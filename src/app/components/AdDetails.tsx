@@ -1,5 +1,5 @@
 import { ArrowLeft, Heart, Share2, Flag, MapPin, Clock, Eye, Phone, MessageCircle, User, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { Ad } from '../App';
+import type { Ad } from '../../types';
 import { useState } from 'react';
 
 type AdDetailsProps = {
@@ -65,18 +65,20 @@ export function AdDetails({ ad, onBack, isFavorite, onToggleFavorite }: AdDetail
                   alt={ad.title}
                   className="w-full h-full object-cover"
                 />
-                
+
                 {ad.images.length > 1 && (
                   <>
                     <button
                       onClick={prevImage}
                       className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-lg"
+                      aria-label="Imagem anterior"
                     >
                       <ChevronLeft className="w-6 h-6" />
                     </button>
                     <button
                       onClick={nextImage}
                       className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-lg"
+                      aria-label="Próxima imagem"
                     >
                       <ChevronRight className="w-6 h-6" />
                     </button>
@@ -86,18 +88,17 @@ export function AdDetails({ ad, onBack, isFavorite, onToggleFavorite }: AdDetail
                   </>
                 )}
               </div>
-              
+
               {ad.images.length > 1 && (
                 <div className="p-4 flex gap-2 overflow-x-auto">
                   {ad.images.map((image, index) => (
                     <button
                       key={index}
                       onClick={() => setCurrentImageIndex(index)}
-                      className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
-                        index === currentImageIndex
-                          ? 'border-blue-600 scale-105'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                      className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${index === currentImageIndex
+                        ? 'border-blue-600 scale-105'
+                        : 'border-gray-200 hover:border-gray-300'
+                        }`}
                     >
                       <img
                         src={image}
@@ -113,7 +114,7 @@ export function AdDetails({ ad, onBack, isFavorite, onToggleFavorite }: AdDetail
             {/* Description */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <h1 className="text-3xl mb-4">{ad.title}</h1>
-              
+
               <div className="flex items-center gap-6 mb-6 pb-6 border-b border-gray-200">
                 <div className="flex items-center gap-2 text-gray-600">
                   <MapPin className="w-5 h-5" />
@@ -182,11 +183,10 @@ export function AdDetails({ ad, onBack, isFavorite, onToggleFavorite }: AdDetail
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={onToggleFavorite}
-                      className={`py-3 rounded-lg border-2 transition-colors flex items-center justify-center gap-2 ${
-                        isFavorite
-                          ? 'border-red-500 bg-red-50 text-red-600'
-                          : 'border-gray-300 hover:border-gray-400'
-                      }`}
+                      className={`py-3 rounded-lg border-2 transition-colors flex items-center justify-center gap-2 ${isFavorite
+                        ? 'border-red-500 bg-red-50 text-red-600'
+                        : 'border-gray-300 hover:border-gray-400'
+                        }`}
                     >
                       <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
                       {isFavorite ? 'Favoritado' : 'Favoritar'}

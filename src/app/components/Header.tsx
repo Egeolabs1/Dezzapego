@@ -1,7 +1,10 @@
-import { Search, Heart, User, CirclePlus, Menu } from 'lucide-react';
-import { useState } from 'react';
+import { Search, Heart, User, CirclePlus, Menu, LogOut, ChevronDown } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 import { LocationSelector } from './LocationSelector';
 import { Logo, LogoIcon } from './Logo';
+import { Notifications } from './Notifications';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 type HeaderProps = {
   searchQuery: string;
@@ -14,14 +17,40 @@ type HeaderProps = {
 
 export function Header({ searchQuery, onSearchChange, onLogoClick, selectedState, selectedCity, onLocationChange }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+    setUserMenuOpen(false);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [dropdownRef]);
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <button 
-            onClick={onLogoClick}
+          <button
+            onClick={() => {
+              onLogoClick();
+              navigate('/');
+            }}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             {/* Ícone do Logo - Visível em Mobile */}
@@ -55,46 +84,100 @@ export function Header({ searchQuery, onSearchChange, onLogoClick, selectedState
               selectedCity={selectedCity}
               onLocationChange={onLocationChange}
             />
+
+            <Notifications />
+
             <button className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-blue-600 transition-colors">
               <Heart className="w-5 h-5" />
               <span>Favoritos</span>
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-blue-600 transition-colors">
-              <User className="w-5 h-5" />
-              <span>Entrar</span>
-            </button>
-            <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-shadow">
-              <CirclePlus className="w-5 h-5" />
-              <span>Anunciar Grátis</span>
-            </button>
+
+            {user ? (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center gap-2 px-2 py-1 rounded-full hover:bg-gray-100 transition-colors focus:outline-none"
+                >
+                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold">
+                    {user.email?.charAt(0).toUpperCase()}
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 border border-gray-100 z-50">
+                    <div className="px-4 py-2 border-b border-gray-100">
+                      <Link to="/dashboard" onClick={() => setUserMenuOpen(false)} className="hover:text-blue-600 transition-colors">
+                        <p className="text-sm font-medium text-gray-900">Minha Conta</p>
+                      </Link>
+                      <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                    </div>
+                    <Link
+                      to="/meus-anuncios"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <Heart className="w-4 h-4" /> {/* Reusing Heart icon for now, or use List/Grid */}
+                      <span>Meus Anúncios</span>
+                    </Link>
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Sair</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link to="/login">
+                <button className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-blue-600 transition-colors">
+                  <User className="w-5 h-5" />
+                  <span>Entrar</span>
+                </button>
+              </Link>
+            )}
+
+            <Link to="/anunciar">
+              <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-shadow">
+                <CirclePlus className="w-5 h-5" />
+                <span>Anunciar Grátis</span>
+              </button>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
-          <button 
+          <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2 text-gray-700"
+            aria-label="Abrir menu"
           >
             <Menu className="w-6 h-6" />
           </button>
         </div>
 
-        {/* Search Bar - Mobile */}
+        {/* Search Bar & Location - Mobile */}
         <div className="md:hidden pb-4">
-          <div className="relative w-full mb-3">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Buscar produtos..."
-              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Buscar..."
+                className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+            </div>
+            <div className="flex-shrink-0">
+              <LocationSelector
+                selectedState={selectedState}
+                selectedCity={selectedCity}
+                onLocationChange={onLocationChange}
+              />
+            </div>
           </div>
-          <LocationSelector
-            selectedState={selectedState}
-            selectedCity={selectedCity}
-            onLocationChange={onLocationChange}
-          />
         </div>
 
         {/* Mobile Menu */}
@@ -104,10 +187,22 @@ export function Header({ searchQuery, onSearchChange, onLogoClick, selectedState
               <Heart className="w-5 h-5" />
               <span>Favoritos</span>
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 w-full text-left text-gray-700 hover:bg-gray-50 rounded-lg">
-              <User className="w-5 h-5" />
-              <span>Entrar</span>
-            </button>
+            {user ? (
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-2 px-4 py-2 w-full text-left text-red-600 hover:bg-gray-50 rounded-lg"
+              >
+                <LogOut className="w-5 h-5" />
+                <span>Sair ({user.email})</span>
+              </button>
+            ) : (
+              <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                <button className="flex items-center gap-2 px-4 py-2 w-full text-left text-gray-700 hover:bg-gray-50 rounded-lg">
+                  <User className="w-5 h-5" />
+                  <span>Entrar</span>
+                </button>
+              </Link>
+            )}
             <button className="flex items-center gap-2 px-4 py-3 w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg justify-center">
               <CirclePlus className="w-5 h-5" />
               <span>Anunciar Grátis</span>

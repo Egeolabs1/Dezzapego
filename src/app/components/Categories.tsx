@@ -9,8 +9,8 @@ type CategoriesProps = {
   onTransactionTypeSelect?: (type: 'venda' | 'aluguel' | '') => void;
 };
 
-export function Categories({ 
-  selectedCategory, 
+export function Categories({
+  selectedCategory,
   onCategorySelect,
   selectedSubcategory = '',
   onSubcategorySelect,
@@ -23,46 +23,40 @@ export function Categories({
   return (
     <section className="bg-white border-b border-gray-200">
       {/* Main Categories */}
-      <div className="py-6 border-b border-gray-100">
+      <div className="py-4 md:py-6 border-b border-gray-100">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl">Categorias</h2>
+            <h2 className="text-lg md:text-xl font-semibold text-gray-800">Categorias</h2>
             {selectedCategory && (
               <button
                 onClick={() => onCategorySelect('')}
-                className="text-sm text-blue-600 hover:text-blue-700"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
               >
-                Limpar filtro
+                Limpar
               </button>
             )}
           </div>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 gap-3">
+
+          <div className="flex overflow-x-auto pt-4 pb-4 gap-2 md:grid md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 md:gap-4 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
             {categoriesData.map((category) => {
               const Icon = category.icon;
               const isSelected = selectedCategory === category.id;
-              
+
               return (
                 <button
                   key={category.id}
                   onClick={() => onCategorySelect(isSelected ? '' : category.id)}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all hover:shadow-md ${
-                    isSelected
-                      ? 'border-blue-600 bg-blue-50 shadow-md'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                  className={`flex flex-col items-center gap-2 min-w-[72px] md:min-w-0 transition-all ${isSelected ? 'scale-105' : 'hover:scale-105'}`}
                 >
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    isSelected
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    <Icon className="w-5 h-5" />
+                  <div className={`w-16 h-16 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-all shadow-sm border-2 ${isSelected
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-blue-200'
+                    : 'bg-white text-gray-600 border-gray-100 hover:border-blue-200 hover:shadow-md'
+                    }`}>
+                    <Icon className="w-7 h-7 md:w-6 md:h-6" />
                   </div>
-                  <div className="text-center">
-                    <p className="text-xs mb-1">{category.name}</p>
-                    <p className="text-xs text-gray-500">{category.count}</p>
-                  </div>
+                  <span className={`text-xs md:text-sm font-medium whitespace-nowrap ${isSelected ? 'text-blue-700' : 'text-gray-600'}`}>
+                    {category.name}
+                  </span>
                 </button>
               );
             })}
@@ -85,25 +79,23 @@ export function Categories({
                 </button>
               )}
             </div>
-            
+
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => onTransactionTypeSelect?.('venda')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full border-2 transition-all text-sm font-medium ${
-                  selectedTransactionType === 'venda'
-                    ? 'border-blue-600 bg-blue-600 text-white shadow-md'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50'
-                }`}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-full border-2 transition-all text-sm font-medium ${selectedTransactionType === 'venda'
+                  ? 'border-blue-600 bg-blue-600 text-white shadow-md'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50'
+                  }`}
               >
                 <span>💰 Venda</span>
               </button>
               <button
                 onClick={() => onTransactionTypeSelect?.('aluguel')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full border-2 transition-all text-sm font-medium ${
-                  selectedTransactionType === 'aluguel'
-                    ? 'border-blue-600 bg-blue-600 text-white shadow-md'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50'
-                }`}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-full border-2 transition-all text-sm font-medium ${selectedTransactionType === 'aluguel'
+                  ? 'border-blue-600 bg-blue-600 text-white shadow-md'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50'
+                  }`}
               >
                 <span>🏠 Aluguel</span>
               </button>
@@ -127,20 +119,19 @@ export function Categories({
                 </button>
               )}
             </div>
-            
+
             <div className="flex flex-wrap gap-2">
               {selectedCategoryData.subcategories.map((subcategory) => {
                 const isSelected = selectedSubcategory === subcategory.id;
-                
+
                 return (
                   <button
                     key={subcategory.id}
                     onClick={() => onSubcategorySelect?.(isSelected ? '' : subcategory.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all text-sm ${
-                      isSelected
-                        ? 'border-blue-600 bg-blue-600 text-white shadow-md'
-                        : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50'
-                    }`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all text-sm ${isSelected
+                      ? 'border-blue-600 bg-blue-600 text-white shadow-md'
+                      : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50'
+                      }`}
                   >
                     <span>{subcategory.name}</span>
                     <span className={`text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500'}`}>
