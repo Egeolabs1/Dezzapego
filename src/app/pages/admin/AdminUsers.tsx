@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
-import { Loader2, Trash2, Search, ShieldAlert, Download, BadgeCheck } from 'lucide-react';
+import { Search, ShieldAlert, Download, BadgeCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 type SellerStats = {
@@ -9,6 +9,7 @@ type SellerStats = {
     count: number;
     email?: string;
     verified?: boolean; // New field derived from one of their ads
+    verification_status?: string;
 };
 
 export default function AdminUsers() {
@@ -44,7 +45,8 @@ export default function AdminUsers() {
                         id: seller.id,
                         name: seller.name || 'Desconhecido',
                         count: 1,
-                        verified: seller.verified || false
+                        verified: seller.verified || false,
+                        verification_status: seller.verification_status // Capture pending status
                     });
                 }
             });
@@ -208,6 +210,10 @@ export default function AdminUsers() {
                                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                                                     <BadgeCheck className="w-3 h-3" /> Verificado
                                                 </span>
+                                            ) : (seller as any).verification_status === 'pending' ? (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                    Solicitado
+                                                </span>
                                             ) : (
                                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
                                                     Padrão
@@ -224,8 +230,8 @@ export default function AdminUsers() {
                                                 <button
                                                     onClick={() => handleVerifyUser(seller)}
                                                     className={`p-2 rounded-lg transition-colors ${seller.verified
-                                                            ? 'text-blue-600 bg-blue-50 hover:bg-blue-100'
-                                                            : 'text-gray-400 hover:text-blue-600 hover:bg-gray-100'
+                                                        ? 'text-blue-600 bg-blue-50 hover:bg-blue-100'
+                                                        : 'text-gray-400 hover:text-blue-600 hover:bg-gray-100'
                                                         }`}
                                                     title={seller.verified ? "Remover verificação" : "Verificar usuário"}
                                                 >

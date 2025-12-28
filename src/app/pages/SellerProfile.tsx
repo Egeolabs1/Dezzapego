@@ -102,10 +102,12 @@ export default function SellerProfile() {
                                         <Package className="w-4 h-4" />
                                         <span>{ads.length} {ads.length === 1 ? 'anúncio ativo' : 'anúncios ativos'}</span>
                                     </div>
-                                    <div className="flex items-center gap-1.5 text-green-600">
-                                        <ShieldCheck className="w-4 h-4" />
-                                        <span>Identidade verificada</span>
-                                    </div>
+                                    {seller.verified && (
+                                        <div className="flex items-center gap-1.5 text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                                            <ShieldCheck className="w-4 h-4" />
+                                            <span className="font-semibold text-xs">Verificado</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="w-full md:w-auto">

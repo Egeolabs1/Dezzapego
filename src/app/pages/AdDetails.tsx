@@ -353,6 +353,11 @@ export default function AdDetails() {
                                                     PRO
                                                 </span>
                                             )}
+                                            {ad.seller.verified && (
+                                                <span className="text-blue-600" title="Vendedor Verificado">
+                                                    <ShieldCheck className="w-5 h-5 fill-blue-100" />
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </Link>
