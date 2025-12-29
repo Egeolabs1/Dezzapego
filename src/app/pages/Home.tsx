@@ -96,7 +96,7 @@ export default function Home() {
                     title={selectedAd.title}
                     description={selectedAd.description}
                     image={selectedAd.images[0]}
-                    url={`https://dezzapego.com.br/anuncio/${selectedAd.id}`}
+                    url={`https://dezzapego.com/anuncio/${selectedAd.id}`}
                     type="article"
                 />
                 <Header />

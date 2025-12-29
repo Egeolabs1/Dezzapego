@@ -38,7 +38,7 @@ export default function Terms() {
                                     <h2 className="text-xl font-bold text-red-700 m-0">1. Isenção de Responsabilidade (Disclaimer)</h2>
                                 </div>
                                 <p className="font-medium text-gray-900">
-                                    O Dezzapego.com.br atua exclusivamente como uma plataforma de classificados online, conectando anunciantes e interessados.
+                                    O Dezzapego.com atua exclusivamente como uma plataforma de classificados online, conectando anunciantes e interessados.
                                 </p>
                                 <ul className="list-disc pl-5 space-y-2 mt-4 text-gray-800">
                                     <li><strong>Não intermediamos pagamentos:</strong> Toda transação é feita diretamente entre comprador e vendedor. Não processamos, garantimos ou nos responsabilizamos por pagamentos.</li>

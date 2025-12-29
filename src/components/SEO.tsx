@@ -16,7 +16,7 @@ export default function SEO({
     name = "Dezzapego",
     type = "website",
     image = "/icon.svg",
-    url = "https://dezzapego.com.br",
+    url = "https://dezzapego.com",
     structuredData,
 }: SEOProps) {
     return (

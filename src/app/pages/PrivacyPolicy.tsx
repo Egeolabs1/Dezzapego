@@ -10,7 +10,7 @@ export default function PrivacyPolicy() {
         <div className="min-h-screen bg-gray-50">
             <SEO
                 title="Política de Privacidade"
-                description="Política de Privacidade do dezzapego.com.br"
+                description="Política de Privacidade do dezzapego.com"
             />
             <Header />
 
