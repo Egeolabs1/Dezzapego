@@ -156,18 +156,47 @@ export default function UserDashboard() {
     const handleAvatarUpload = (url: string) => setAvatar([url]);
     const handleAvatarRemove = (_url: string) => setAvatar([]);
 
+    const handleDeleteAccount = async () => {
+        if (!user) return;
+
+        const confirmDelete = window.confirm(
+            'TEM CERTEZA QUE DESEJA EXCLUIR SUA CONTA?\n\n' +
+            'Esta ação é irreversível. Todos os seus dados, anúncios e fotos serão apagados permanentemente.'
+        );
+
+        if (!confirmDelete) return;
+
+        const confirmReference = window.prompt(
+            'Para confirmar, digite "DELETAR" no campo abaixo:'
+        );
+
+        if (confirmReference !== 'DELETAR') {
+            toast.error('Confirmação incorreta. A conta NÃO foi excluída.');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const { error } = await supabase.rpc('delete_own_account');
+
+            if (error) throw error;
+
+            await supabase.auth.signOut();
+            toast.success('Sua conta foi excluída permanentemente.');
+            navigate('/');
+        } catch (error) {
+            console.error('Error deleting account:', error);
+            toast.error('Erro ao excluir conta. Tente novamente ou contate o suporte.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     if (!user) return null;
 
     return (
         <div className="bg-gray-50 min-h-screen">
-            <Header
-                searchQuery=""
-                onSearchChange={() => { }}
-                onLogoClick={() => navigate('/')}
-                selectedState=""
-                selectedCity=""
-                onLocationChange={() => { }}
-            />
+            <Header />
 
             <div className="container mx-auto px-4 py-8">
                 <h1 className="text-2xl font-bold text-gray-900 mb-6">Minha Conta</h1>
@@ -208,220 +237,241 @@ export default function UserDashboard() {
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Main Content */}
-                    <div className="md:col-span-3">
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                            <h2 className="text-xl font-bold text-gray-800 mb-6 pb-4 border-b border-gray-100">
-                                Edição de Perfil
-                            </h2>
+                        {/* Main Content */}
+                        <div className="md:col-span-3">
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h2 className="text-xl font-bold text-gray-800 mb-6 pb-4 border-b border-gray-100">
+                                    Edição de Perfil
+                                </h2>
 
-                            {/* Verification Status Section */}
-                            <div className="mb-8 p-5 bg-gray-50 rounded-xl border border-gray-100 flex flex-col md:flex-row items-start md:items-center gap-4">
-                                <div className="p-3 bg-white rounded-full border border-gray-100 shadow-sm text-blue-600">
-                                    {verificationStatus === 'verified' ? <ShieldCheck className="w-6 h-6" /> : <Shield className="w-6 h-6" />}
+                                {/* Verification Status Section */}
+                                <div className="mb-8 p-5 bg-gray-50 rounded-xl border border-gray-100 flex flex-col md:flex-row items-start md:items-center gap-4">
+                                    <div className="p-3 bg-white rounded-full border border-gray-100 shadow-sm text-blue-600">
+                                        {verificationStatus === 'verified' ? <ShieldCheck className="w-6 h-6" /> : <Shield className="w-6 h-6" />}
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                                            Verificação de Conta
+                                            {verificationStatus === 'verified' && <span className="text-blue-600 text-xs bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">Verificado com Sucesso</span>}
+                                            {verificationStatus === 'pending' && <span className="text-yellow-600 text-xs bg-yellow-50 px-2 py-0.5 rounded-full border border-yellow-100">Em Análise</span>}
+                                        </h3>
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            {verificationStatus === 'verified'
+                                                ? 'Sua conta está verificada! Você possui o selo de autenticidade em seus anúncios.'
+                                                : verificationStatus === 'pending'
+                                                    ? 'Sua solicitação está sendo analisada pela nossa equipe. Responderemos em breve.'
+                                                    : 'Obtenha o selo de verificado para transmitir mais confiança aos compradores.'}
+                                        </p>
+                                    </div>
+                                    {verificationStatus === 'none' && (
+                                        <button
+                                            onClick={handleRequestVerification}
+                                            disabled={submittingVerification}
+                                            className="whitespace-nowrap px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                        >
+                                            {submittingVerification ? 'Enviando...' : 'Solicitar Verificação'}
+                                        </button>
+                                    )}
                                 </div>
-                                <div className="flex-1">
-                                    <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                                        Verificação de Conta
-                                        {verificationStatus === 'verified' && <span className="text-blue-600 text-xs bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">Verificado com Sucesso</span>}
-                                        {verificationStatus === 'pending' && <span className="text-yellow-600 text-xs bg-yellow-50 px-2 py-0.5 rounded-full border border-yellow-100">Em Análise</span>}
-                                    </h3>
-                                    <p className="text-sm text-gray-500 mt-1">
-                                        {verificationStatus === 'verified'
-                                            ? 'Sua conta está verificada! Você possui o selo de autenticidade em seus anúncios.'
-                                            : verificationStatus === 'pending'
-                                                ? 'Sua solicitação está sendo analisada pela nossa equipe. Responderemos em breve.'
-                                                : 'Obtenha o selo de verificado para transmitir mais confiança aos compradores.'}
-                                    </p>
-                                </div>
-                                {verificationStatus === 'none' && (
-                                    <button
-                                        onClick={handleRequestVerification}
-                                        disabled={submittingVerification}
-                                        className="whitespace-nowrap px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                                    >
-                                        {submittingVerification ? 'Enviando...' : 'Solicitar Verificação'}
-                                    </button>
-                                )}
-                            </div>
 
-                            <h2 className="text-lg font-bold text-gray-800 mb-6 pb-4 border-b border-gray-100">
-                                Dados Pessoais
-                            </h2>
+                                <h2 className="text-lg font-bold text-gray-800 mb-6 pb-4 border-b border-gray-100">
+                                    Dados Pessoais
+                                </h2>
 
-                            <form onSubmit={handleUpdateProfile} className="space-y-6 max-w-2xl">
+                                <form onSubmit={handleUpdateProfile} className="space-y-6 max-w-2xl">
 
-                                {/* Avatar Section */}
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-700">Foto de Perfil</label>
-                                    <div className="flex items-start gap-4">
-                                        <div className="w-32 h-32 bg-gray-100 rounded-full overflow-hidden border-2 border-dashed border-gray-300 flex items-center justify-center">
-                                            {avatar.length > 0 ? (
-                                                <img src={avatar[0]} alt="Avatar" className="w-full h-full object-cover" />
-                                            ) : (
-                                                <User className="w-12 h-12 text-gray-400" />
-                                            )}
+                                    {/* Avatar Section */}
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-gray-700">Foto de Perfil</label>
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-32 h-32 bg-gray-100 rounded-full overflow-hidden border-2 border-dashed border-gray-300 flex items-center justify-center">
+                                                {avatar.length > 0 ? (
+                                                    <img src={avatar[0]} alt="Avatar" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <User className="w-12 h-12 text-gray-400" />
+                                                )}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="w-full max-w-[200px]">
+                                                    <ImageUpload
+                                                        onUpload={handleAvatarUpload}
+                                                        onRemove={handleAvatarRemove}
+                                                        currentImages={avatar}
+                                                        maxImages={1}
+                                                        userId={user.id}
+                                                    />
+                                                </div>
+                                                <p className="text-xs text-gray-500 mt-2">Recomendado: 400x400px. JPG ou PNG.</p>
+                                            </div>
                                         </div>
-                                        <div className="flex-1">
-                                            <div className="w-full max-w-[200px]">
-                                                <ImageUpload
-                                                    onUpload={handleAvatarUpload}
-                                                    onRemove={handleAvatarRemove}
-                                                    currentImages={avatar}
-                                                    maxImages={1}
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* Name */}
+                                        <div className="space-y-2">
+                                            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                                                Nome Completo <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                id="name"
+                                                type="text"
+                                                value={name}
+                                                onChange={(e) => setName(e.target.value)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                placeholder="Seu nome"
+                                            />
+                                        </div>
+
+                                        {/* Email (Read Only) */}
+                                        <div className="space-y-2">
+                                            <label htmlFor="emailDisplay" className="block text-sm font-medium text-gray-500">
+                                                Email <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                id="emailDisplay"
+                                                type="email"
+                                                value={user?.email || ''}
+                                                disabled
+                                                className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                                            />
+                                        </div>
+
+                                        {/* Phone */}
+                                        <div className="space-y-2">
+                                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                                                Telefone / WhatsApp <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                id="phone"
+                                                type="text"
+                                                value={phone}
+                                                onChange={(e) => setPhone(e.target.value)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                placeholder="(11) 99999-9999"
+                                            />
+                                        </div>
+
+                                        {/* CPF/CNPJ */}
+                                        <div className="space-y-2">
+                                            <label htmlFor="cpfCnpj" className="block text-sm font-medium text-gray-700">
+                                                CPF ou CNPJ <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                id="cpfCnpj"
+                                                type="text"
+                                                value={cpfCnpj}
+                                                onChange={(e) => setCpfCnpj(e.target.value)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                placeholder="000.000.000-00"
+                                            />
+                                        </div>
+
+                                        {/* Location */}
+                                        <div className="space-y-2">
+                                            <label htmlFor="state" className="block text-sm font-medium text-gray-700">Estado (UF)</label>
+                                            <input
+                                                id="state"
+                                                type="text"
+                                                maxLength={2}
+                                                value={state}
+                                                onChange={(e) => setState(e.target.value.toUpperCase())}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                placeholder="SP"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label htmlFor="city" className="block text-sm font-medium text-gray-700">Cidade</label>
+                                            <input
+                                                id="city"
+                                                type="text"
+                                                value={city}
+                                                onChange={(e) => setCity(e.target.value)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                placeholder="São Paulo"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label htmlFor="instagram" className="block text-sm font-medium text-gray-700">Instagram</label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">@</span>
+                                                <input
+                                                    id="instagram"
+                                                    type="text"
+                                                    value={instagram}
+                                                    onChange={(e) => setInstagram(e.target.value)}
+                                                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    placeholder="usuario"
                                                 />
                                             </div>
-                                            <p className="text-xs text-gray-500 mt-2">Recomendado: 400x400px. JPG ou PNG.</p>
                                         </div>
-                                    </div>
-                                </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {/* Name */}
-                                    <div className="space-y-2">
-                                        <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                                            Nome Completo <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            id="name"
-                                            type="text"
-                                            value={name}
-                                            onChange={(e) => setName(e.target.value)}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            placeholder="Seu nome"
-                                        />
-                                    </div>
-
-                                    {/* Email (Read Only) */}
-                                    <div className="space-y-2">
-                                        <label htmlFor="emailDisplay" className="block text-sm font-medium text-gray-500">
-                                            Email <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            id="emailDisplay"
-                                            type="email"
-                                            value={user?.email || ''}
-                                            disabled
-                                            className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
-                                        />
-                                    </div>
-
-                                    {/* Phone */}
-                                    <div className="space-y-2">
-                                        <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                                            Telefone / WhatsApp <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            id="phone"
-                                            type="text"
-                                            value={phone}
-                                            onChange={(e) => setPhone(e.target.value)}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            placeholder="(11) 99999-9999"
-                                        />
-                                    </div>
-
-                                    {/* CPF/CNPJ */}
-                                    <div className="space-y-2">
-                                        <label htmlFor="cpfCnpj" className="block text-sm font-medium text-gray-700">
-                                            CPF ou CNPJ <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            id="cpfCnpj"
-                                            type="text"
-                                            value={cpfCnpj}
-                                            onChange={(e) => setCpfCnpj(e.target.value)}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            placeholder="000.000.000-00"
-                                        />
-                                    </div>
-
-                                    {/* Location */}
-                                    <div className="space-y-2">
-                                        <label htmlFor="state" className="block text-sm font-medium text-gray-700">Estado (UF)</label>
-                                        <input
-                                            id="state"
-                                            type="text"
-                                            maxLength={2}
-                                            value={state}
-                                            onChange={(e) => setState(e.target.value.toUpperCase())}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            placeholder="SP"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label htmlFor="city" className="block text-sm font-medium text-gray-700">Cidade</label>
-                                        <input
-                                            id="city"
-                                            type="text"
-                                            value={city}
-                                            onChange={(e) => setCity(e.target.value)}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            placeholder="São Paulo"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label htmlFor="instagram" className="block text-sm font-medium text-gray-700">Instagram</label>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">@</span>
+                                        <div className="space-y-2">
+                                            <label htmlFor="website" className="block text-sm font-medium text-gray-700">Site / Link</label>
                                             <input
-                                                id="instagram"
-                                                type="text"
-                                                value={instagram}
-                                                onChange={(e) => setInstagram(e.target.value)}
-                                                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                placeholder="usuario"
+                                                id="website"
+                                                type="url"
+                                                value={website}
+                                                onChange={(e) => setWebsite(e.target.value)}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                placeholder="https://seusite.com"
                                             />
                                         </div>
                                     </div>
 
+                                    {/* Bio */}
                                     <div className="space-y-2">
-                                        <label htmlFor="website" className="block text-sm font-medium text-gray-700">Site / Link</label>
-                                        <input
-                                            id="website"
-                                            type="url"
-                                            value={website}
-                                            onChange={(e) => setWebsite(e.target.value)}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            placeholder="https://seusite.com"
+                                        <label htmlFor="bio" className="block text-sm font-medium text-gray-700">
+                                            Bio / Sobre mim
+                                        </label>
+                                        <textarea
+                                            id="bio"
+                                            rows={4}
+                                            value={bio}
+                                            onChange={(e) => setBio(e.target.value)}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                                            placeholder="Conte um pouco sobre você ou sua loja..."
                                         />
+                                        <p className="text-xs text-gray-500 text-right">{bio.length}/500</p>
                                     </div>
-                                </div>
 
-                                {/* Bio */}
-                                <div className="space-y-2">
-                                    <label htmlFor="bio" className="block text-sm font-medium text-gray-700">
-                                        Bio / Sobre mim
-                                    </label>
-                                    <textarea
-                                        id="bio"
-                                        rows={4}
-                                        value={bio}
-                                        onChange={(e) => setBio(e.target.value)}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                                        placeholder="Conte um pouco sobre você ou sua loja..."
-                                    />
-                                    <p className="text-xs text-gray-500 text-right">{bio.length}/500</p>
-                                </div>
+                                    <div className="pt-4">
+                                        <button
+                                            type="submit"
+                                            disabled={loading}
+                                            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                        >
+                                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                                            Salvar Alterações
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
 
-                                <div className="pt-4">
-                                    <button
-                                        type="submit"
-                                        disabled={loading}
-                                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                                    >
-                                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                                        Salvar Alterações
-                                    </button>
-                                </div>
-                            </form>
+                        {/* Danger Zone */}
+                        <div className="mt-8 border border-red-200 rounded-xl overflow-hidden bg-white">
+                            <div className="bg-red-50 px-6 py-4 border-b border-red-100 flex items-center gap-2">
+                                <Shield className="w-5 h-5 text-red-600" />
+                                <h3 className="text-lg font-bold text-red-700">Zona de Perigo</h3>
+                            </div>
+                            <div className="p-6">
+                                <p className="text-gray-600 mb-4">
+                                    Uma vez que você excluir sua conta, não há como voltar atrás. Por favor, tenha certeza.
+                                </p>
+                                <button
+                                    onClick={handleDeleteAccount}
+                                    className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                >
+                                    Excluir minha conta
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+
         </div>
     );
 }
