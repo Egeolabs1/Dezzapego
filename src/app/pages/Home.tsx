@@ -73,13 +73,7 @@ export default function Home() {
         updateSearchParams({ type });
     };
 
-    const handleLocationChange = (state: string, city: string) => {
-        updateSearchParams({ state, city });
-    };
 
-    const handleSearchChange = (query: string) => {
-        updateSearchParams({ q: query });
-    };
 
     const handlePriceRangeChange = (range: [number, number]) => {
         updateSearchParams({
