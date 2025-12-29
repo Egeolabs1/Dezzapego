@@ -17,45 +17,52 @@ export function ImageUpload({ onUpload, onRemove, currentImages = [], maxImages 
 
     const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         try {
-            if (!event.target.files || event.target.files.length === 0) {
+            const files = Array.from(event.target.files || []);
+            if (files.length === 0) return;
+
+            if (currentImages.length + files.length > maxImages) {
+                toast.error(`Você pode adicionar no máximo ${maxImages} imagens. Atualmente você tem ${currentImages.length}.`);
                 return;
             }
 
-            if (currentImages.length >= maxImages) {
-                toast.error(`Você já atingiu o limite de ${maxImages} imagens.`);
-                return;
+            // Validate sizes
+            const validFiles = files.filter(file => file.size <= MAX_FILE_SIZE);
+            if (files.length !== validFiles.length) {
+                toast.error('Algumas imagens excedem 5MB e serão ignoradas.');
             }
 
-            const file = event.target.files[0];
-
-            if (file.size > MAX_FILE_SIZE) {
-                toast.error('A imagem deve ter no máximo 5MB.');
-                return;
-            }
+            if (validFiles.length === 0) return;
 
             setUploading(true);
+            let successCount = 0;
 
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Math.random()}.${fileExt}`;
-            const filePath = `${fileName}`;
+            await Promise.all(validFiles.map(async (file) => {
+                try {
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `${Math.random()}.${fileExt}`;
+                    const filePath = `${fileName}`;
 
-            const { error: uploadError } = await supabase.storage
-                .from('ads')
-                .upload(filePath, file);
+                    const { error: uploadError } = await supabase.storage
+                        .from('ads')
+                        .upload(filePath, file);
 
-            if (uploadError) {
-                throw uploadError;
+                    if (uploadError) throw uploadError;
+
+                    const { data } = supabase.storage.from('ads').getPublicUrl(filePath);
+                    onUpload(data.publicUrl);
+                    successCount++;
+                } catch (error) {
+                    console.error('Error uploading file:', file.name, error);
+                }
+            }));
+
+            if (successCount > 0) {
+                toast.success(`${successCount} imagem(ns) enviada(s)!`);
             }
-
-            const { data } = supabase.storage.from('ads').getPublicUrl(filePath);
-
-            onUpload(data.publicUrl);
-            toast.success('Imagem enviada com sucesso!');
         } catch (error: any) {
             console.error(error);
-            toast.error(error.message || 'Erro ao enviar imagem.');
+            toast.error(error.message || 'Erro ao enviar imagens.');
         } finally {
-            // Reset input value to allow uploading the same file again if needed
             event.target.value = '';
             setUploading(false);
         }
@@ -105,7 +112,7 @@ export function ImageUpload({ onUpload, onRemove, currentImages = [], maxImages 
                             <>
                                 <Upload className="w-8 h-8 mb-2 text-gray-400" />
                                 <p className="text-sm text-gray-500 font-medium">
-                                    Adicionar foto ({currentImages.length}/{maxImages})
+                                    Adicionar fotos ({currentImages.length}/{maxImages})
                                 </p>
                                 <p className="text-xs text-gray-400 mt-1">MAX. 5MB</p>
                             </>
@@ -115,6 +122,7 @@ export function ImageUpload({ onUpload, onRemove, currentImages = [], maxImages 
                         id="image-upload"
                         type="file"
                         accept="image/*"
+                        multiple
                         className="hidden"
                         onChange={handleUpload}
                         disabled={uploading}

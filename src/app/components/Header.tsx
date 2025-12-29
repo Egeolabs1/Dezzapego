@@ -5,17 +5,17 @@ import { Logo, LogoIcon } from './Logo';
 import { Notifications } from './Notifications';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useFilter } from '../contexts/FilterContext';
 
 type HeaderProps = {
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
-  onLogoClick: () => void;
-  selectedState: string;
-  selectedCity: string;
-  onLocationChange: (state: string, city: string) => void;
+  // Props are now optional/deprecated as we use Context, 
+  // but kept optional to avoid breaking pending refactors if any.
+  // Ideally, remove them entirely or use as overrides.
+  hideLocationFilter?: boolean;
 };
 
-export function Header({ searchQuery, onSearchChange, onLogoClick, selectedState, selectedCity, onLocationChange }: HeaderProps) {
+export function Header({ hideLocationFilter = false }: HeaderProps) {
+  const { searchQuery, setSearchQuery, selectedState, selectedCity, setLocation } = useFilter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
@@ -48,7 +48,7 @@ export function Header({ searchQuery, onSearchChange, onLogoClick, selectedState
           {/* Logo */}
           <button
             onClick={() => {
-              onLogoClick();
+              setSearchQuery(''); // Optional: Clear search on logo click?
               navigate('/');
             }}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
@@ -70,27 +70,54 @@ export function Header({ searchQuery, onSearchChange, onLogoClick, selectedState
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar por produtos, marcas ou categorias..."
                 className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>
 
+          {/* Search Bar & Location - Mobile (Inline) */}
+          <div className="flex md:hidden flex-1 items-center gap-2 mx-2 min-w-0">
+            <div className="relative flex-1 min-w-0">
+              <div className="absolute left-2.5 top-1/2 -translate-y-1/2">
+                <Search className="w-3.5 h-3.5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar..."
+                className="w-full pl-8 pr-2 py-1.5 bg-gray-100 border-none rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              />
+            </div>
+            {!hideLocationFilter && (
+              <div className="flex-shrink-0 scale-90 origin-right">
+                <LocationSelector
+                  selectedState={selectedState}
+                  selectedCity={selectedCity}
+                  onLocationChange={setLocation}
+                />
+              </div>
+            )}
+          </div>
+
           {/* Actions - Desktop */}
           <div className="hidden md:flex items-center gap-3">
-            <LocationSelector
-              selectedState={selectedState}
-              selectedCity={selectedCity}
-              onLocationChange={onLocationChange}
-            />
+            {!hideLocationFilter && (
+              <LocationSelector
+                selectedState={selectedState}
+                selectedCity={selectedCity}
+                onLocationChange={setLocation}
+              />
+            )}
 
             <Notifications />
 
-            <button className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-blue-600 transition-colors">
+            <Link to="/favoritos" className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-blue-600 transition-colors">
               <Heart className="w-5 h-5" />
               <span>Favoritos</span>
-            </button>
+            </Link>
 
             {user ? (
               <div className="relative" ref={dropdownRef}>
@@ -112,6 +139,18 @@ export function Header({ searchQuery, onSearchChange, onLogoClick, selectedState
                       </Link>
                       <p className="text-xs text-gray-500 truncate">{user.email}</p>
                     </div>
+
+                    {/* Admin Link - Only for Admins */}
+                    {/* Uses optional chaining or defaults as profile structure updates */}
+                    {(user.email === 'admin@dezzapego.com' || user.email === 'ngfilho@gmail.com' || (user as any)?.role === 'admin' || (user as any)?.user_metadata?.role === 'admin' || (useAuth().profile?.role === 'admin')) && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium"
+                      >
+                        <span>⚡ Painel Admin</span>
+                      </Link>
+                    )}
                     <Link
                       to="/meus-anuncios"
                       onClick={() => setUserMenuOpen(false)}
@@ -155,29 +194,6 @@ export function Header({ searchQuery, onSearchChange, onLogoClick, selectedState
           >
             <Menu className="w-6 h-6" />
           </button>
-        </div>
-
-        {/* Search Bar & Location - Mobile */}
-        <div className="md:hidden pb-4">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Buscar..."
-                className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              />
-            </div>
-            <div className="flex-shrink-0">
-              <LocationSelector
-                selectedState={selectedState}
-                selectedCity={selectedCity}
-                onLocationChange={onLocationChange}
-              />
-            </div>
-          </div>
         </div>
 
         {/* Mobile Menu */}

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { FilterProvider } from './contexts/FilterContext';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -7,6 +8,7 @@ import { Toaster } from 'sonner';
 import NewAd from './pages/NewAd';
 import MyAds from './pages/MyAds';
 import AdDetails from './pages/AdDetails';
+import MyFavorites from './pages/MyFavorites'; // NEW
 import SellerProfile from './pages/SellerProfile';
 import EditAd from './pages/EditAd';
 import UserDashboard from './pages/UserDashboard';
@@ -62,6 +64,7 @@ function AppContent() {
         <Route path="/anunciante/:userId" element={<SellerProfile />} />
         <Route path="/editar/:id" element={<EditAd />} />
         <Route path="/dashboard" element={<UserDashboard />} />
+        <Route path="/favoritos" element={<MyFavorites />} /> // NEW Route
 
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLayout />}>
@@ -83,16 +86,22 @@ function AppContent() {
   );
 }
 
+import { HelmetProvider } from 'react-helmet-async';
+
 export default function App() {
   return (
-    <AuthProvider>
-      <MaintenanceProvider>
-        <BrowserRouter>
-          <AppContent />
-          <Toaster richColors position="top-right" />
-        </BrowserRouter>
-      </MaintenanceProvider>
-    </AuthProvider>
+    <HelmetProvider>
+      <AuthProvider>
+        <FilterProvider>
+          <MaintenanceProvider>
+            <BrowserRouter>
+              <AppContent />
+              <Toaster richColors position="top-right" />
+            </BrowserRouter>
+          </MaintenanceProvider>
+        </FilterProvider>
+      </AuthProvider>
+    </HelmetProvider>
   );
 }
 

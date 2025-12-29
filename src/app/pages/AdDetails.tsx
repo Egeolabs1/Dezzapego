@@ -1,15 +1,30 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix for default marker icon in React-Leaflet
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+const DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconAnchor: [12, 41]
+});
+L.Marker.prototype.options.icon = DefaultIcon;
 import { supabase } from '../../lib/supabase';
 import {
     Loader2, MapPin, Calendar, ArrowLeft, Share2, MessageCircle,
-    Flag, X, AlertTriangle, ShieldCheck, ChevronRight, Heart, User
+    Flag, X, AlertTriangle, ShieldCheck, ChevronRight, Heart, User, Trash2, Pencil
 } from 'lucide-react';
-import { Ad } from '../../types';
+import { Ad, Profile } from '../../types';
 import { formatPrice } from '../../lib/formatters';
 import { toast } from 'sonner';
 import { Header } from '../components/Header';
 import { useAuth } from '../contexts/AuthContext';
+import SEO from '../../components/SEO';
 
 export default function AdDetails() {
     const { id } = useParams<{ id: string }>();
@@ -25,18 +40,35 @@ export default function AdDetails() {
     const [reportDescription, setReportDescription] = useState('');
     const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
+    const [profile, setProfile] = useState<Profile | null>(null); // NEW
+
     useEffect(() => {
         async function fetchAd() {
             if (!id) return;
             try {
-                const { data, error } = await supabase
+                // 1. Fetch Ad
+                const { data: adData, error: adError } = await supabase
                     .from('ads')
                     .select('*')
                     .eq('id', id)
                     .single();
 
-                if (error) throw error;
-                setAd(data);
+                if (adError) throw adError;
+                setAd(adData);
+
+                // 2. Fetch Profile (Live Data)
+                if (adData && adData.user_id) {
+                    const { data: profileData } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', adData.user_id)
+                        .single();
+
+                    if (profileData) {
+                        setProfile(profileData);
+                    }
+                }
+
             } catch (error) {
                 console.error('Error fetching ad:', error);
                 toast.error('Erro ao carregar anúncio.');
@@ -104,6 +136,32 @@ export default function AdDetails() {
         }
     };
 
+    const handleDelete = async () => {
+        if (!ad || !user) return;
+
+        if (!window.confirm('Tem certeza que deseja excluir este anúncio? Esta ação não pode ser desfeita.')) {
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const { error } = await supabase
+                .from('ads')
+                .delete()
+                .eq('id', ad.id)
+                .eq('user_id', user.id); // Security: ensure query matches owner
+
+            if (error) throw error;
+
+            toast.success('Anúncio excluído com sucesso.');
+            navigate('/');
+        } catch (error) {
+            console.error('Error deleting ad:', error);
+            toast.error('Erro ao excluir anúncio.');
+            setLoading(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center items-center h-[calc(100vh-80px)]">
@@ -114,6 +172,27 @@ export default function AdDetails() {
 
     if (!ad) return null;
 
+    const jsonLd = {
+        "@context": "https://schema.org/",
+        "@type": "Product",
+        "name": ad.title,
+        "image": ad.images,
+        "description": ad.description,
+        "sku": ad.id,
+        "offers": {
+            "@type": "Offer",
+            "url": window.location.href,
+            "priceCurrency": "BRL",
+            "price": ad.price,
+            "availability": "https://schema.org/InStock",
+            "itemCondition": ad.condition === 'new' ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition"
+        },
+        "seller": {
+            "@type": "Person",
+            "name": profile?.full_name || ad.seller.name
+        }
+    };
+
     const handleSearch = (query: string) => {
         // Redirect to home with search query
         // For now, just logging or could navigate
@@ -122,13 +201,16 @@ export default function AdDetails() {
 
     return (
         <div className="bg-gray-50 min-h-screen pb-12">
+            <SEO
+                title={ad.title}
+                description={ad.description?.substring(0, 160)}
+                image={ad.images[0]}
+                url={window.location.href}
+                type="product"
+                structuredData={jsonLd}
+            />
             <Header
-                searchQuery=""
-                onSearchChange={handleSearch}
                 onLogoClick={() => navigate('/')}
-                selectedState={ad.location.state}
-                selectedCity={ad.location.city}
-                onLocationChange={() => { }} // Read-only in details
             />
 
             {/* Breadcrumb Navigation */}
@@ -184,6 +266,7 @@ export default function AdDetails() {
                                     src={ad.images[activeImageIndex]}
                                     alt={ad.title}
                                     className="w-full h-full object-contain mix-blend-multiply"
+                                    loading="lazy"
                                 />
                                 {ad.featured && (
                                     <div className="absolute top-4 left-4 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide shadow-sm">
@@ -205,7 +288,7 @@ export default function AdDetails() {
                                                     : 'border-transparent hover:border-gray-300 opacity-70 hover:opacity-100'
                                                     }`}
                                             >
-                                                <img src={img} alt={`View ${idx}`} className="w-full h-full object-cover" />
+                                                <img src={img} alt={`View ${idx}`} className="w-full h-full object-cover" loading="lazy" />
                                             </button>
                                         ))}
                                     </div>
@@ -306,6 +389,29 @@ export default function AdDetails() {
                                 </div>
                             </div>
 
+                            {/* Owner Controls */}
+                            {user && user.id === ad.user_id && (
+                                <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                                    <p className="text-sm font-semibold text-gray-700 mb-3">Gerenciar Anúncio</p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button
+                                            onClick={() => navigate(`/editar-anuncio/${ad.id}`)}
+                                            className="flex items-center justify-center gap-2 py-2 px-4 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-blue-600 font-medium transition-colors"
+                                        >
+                                            <Pencil className="w-4 h-4" />
+                                            Editar
+                                        </button>
+                                        <button
+                                            onClick={handleDelete}
+                                            className="flex items-center justify-center gap-2 py-2 px-4 bg-white text-red-600 border border-red-200 rounded-lg hover:bg-red-50 font-medium transition-colors"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            Excluir
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
                             {user ? (
                                 <button
                                     onClick={handleContact}
@@ -341,19 +447,31 @@ export default function AdDetails() {
                             {/* Seller Info */}
                             <div className="mt-8 pt-6 border-t border-gray-100">
                                 <Link to={`/anunciante/${ad.user_id}`} className="flex items-center gap-4 mb-4 hover:bg-gray-50 p-2 rounded-lg transition-colors group">
-                                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-lg group-hover:bg-blue-200 transition-colors">
-                                        {ad.seller.name.charAt(0).toUpperCase()}
+                                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-lg group-hover:bg-blue-200 transition-colors overflow-hidden">
+                                        {profile?.avatar_url ? (
+                                            <img
+                                                src={profile.avatar_url}
+                                                alt={profile.full_name || ad.seller?.name}
+                                                className="w-full h-full object-cover"
+                                                loading="lazy"
+                                            />
+                                        ) : (
+                                            (profile?.full_name || ad.seller?.name || '?').charAt(0).toUpperCase()
+                                        )}
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500">Vendido por</p>
                                         <div className="flex items-center gap-2">
-                                            <p className="font-bold text-gray-900 text-lg group-hover:text-blue-600 transition-colors">{ad.seller.name}</p>
-                                            {ad.seller.type === 'professional' && (
+                                            <p className="font-bold text-gray-900 text-lg group-hover:text-blue-600 transition-colors">
+                                                {profile?.full_name || ad.seller?.name}
+                                            </p>
+                                            {/* Type is not currently in Profile, fallback to snapshot or assume default */}
+                                            {ad.seller?.type === 'professional' && (
                                                 <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold border border-blue-200 uppercase tracking-wide">
                                                     PRO
                                                 </span>
                                             )}
-                                            {ad.seller.verified && (
+                                            {(profile?.verified || ad.seller?.verified) && (
                                                 <span className="text-blue-600" title="Vendedor Verificado">
                                                     <ShieldCheck className="w-5 h-5 fill-blue-100" />
                                                 </span>
@@ -363,7 +481,9 @@ export default function AdDetails() {
                                 </Link>
                                 <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
                                     <Calendar className="w-4 h-4" />
-                                    <span>No Dezzapego desde {new Date(ad.seller.memberSince || new Date().toISOString()).getFullYear()}</span>
+                                    <span>
+                                        No Dezzapego desde {new Date(profile?.created_at || ad.seller?.memberSince || new Date().toISOString()).getFullYear()}
+                                    </span>
                                 </div>
                             </div>
 

@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { mockAds } from '../data/mockAds';
 import type { Ad } from '../../types';
 
-export function useAds() {
+export type AdsFilters = {
+    lat?: number;
+    lng?: number;
+    radius?: number; // in km
+};
+
+export function useAds(filters?: AdsFilters) {
     const [ads, setAds] = useState<Ad[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -22,42 +27,102 @@ export function useAds() {
                     return;
                 }
 
-                const { data, error } = await supabase
-                    .from('ads')
-                    .select('*');
+                let data: any[] | null = null;
 
-                if (error) {
-                    throw error;
+                // 1. Radius Search (RPC)
+                if (filters?.lat && filters?.lng && filters?.radius) {
+                    const { data: nearbyProps, error: rpcError } = await supabase
+                        .rpc('get_nearby_ads', {
+                            user_lat: filters.lat,
+                            user_lng: filters.lng,
+                            radius_km: filters.radius
+                        });
+
+                    if (rpcError) throw rpcError;
+
+                    if (nearbyProps && nearbyProps.length > 0) {
+                        const ids = nearbyProps.map((p: any) => p.id);
+                        const { data: adData, error: adsError } = await supabase
+                            .from('ads')
+                            .select('*')
+                            .in('id', ids);
+
+                        if (adsError) throw adsError;
+                        data = adData;
+                    } else {
+                        data = [];
+                    }
+                } else {
+                    // 2. Standard Search
+                    const { data: adData, error: adsError } = await supabase
+                        .from('ads')
+                        .select('*');
+
+                    if (adsError) throw adsError;
+                    data = adData;
                 }
 
                 if (data && data.length > 0) {
-                    // We need to map Supabase data to our Ad type
-                    // This assumes the Supabase table has similar structure
-                    // Adjust mapping as needed based on actual table schema
-                    const mappedAds: Ad[] = data.map(item => ({
-                        ...item,
-                        // Ensure dates are strings if Supabase returns Date objects
-                        publishedAt: item.created_at || item.publishedAt,
-                    }));
+                    // Extract User IDs
+                    const userIds = Array.from(new Set(data.map(ad => ad.user_id).filter(Boolean)));
+
+                    // Fetch Profiles
+                    let profilesMap: Record<string, any> = {};
+                    if (userIds.length > 0) {
+                        const { data: profiles } = await supabase
+                            .from('profiles')
+                            .select('*')
+                            .in('id', userIds);
+
+                        if (profiles) {
+                            profiles.forEach(p => {
+                                profilesMap[p.id] = p;
+                            });
+                        }
+                    }
+
+                    // Map Ads with Live Profile Data
+                    const mappedAds: Ad[] = data.map(item => {
+                        const profile = profilesMap[item.user_id];
+
+                        // Merge profile into seller (taking precedence over snapshot)
+                        const seller = {
+                            ...item.seller,
+                            name: profile?.full_name || item.seller?.name || 'Usuário',
+                            avatar_url: profile?.avatar_url || item.seller?.avatar_url,
+                            verified: profile?.verified ?? item.seller?.verified,
+                            memberSince: profile?.created_at || item.seller?.memberSince || new Date().toISOString()
+                        };
+
+                        return {
+                            ...item,
+                            seller,
+                            publishedAt: item.created_at || item.publishedAt,
+                        };
+                    });
+
                     setAds(mappedAds);
                 } else {
-                    console.log('No ads found in Supabase, utilizing mock data for demonstration.');
-                    setAds(mockAds);
+                    if (filters?.radius) {
+                        // If radius filter is active and no results, show empty
+                        setAds([]);
+                    } else {
+                        console.log('No ads found in Supabase.');
+                        setAds([]); // Fallback to empty list instead of mockAds
+                    }
                 }
 
             } catch (err: any) {
                 console.error('Error fetching ads:', err);
                 setError(err.message);
-                // Fallback to mock data on error for now? 
-                // Let's fallback so the app shouldn't break during setup
-                setAds(mockAds);
+                setAds([]); // Error fallback to empty list
             } finally {
                 setLoading(false);
             }
         }
 
         fetchAds();
-    }, []);
+    }, [filters?.lat, filters?.lng, filters?.radius]);
 
     return { ads, loading, error };
 }

@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
 
 export default function UserDashboard() {
-    const { user } = useAuth();
+    const { user, profile, refreshProfile } = useAuth(); // ADDED profile, refreshProfile
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [submittingVerification, setSubmittingVerification] = useState(false);
@@ -24,31 +24,35 @@ export default function UserDashboard() {
     const [website, setWebsite] = useState('');
     const [instagram, setInstagram] = useState('');
     const [cpfCnpj, setCpfCnpj] = useState('');
-    const [verificationStatus, setVerificationStatus] = useState<'none' | 'pending' | 'verified'>('none');
+    // Use profile status or default
+    const verificationStatus = profile?.verification_status || 'none';
 
     // Stats State
     const [stats, setStats] = useState({ totalAds: 0, totalViews: 0 });
 
     useEffect(() => {
         if (user) {
-            setName(user.user_metadata?.full_name || '');
-            setPhone(user.user_metadata?.phone || '');
-            setBio(user.user_metadata?.bio || '');
-            setState(user.user_metadata?.state || '');
-            setCity(user.user_metadata?.city || '');
-            setWebsite(user.user_metadata?.website || '');
-            setInstagram(user.user_metadata?.instagram || '');
-            setCpfCnpj(user.user_metadata?.cpf_cnpj || '');
-            setVerificationStatus(user.user_metadata?.verification_status || 'none');
+            // Prioritize profile data, fallback to metadata (migration) or empty
+            setName(profile?.full_name || user.user_metadata?.full_name || '');
+            setPhone(profile?.phone || user.user_metadata?.phone || '');
+            setBio(profile?.bio || user.user_metadata?.bio || '');
+            setState(profile?.state || user.user_metadata?.state || '');
+            setCity(profile?.city || user.user_metadata?.city || '');
+            setWebsite(profile?.website || user.user_metadata?.website || '');
+            setInstagram(profile?.instagram || user.user_metadata?.instagram || '');
+            setCpfCnpj(profile?.cpf_cnpj || user.user_metadata?.cpf_cnpj || '');
 
-            if (user.user_metadata?.avatar_url) {
+            if (profile?.avatar_url) {
+                setAvatar([profile.avatar_url]);
+            } else if (user.user_metadata?.avatar_url) {
                 setAvatar([user.user_metadata.avatar_url]);
             }
+
             fetchStats();
         } else {
             navigate('/login');
         }
-    }, [user, navigate]);
+    }, [user, profile, navigate]); // Added profile dependency
 
     const fetchStats = async () => {
         if (!user) return;
@@ -66,26 +70,50 @@ export default function UserDashboard() {
 
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Validation
+        if (!name.trim()) {
+            toast.error('O campo Nome Completo é obrigatório.');
+            return;
+        }
+        if (!phone.trim()) {
+            toast.error('O campo Telefone é obrigatório.');
+            return;
+        }
+        if (!cpfCnpj.trim()) {
+            toast.error('O campo CPF/CNPJ é obrigatório.');
+            return;
+        }
+
         setLoading(true);
 
         try {
-            const updates: any = {
-                data: {
-                    full_name: name,
-                    phone: phone,
-                    avatar_url: avatar[0] || null,
-                    bio,
-                    state,
-                    city,
-                    website,
-                    instagram,
-                    cpf_cnpj: cpfCnpj
-                }
+            const updates = {
+                full_name: name,
+                avatar_url: avatar[0] || null,
+                phone,
+                bio,
+                state,
+                city,
+                website,
+                instagram,
+                cpf_cnpj: cpfCnpj,
+                updated_at: new Date().toISOString(),
             };
 
-            const { error } = await supabase.auth.updateUser(updates);
+            // 1. Update Profile Table
+            const { error } = await supabase
+                .from('profiles')
+                .upsert({ id: user!.id, ...updates }); // Upsert in case trigger failed
 
             if (error) throw error;
+
+            // 2. Update Auth Metadata (Keep in sync for now, optional but good for redundancy)
+            await supabase.auth.updateUser({
+                data: updates
+            });
+
+            await refreshProfile(); // Refresh context
             toast.success('Perfil atualizado com sucesso!');
         } catch (error) {
             console.error('Error updating profile:', error);
@@ -104,34 +132,18 @@ export default function UserDashboard() {
 
         setSubmittingVerification(true);
         try {
-            // 1. Update User Metadata
-            const { error: authError } = await supabase.auth.updateUser({
-                data: { verification_status: 'pending' }
-            });
-            if (authError) throw authError;
-
-            // 2. Update Ads to reflect pending status (so Admin can see it)
-            // Ideally we'd have a 'users' table or 'verification_requests' table.
-            // For this structure, we'll iterate update user's ads to flag the request.
-            // A smarter way for MVP: Just rely on the admin "checking" occasionally or user sending email,
-            // BUT let's try to make it visible in AdminUsers by updating at least one ad or all.
-            const { error: _adsError } = await supabase
-                .from('ads')
+            // Update Profile Table
+            const { error } = await supabase
+                .from('profiles')
                 .update({
-                    seller: {
-                        ...user.user_metadata, // Update seller snapshot with latest metadata (including pending status)
-                        id: user.id,
-                        name: name,
-                        verification_status: 'pending',
-                        verified: false
-                    }
+                    verification_status: 'pending',
+                    verified: false
                 })
-                .eq('user_id', user.id);
+                .eq('id', user.id);
 
-            // Note: If user has no ads, Admin won't see them in current AdminUsers implementation.
-            // This is a known limitation of the "no users table" approach.
+            if (error) throw error;
 
-            setVerificationStatus('pending');
+            await refreshProfile();
             toast.success('Solicitação enviada! Analisaremos seu perfil em breve.');
         } catch (error) {
             console.error('Error requesting verification:', error);
@@ -270,7 +282,7 @@ export default function UserDashboard() {
                                     {/* Name */}
                                     <div className="space-y-2">
                                         <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                                            Nome Completo
+                                            Nome Completo <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             id="name"
@@ -282,10 +294,24 @@ export default function UserDashboard() {
                                         />
                                     </div>
 
+                                    {/* Email (Read Only) */}
+                                    <div className="space-y-2">
+                                        <label htmlFor="emailDisplay" className="block text-sm font-medium text-gray-500">
+                                            Email <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            id="emailDisplay"
+                                            type="email"
+                                            value={user?.email || ''}
+                                            disabled
+                                            className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                                        />
+                                    </div>
+
                                     {/* Phone */}
                                     <div className="space-y-2">
                                         <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                                            Telefone / WhatsApp
+                                            Telefone / WhatsApp <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             id="phone"
@@ -300,7 +326,7 @@ export default function UserDashboard() {
                                     {/* CPF/CNPJ */}
                                     <div className="space-y-2">
                                         <label htmlFor="cpfCnpj" className="block text-sm font-medium text-gray-700">
-                                            CPF ou CNPJ (Opcional)
+                                            CPF ou CNPJ <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             id="cpfCnpj"

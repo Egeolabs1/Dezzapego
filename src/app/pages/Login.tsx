@@ -4,6 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import SEO from '../../components/SEO';
+
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -33,6 +35,7 @@ export default function Login() {
 
     return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] bg-gray-50 px-4">
+            <SEO title="Entrar" description="Acesse sua conta no Dezzapego" />
             <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-md">
                 <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">Entrar no Dezzapego</h1>
 

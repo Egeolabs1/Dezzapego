@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, Users, LogOut, Menu, Settings, Flag, Image as ImageIcon, Shield, Bell } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Users, LogOut, Menu, Settings, Flag, Image as ImageIcon, Shield, Bell, Home } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Logo } from '../../components/Logo';
 
@@ -11,10 +11,14 @@ export default function AdminLayout() {
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
-    // Simple auth check - in production you'd check a database role
+    // Strict auth check for Admin
     useEffect(() => {
-        if (!loading && !user) {
-            navigate('/login');
+        if (!loading) {
+            if (!user) {
+                navigate('/login');
+            } else if (user.email !== 'ngfilho@gmail.com') {
+                navigate('/'); // Unauthorized access prevention
+            }
         }
     }, [user, loading, navigate]);
 
@@ -78,6 +82,13 @@ export default function AdminLayout() {
                     </nav>
 
                     <div className="p-4 border-t border-gray-100">
+                        <Link
+                            to="/"
+                            className="flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors mb-2"
+                        >
+                            <Home className="w-5 h-5" />
+                            Voltar ao Site
+                        </Link>
                         <button
                             onClick={handleSignOut}
                             className="flex items-center gap-3 px-4 py-3 w-full text-left text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"

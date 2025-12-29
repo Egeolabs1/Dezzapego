@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Hero } from '../components/Hero';
 import { Categories } from '../components/Categories';
@@ -6,47 +7,107 @@ import { Filters } from '../components/Filters';
 import { AdsList } from '../components/AdsList';
 import { AdDetails } from '../components/AdDetails';
 import type { Ad } from '../../types';
+import { useFavorites } from '../hooks/useFavorites';
+
+import SEO from '../../components/SEO';
 
 export default function Home() {
-    const [selectedCategory, setSelectedCategory] = useState<string>('');
-    const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
-    const [selectedTransactionType, setSelectedTransactionType] = useState<'venda' | 'aluguel' | ''>('');
-    const [selectedState, setSelectedState] = useState<string>('');
-    const [selectedCity, setSelectedCity] = useState<string>('');
-    const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Derived state from URL
+    const selectedCategory = searchParams.get('category') || '';
+    const selectedSubcategory = searchParams.get('subcategory') || '';
+    const selectedTransactionType = (searchParams.get('type') as 'venda' | 'aluguel' | '') || '';
+    const selectedState = searchParams.get('state') || '';
+    const selectedCity = searchParams.get('city') || '';
+    const searchQuery = searchParams.get('q') || '';
+
+    const minPrice = searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : 0;
+    const maxPrice = searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : 10000000;
+    const priceRange: [number, number] = [minPrice, maxPrice];
+
+    const radius = searchParams.get('radius') ? Number(searchParams.get('radius')) : 0;
+
+    // Filters that are not yet persisted or complex objects can remain verified simple state for now 
+    // or be expanded later. 'detailsFilters' and 'userLocation' are candidates for future improvement 
+    // but might be too complex for simple URL params without encoding.
+    const [detailsFilters, setDetailsFilters] = useState<Record<string, any>>({});
+    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
     const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
-    const [favorites, setFavorites] = useState<Set<string>>(new Set());
+    const { favorites, toggleFavorite } = useFavorites();
+
+    const updateSearchParams = (updates: Record<string, string | null>) => {
+        setSearchParams(prev => {
+            const newParams = new URLSearchParams(prev);
+            Object.entries(updates).forEach(([key, value]) => {
+                if (value === null || value === '') {
+                    newParams.delete(key);
+                } else {
+                    newParams.set(key, value);
+                }
+            });
+            return newParams;
+        });
+    };
 
     const handleCategorySelect = (category: string) => {
-        setSelectedCategory(category);
-        setSelectedSubcategory('');
-        setSelectedTransactionType('');
+        // When changing category, reset dependent filters
+        setSearchParams(prev => {
+            const newParams = new URLSearchParams(prev);
+            if (category) newParams.set('category', category);
+            else newParams.delete('category');
+
+            newParams.delete('subcategory');
+            newParams.delete('type');
+            return newParams;
+        });
+        setDetailsFilters({});
+    };
+
+    const handleSubcategorySelect = (subcategory: string) => {
+        updateSearchParams({ subcategory });
+    };
+
+    const handleTransactionTypeSelect = (type: string) => {
+        updateSearchParams({ type });
     };
 
     const handleLocationChange = (state: string, city: string) => {
-        setSelectedState(state);
-        setSelectedCity(city);
+        updateSearchParams({ state, city });
     };
 
-    const toggleFavorite = (adId: string) => {
-        setFavorites(prev => {
-            const newFavorites = new Set(prev);
-            if (newFavorites.has(adId)) {
-                newFavorites.delete(adId);
-            } else {
-                newFavorites.add(adId);
-            }
-            return newFavorites;
+    const handleSearchChange = (query: string) => {
+        updateSearchParams({ q: query });
+    };
+
+    const handlePriceRangeChange = (range: [number, number]) => {
+        updateSearchParams({
+            minPrice: range[0].toString(),
+            maxPrice: range[1].toString()
         });
     };
+
+    const handleRadiusChange = (newRadius: number) => {
+        updateSearchParams({ radius: newRadius.toString() });
+    };
+
+    // Handle deep linking to specific ad if ID is in URL (optional, can be added later)
+    // For now, checks existing ad selection logic
 
     if (selectedAd) {
         return (
             <div className="min-h-screen bg-gray-50">
+                <SEO
+                    title={selectedAd.title}
+                    description={selectedAd.description}
+                    image={selectedAd.images[0]}
+                    url={`https://dezzapego.com.br/anuncio/${selectedAd.id}`}
+                    type="article"
+                />
                 <Header
                     searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
+                    onSearchChange={handleSearchChange}
                     onLogoClick={() => setSelectedAd(null)}
                     selectedState={selectedState}
                     selectedCity={selectedCity}
@@ -64,10 +125,15 @@ export default function Home() {
 
     return (
         <div className="min-h-screen bg-gray-50">
+            <SEO title="Home" />
             <Header
                 searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                onLogoClick={() => setSelectedAd(null)}
+                onSearchChange={handleSearchChange}
+                onLogoClick={() => {
+                    setSelectedAd(null);
+                    // Optional: reset filters on logo click? Usually users expect to go to "clean" home.
+                    // keeping persistence for now as it's safer UX.
+                }}
                 selectedState={selectedState}
                 selectedCity={selectedCity}
                 onLocationChange={handleLocationChange}
@@ -77,20 +143,27 @@ export default function Home() {
                 selectedCategory={selectedCategory}
                 onCategorySelect={handleCategorySelect}
                 selectedSubcategory={selectedSubcategory}
-                onSubcategorySelect={setSelectedSubcategory}
+                onSubcategorySelect={handleSubcategorySelect}
                 selectedTransactionType={selectedTransactionType}
-                onTransactionTypeSelect={setSelectedTransactionType}
+                onTransactionTypeSelect={handleTransactionTypeSelect}
             />
             <div className="container mx-auto px-2 md:px-4 py-4 md:py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                     <aside className="lg:col-span-1">
                         <Filters
+                            selectedCategory={selectedCategory}
                             selectedState={selectedState}
-                            onStateChange={setSelectedState}
+                            onStateChange={(state) => updateSearchParams({ state, city: '' })} // Reset city when state changes
                             selectedCity={selectedCity}
-                            onCityChange={setSelectedCity}
+                            onCityChange={(city) => updateSearchParams({ city })}
                             priceRange={priceRange}
-                            onPriceRangeChange={setPriceRange}
+                            onPriceRangeChange={handlePriceRangeChange}
+                            detailsFilters={detailsFilters}
+                            onDetailsFilterChange={setDetailsFilters}
+                            radius={radius}
+                            onRadiusChange={handleRadiusChange}
+                            userLocation={userLocation}
+                            onUserLocationChange={setUserLocation}
                         />
                     </aside>
                     <main className="lg:col-span-3">
@@ -105,6 +178,9 @@ export default function Home() {
                             onAdClick={setSelectedAd}
                             favorites={favorites}
                             onToggleFavorite={toggleFavorite}
+                            detailsFilters={detailsFilters}
+                            radius={radius}
+                            userLocation={userLocation}
                         />
                     </main>
                 </div>
