@@ -58,9 +58,11 @@ export function Footer() {
                     <div className="col-span-1">
                         <h3 className="font-semibold text-gray-900 mb-4">Contato</h3>
                         <ul className="space-y-2 text-sm text-gray-600">
-                            <li className="flex items-center gap-2">
-                                <Mail className="w-4 h-4 text-purple-600" />
-                                <span>Entre em contato</span>
+                            <li>
+                                <Link to="/contato" className="flex items-center gap-2 hover:text-blue-600 transition-colors">
+                                    <Mail className="w-4 h-4 text-purple-600" />
+                                    <span>Entre em contato</span>
+                                </Link>
                             </li>
                         </ul>
                     </div>

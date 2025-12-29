@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
+
 import SEO from '../../components/SEO';
 import { Mail, Send, Loader2, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
