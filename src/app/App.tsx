@@ -27,6 +27,8 @@ import { Footer } from './components/Footer';
 import TermsOfUse from './pages/TermsOfUse';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import SafetyTips from './pages/SafetyTips';
+import Contact from './pages/Contact';
+import AdminMessages from './pages/admin/AdminMessages';
 
 // Ad type moved to src/types/index.ts
 
@@ -69,16 +71,18 @@ function AppContent() {
         <Route path="/editar/:id" element={<EditAd />} />
         <Route path="/dashboard" element={<UserDashboard />} />
         <Route path="/favoritos" element={<MyFavorites />} /> // NEW Route
-        <Route path="/favoritos" element={<MyFavorites />} /> // NEW Route
+
         <Route path="/termos" element={<TermsOfUse />} />
         <Route path="/privacidade" element={<PrivacyPolicy />} />
         <Route path="/dicas-seguranca" element={<SafetyTips />} />
+        <Route path="/contato" element={<Contact />} />
 
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="anuncios" element={<AdminAds />} />
           <Route path="usuarios" element={<AdminUsers />} />
+          <Route path="mensagens" element={<AdminMessages />} />
           <Route path="denuncias" element={<AdminReports />} />
           <Route path="banners" element={<AdminBanners />} />
           <Route path="notificacoes" element={<AdminNotifications />} />

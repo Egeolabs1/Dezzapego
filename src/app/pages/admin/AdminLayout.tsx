@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, Users, LogOut, Menu, Settings, Flag, Image as ImageIcon, Shield, Bell, Home } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Users, LogOut, Menu, Settings, Flag, Image as ImageIcon, Shield, Bell, Home, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Logo } from '../../components/Logo';
 
@@ -35,6 +35,7 @@ export default function AdminLayout() {
     const navItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
         { icon: ShoppingBag, label: 'Anúncios', path: '/admin/anuncios' },
+        { icon: MessageSquare, label: 'Mensagens', path: '/admin/mensagens' },
         { icon: Users, label: 'Usuários', path: '/admin/usuarios' },
         { icon: Flag, label: 'Denúncias', path: '/admin/denuncias' },
         { icon: Bell, label: 'Notificações', path: '/admin/notificacoes' },
