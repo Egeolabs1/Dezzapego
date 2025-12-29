@@ -1,22 +1,8 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-
-// Fix for default marker icon in React-Leaflet
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-
-const DefaultIcon = L.icon({
-    iconUrl: icon,
-    shadowUrl: iconShadow,
-    iconAnchor: [12, 41]
-});
-L.Marker.prototype.options.icon = DefaultIcon;
 import { supabase } from '../../lib/supabase';
 import {
-    Loader2, MapPin, Calendar, ArrowLeft, Share2, MessageCircle,
+    Loader2, MapPin, Calendar, Share2, MessageCircle,
     Flag, X, AlertTriangle, ShieldCheck, ChevronRight, Heart, User, Trash2, Pencil
 } from 'lucide-react';
 import { Ad, Profile } from '../../types';
@@ -193,12 +179,6 @@ export default function AdDetails() {
         }
     };
 
-    const handleSearch = (query: string) => {
-        // Redirect to home with search query
-        // For now, just logging or could navigate
-        // navigate(`/?q=${query}`);
-    };
-
     return (
         <div className="bg-gray-50 min-h-screen pb-12">
             <SEO
@@ -209,9 +189,7 @@ export default function AdDetails() {
                 type="product"
                 structuredData={jsonLd}
             />
-            <Header
-                onLogoClick={() => navigate('/')}
-            />
+            <Header />
 
             {/* Breadcrumb Navigation */}
             <div className="bg-white border-b border-gray-200">

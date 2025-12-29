@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Hero } from '../components/Hero';
@@ -105,14 +105,7 @@ export default function Home() {
                     url={`https://dezzapego.com.br/anuncio/${selectedAd.id}`}
                     type="article"
                 />
-                <Header
-                    searchQuery={searchQuery}
-                    onSearchChange={handleSearchChange}
-                    onLogoClick={() => setSelectedAd(null)}
-                    selectedState={selectedState}
-                    selectedCity={selectedCity}
-                    onLocationChange={handleLocationChange}
-                />
+                <Header />
                 <AdDetails
                     ad={selectedAd}
                     onBack={() => setSelectedAd(null)}
@@ -126,18 +119,7 @@ export default function Home() {
     return (
         <div className="min-h-screen bg-gray-50">
             <SEO title="Home" />
-            <Header
-                searchQuery={searchQuery}
-                onSearchChange={handleSearchChange}
-                onLogoClick={() => {
-                    setSelectedAd(null);
-                    // Optional: reset filters on logo click? Usually users expect to go to "clean" home.
-                    // keeping persistence for now as it's safer UX.
-                }}
-                selectedState={selectedState}
-                selectedCity={selectedCity}
-                onLocationChange={handleLocationChange}
-            />
+            <Header />
             <Hero />
             <Categories
                 selectedCategory={selectedCategory}
