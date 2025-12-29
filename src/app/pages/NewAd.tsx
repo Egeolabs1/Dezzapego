@@ -227,6 +227,7 @@ export default function NewAd() {
                             </div>
                             <div className="bg-gray-50 p-6 rounded-xl border-2 border-dashed border-gray-200 hover:border-purple-300 transition-colors">
                                 <ImageUpload
+                                    userId={user?.id || ''}
                                     onUpload={handleImageUpload}
                                     onRemove={handleImageRemove}
                                     currentImages={formData.images}

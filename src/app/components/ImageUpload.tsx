@@ -4,6 +4,7 @@ import { Upload, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ImageUploadProps {
+    userId: string;
     onUpload: (url: string) => void;
     onRemove: (url: string) => void;
     currentImages: string[];
@@ -12,7 +13,7 @@ interface ImageUploadProps {
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-export function ImageUpload({ onUpload, onRemove, currentImages = [], maxImages = 6 }: ImageUploadProps) {
+export function ImageUpload({ userId, onUpload, onRemove, currentImages = [], maxImages = 6 }: ImageUploadProps) {
     const [uploading, setUploading] = useState(false);
 
     const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,7 +41,7 @@ export function ImageUpload({ onUpload, onRemove, currentImages = [], maxImages 
                 try {
                     const fileExt = file.name.split('.').pop();
                     const fileName = `${Math.random()}.${fileExt}`;
-                    const filePath = `${fileName}`;
+                    const filePath = `${userId}/${fileName}`;
 
                     const { error: uploadError } = await supabase.storage
                         .from('ads')

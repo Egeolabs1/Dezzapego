@@ -87,21 +87,24 @@ function AppContent() {
 }
 
 import { HelmetProvider } from 'react-helmet-async';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function App() {
   return (
-    <HelmetProvider>
-      <AuthProvider>
-        <FilterProvider>
-          <MaintenanceProvider>
-            <BrowserRouter>
-              <AppContent />
-              <Toaster richColors position="top-right" />
-            </BrowserRouter>
-          </MaintenanceProvider>
-        </FilterProvider>
-      </AuthProvider>
-    </HelmetProvider>
+    <ErrorBoundary>
+      <HelmetProvider>
+        <AuthProvider>
+          <FilterProvider>
+            <MaintenanceProvider>
+              <BrowserRouter>
+                <AppContent />
+                <Toaster richColors position="top-right" />
+              </BrowserRouter>
+            </MaintenanceProvider>
+          </FilterProvider>
+        </AuthProvider>
+      </HelmetProvider>
+    </ErrorBoundary>
   );
 }
 

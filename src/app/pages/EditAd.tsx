@@ -161,6 +161,7 @@ export default function EditAd() {
                         </label>
                         <div className="bg-white p-4 rounded-lg border border-gray-200">
                             <ImageUpload
+                                userId={user?.id || ''}
                                 onUpload={handleImageUpload}
                                 onRemove={handleImageRemove}
                                 currentImages={formData.images}
