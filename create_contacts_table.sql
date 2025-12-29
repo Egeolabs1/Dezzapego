@@ -25,13 +25,19 @@ create policy "Anyone can insert contacts"
 drop policy if exists "Admins can view contacts" on public.contacts;
 create policy "Admins can view contacts"
   on public.contacts for select
-  using (auth.jwt() ->> 'email' = 'ngfilho@gmail.com');
+  using (public.is_admin());
 
 -- 3. Allow only specific admin to update (mark as read)
 drop policy if exists "Admins can update contacts" on public.contacts;
 create policy "Admins can update contacts"
   on public.contacts for update
-  using (auth.jwt() ->> 'email' = 'ngfilho@gmail.com');
+  using (public.is_admin());
+
+-- 4. Allow admin delete
+drop policy if exists "Admins can delete contacts" on public.contacts;
+create policy "Admins can delete contacts"
+  on public.contacts for delete
+  using (public.is_admin());
 
 -- Grant permissions
 grant insert on public.contacts to anon, authenticated;

@@ -83,8 +83,8 @@ export default function Contact() {
                                         <Mail className="w-6 h-6" />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-gray-900">Email</h3>
-                                        <p className="text-gray-600 text-sm">suporte@dezzapego.com</p>
+                                        <h3 className="font-bold text-gray-900">Atendimento</h3>
+                                        <p className="text-gray-600 text-sm">Envie sua mensagem ao lado</p>
                                     </div>
                                 </div>
                             </div>

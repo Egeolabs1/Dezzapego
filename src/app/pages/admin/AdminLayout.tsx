@@ -3,6 +3,8 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, ShoppingBag, Users, LogOut, Menu, Settings, Flag, Image as ImageIcon, Shield, Bell, Home, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Logo } from '../../components/Logo';
+import { supabase } from '../../../lib/supabase';
+import { toast } from 'sonner';
 
 export default function AdminLayout() {
 
@@ -16,8 +18,18 @@ export default function AdminLayout() {
         if (!loading) {
             if (!user) {
                 navigate('/login');
-            } else if (user.email !== 'ngfilho@gmail.com') {
-                navigate('/'); // Unauthorized access prevention
+            } else {
+                // Check if user is admin via profile
+                // Ideally this should be a stronger check or handled by not rendering the route
+                // But for client-side redirect:
+                const checkAdmin = async () => {
+                    const { data, error } = await supabase.rpc('is_admin');
+                    if (error || !data) {
+                        toast.error('Acesso não autorizado.');
+                        navigate('/');
+                    }
+                };
+                checkAdmin();
             }
         }
     }, [user, loading, navigate]);
