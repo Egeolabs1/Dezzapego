@@ -44,7 +44,12 @@ export function Footer() {
                                     Política de Privacidade
                                 </Link>
                             </li>
-                            <li><span className="text-gray-400 cursor-not-allowed">Dicas de Segurança</span></li>
+                            <li>
+                                <Link to="/dicas-seguranca" className="hover:text-blue-600 transition-colors flex items-center gap-1">
+                                    <ShieldCheck className="w-3 h-3" />
+                                    Dicas de Segurança
+                                </Link>
+                            </li>
                         </ul>
                     </div>
 

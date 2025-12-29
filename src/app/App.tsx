@@ -26,6 +26,7 @@ import { InstallPWA } from './components/InstallPWA';
 import { Footer } from './components/Footer';
 import TermsOfUse from './pages/TermsOfUse';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import SafetyTips from './pages/SafetyTips';
 
 // Ad type moved to src/types/index.ts
 
@@ -71,6 +72,7 @@ function AppContent() {
         <Route path="/favoritos" element={<MyFavorites />} /> // NEW Route
         <Route path="/termos" element={<TermsOfUse />} />
         <Route path="/privacidade" element={<PrivacyPolicy />} />
+        <Route path="/dicas-seguranca" element={<SafetyTips />} />
 
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLayout />}>
