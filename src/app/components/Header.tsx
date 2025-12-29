@@ -219,10 +219,12 @@ export function Header({ hideLocationFilter = false }: HeaderProps) {
                 </button>
               </Link>
             )}
-            <button className="flex items-center gap-2 px-4 py-3 w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg justify-center">
-              <CirclePlus className="w-5 h-5" />
-              <span>Anunciar Grátis</span>
-            </button>
+            <Link to="/anunciar" onClick={() => setMobileMenuOpen(false)}>
+              <button className="flex items-center gap-2 px-4 py-3 w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg justify-center">
+                <CirclePlus className="w-5 h-5" />
+                <span>Anunciar Grátis</span>
+              </button>
+            </Link>
           </div>
         )}
       </div>
