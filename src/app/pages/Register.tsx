@@ -16,6 +16,7 @@ export default function Register() {
     const navigate = useNavigate();
 
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [termsAccepted, setTermsAccepted] = useState(false);
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -23,6 +24,12 @@ export default function Register() {
 
         if (password !== confirmPassword) {
             toast.error('As senhas não coincidem.');
+            setLoading(false);
+            return;
+        }
+
+        if (!termsAccepted) {
+            toast.error('Você deve aceitar os Termos de Uso e Política de Privacidade.');
             setLoading(false);
             return;
         }
@@ -149,6 +156,25 @@ export default function Register() {
                             required
                             className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                         />
+                    </div>
+
+                    <div className="flex items-start gap-3 pt-2">
+                        <div className="flex items-center h-5">
+                            <input
+                                id="terms"
+                                name="terms"
+                                type="checkbox"
+                                required
+                                checked={termsAccepted}
+                                onChange={(e) => setTermsAccepted(e.target.checked)}
+                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                        </div>
+                        <div className="text-sm">
+                            <label htmlFor="terms" className="font-medium text-gray-700">
+                                Declaro que li e concordo com os <Link to="/termos" target="_blank" className="text-blue-600 hover:underline">Termos de Uso</Link> e <Link to="/privacidade" target="_blank" className="text-blue-600 hover:underline">Política de Privacidade</Link>.
+                            </label>
+                        </div>
                     </div>
 
                     <button

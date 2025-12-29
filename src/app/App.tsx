@@ -24,7 +24,8 @@ import AdminLogs from './pages/admin/AdminLogs';
 import { MobileNav } from './components/MobileNav';
 import { InstallPWA } from './components/InstallPWA';
 import { Footer } from './components/Footer';
-import Terms from './pages/Terms';
+import TermsOfUse from './pages/TermsOfUse';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 // Ad type moved to src/types/index.ts
 
@@ -67,7 +68,9 @@ function AppContent() {
         <Route path="/editar/:id" element={<EditAd />} />
         <Route path="/dashboard" element={<UserDashboard />} />
         <Route path="/favoritos" element={<MyFavorites />} /> // NEW Route
-        <Route path="/termos" element={<Terms />} />
+        <Route path="/favoritos" element={<MyFavorites />} /> // NEW Route
+        <Route path="/termos" element={<TermsOfUse />} />
+        <Route path="/privacidade" element={<PrivacyPolicy />} />
 
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLayout />}>

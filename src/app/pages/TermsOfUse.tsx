@@ -1,4 +1,4 @@
-import { ArrowLeft, Shield, FileText, Lock } from 'lucide-react';
+import { ArrowLeft, Shield, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import SEO from '../../components/SEO';
@@ -26,7 +26,7 @@ export default function Terms() {
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="p-8 md:p-12">
                         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
-                            Termos de Uso e Política de Privacidade
+                            Termos de Uso
                         </h1>
 
                         <div className="prose prose-blue max-w-none text-gray-600 space-y-8">
@@ -75,33 +75,8 @@ export default function Terms() {
                                 <p>O Dezzapego se reserva o direito de remover qualquer anúncio que viole estas regras e banir o usuário responsável, sem aviso prévio.</p>
                             </section>
 
-                            <section>
-                                <div className="flex items-center gap-3 mb-4">
-                                    <Lock className="w-6 h-6 text-purple-600" />
-                                    <h2 className="text-2xl font-bold text-gray-900 m-0">3. Política de Privacidade</h2>
-                                </div>
-
-                                <h3 className="text-lg font-bold text-gray-900 mt-4">3.1. Coleta de Dados</h3>
-                                <p>Coletamos informações fornecidas por você (nome, email, telefone) para viabilizar o funcionamento da plataforma e a comunicação entre usuários. Seu endereço de email não é exibido publicamente nos anúncios, a menos que você o inclua na descrição.</p>
-
-                                <h3 className="text-lg font-bold text-gray-900 mt-4">3.2. Uso das Informações</h3>
-                                <p>Utilizamos seus dados para:</p>
-                                <ul className="list-disc pl-5 space-y-1">
-                                    <li>Gerenciar sua conta e anúncios.</li>
-                                    <li>Melhorar a segurança do site.</li>
-                                    <li>Enviar notificações importantes sobre o serviço.</li>
-                                </ul>
-
-                                <h3 className="text-lg font-bold text-gray-900 mt-4">3.3. Cookies e Publicidade</h3>
-                                <p>Utilizamos cookies para melhorar sua experiência de navegação. Também utilizamos serviços de terceiros, como o Google AdSense, que podem usar cookies para exibir anúncios relevantes baseados em suas visitas anteriores a este e outros sites.</p>
-                                <p>Você pode optar por desativar a publicidade personalizada nas configurações de anúncios do Google.</p>
-
-                                <h3 className="text-lg font-bold text-gray-900 mt-4">3.4. Exclusão de Dados</h3>
-                                <p>Você pode solicitar a exclusão completa de sua conta e dados a qualquer momento através do painel de usuário ou entrando em contato com nosso suporte.</p>
-                            </section>
-
                             <section className="bg-gray-50 p-6 rounded-xl border border-gray-200 mt-8">
-                                <h2 className="text-xl font-bold text-gray-900 mb-4">4. Dicas de Segurança para Negócios</h2>
+                                <h2 className="text-xl font-bold text-gray-900 mb-4">3. Dicas de Segurança para Negócios</h2>
                                 <p className="mb-4">Para sua segurança, siga sempre estas recomendações:</p>
                                 <ul className="list-disc pl-5 space-y-2">
                                     <li><strong>Nunca pague antecipadamente:</strong> Não faça depósitos ou transferências antes de ver o produto.</li>

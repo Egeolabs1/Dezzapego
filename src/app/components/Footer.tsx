@@ -35,7 +35,13 @@ export function Footer() {
                             <li>
                                 <Link to="/termos" className="hover:text-blue-600 transition-colors flex items-center gap-1">
                                     <ShieldCheck className="w-3 h-3" />
-                                    Termos de Uso e Privacidade
+                                    Termos de Uso
+                                </Link>
+                            </li>
+                            <li>
+                                <Link to="/privacidade" className="hover:text-blue-600 transition-colors flex items-center gap-1">
+                                    <ShieldCheck className="w-3 h-3" />
+                                    Política de Privacidade
                                 </Link>
                             </li>
                             <li><span className="text-gray-400 cursor-not-allowed">Dicas de Segurança</span></li>
