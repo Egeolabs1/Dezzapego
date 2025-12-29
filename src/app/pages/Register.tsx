@@ -15,9 +15,17 @@ export default function Register() {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
+    const [confirmPassword, setConfirmPassword] = useState('');
+
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+
+        if (password !== confirmPassword) {
+            toast.error('As senhas não coincidem.');
+            setLoading(false);
+            return;
+        }
 
         try {
             const { error } = await supabase.auth.signUp({
@@ -125,6 +133,19 @@ export default function Register() {
                             placeholder="********"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            required
+                            className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">Confirmar Senha</label>
+                        <input
+                            id="confirmPassword"
+                            type="password"
+                            placeholder="********"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
                             required
                             className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                         />
