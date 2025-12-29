@@ -52,7 +52,10 @@ function AppContent() {
     // Allow access to login page so admins can actually log in!
     // We do this by checking the pathname
     const path = window.location.pathname;
-    if (!path.startsWith('/login') && !path.startsWith('/admin')) {
+    const publicRoutes = ['/login', '/admin', '/contato', '/termos', '/privacidade', '/dicas-seguranca'];
+    const isPublicRoute = publicRoutes.some(route => path.startsWith(route));
+
+    if (!isPublicRoute) {
       return <Maintenance />;
     }
   }
