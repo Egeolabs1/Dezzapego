@@ -34,6 +34,14 @@ export default function NewAd() {
         location: { state: 'SP', city: 'São Paulo', neighborhood: '', lat: null as number | null, lng: null as number | null } // NEW
     });
 
+    // Redirect to login if not authenticated
+    useEffect(() => {
+        if (!user) {
+            toast.error('Você precisa estar logado para criar um anúncio.');
+            navigate('/login');
+        }
+    }, [user, navigate]);
+
     // Reset details when category changes
     useEffect(() => {
         setFormData(prev => ({ ...prev, details: {} }));

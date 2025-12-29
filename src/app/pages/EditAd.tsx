@@ -24,6 +24,15 @@ export default function EditAd() {
         images: [] as string[]
     });
 
+    // Redirect if not authenticated
+    useEffect(() => {
+        if (!user) {
+            toast.error('Você precisa estar logado para editar anúncios.');
+            navigate('/login');
+            return;
+        }
+    }, [user, navigate]);
+
     useEffect(() => {
         async function fetchAd() {
             if (!id || !user) return;
