@@ -15,79 +15,89 @@ export type CategoryMap = {
 };
 
 export const CATEGORIES: CategoryMap = {
-  'Eletrônicos': [
-    'Celulares e Tablets',
-    'Computadores e Notebooks',
-    'Games e Consoles',
-    'TV e Vídeo',
-    'Áudio e Som',
-    'Câmeras e Drones',
-    'Acessórios',
-    'Outros Eletrônicos'
-  ],
-  'Móveis': [
-    'Sofás e Poltronas',
-    'Mesas e Cadeiras',
-    'Camas e Colchões',
-    'Armários e Guarda-Roupas',
-    'Estantes e Racks',
-    'Escritório e Home Office',
-    'Jardim e Área Externa',
-    'Decoração',
-    'Outros Móveis'
-  ],
-  'Roupas': [
-    'Feminino',
-    'Masculino',
-    'Infantil',
-    'Calçados',
-    'Bolsas e Acessórios',
-    'Esportivo',
-    'Moda Praia',
-    'Outras Roupas'
-  ],
-  'Esportes': [
-    'Fitness e Musculação',
-    'Ciclismo',
-    'Futebol',
-    'Camping e Pesca',
-    'Surf e Skate',
-    'Tênis e Raquetes',
-    'Artes Marciais',
-    'Outros Esportes'
-  ],
   'Imóveis': [
-    'Venda',
-    'Aluguel',
+    'Venda - casas e apartamentos',
+    'Aluguel - casas e apartamentos',
     'Temporada',
-    'Lançamentos'
+    'Terrenos, sítios e fazendas',
+    'Comércio e indústria',
+    'Imóvel Novo'
   ],
-  'Veículos': [
-    'Carros',
+  'Autos e Peças': [
+    'Carros, Vans e Utilitários',
     'Motos',
-    'Caminhões',
-    'Náutica',
-    'Peças e Acessórios',
-    'Outros Veículos'
+    'Caminhões e Ônibus',
+    'Barcos e Aeronaves',
+    'Peças e Acessórios'
+  ],
+  'Para a sua Casa': [
+    'Móveis',
+    'Eletrodomésticos',
+    'Materiais de Construção',
+    'Jardim e Agricultura',
+    'Utensílios Domésticos',
+    'Decoração',
+    'Cama, Mesa e Banho'
+  ],
+  'Eletrônicos e Celulares': [
+    'Celulares e Telefonia',
+    'Computadores e Acessórios',
+    'Videogames',
+    'TV e Vídeo',
+    'Áudio',
+    'Câmeras e Drones'
+  ],
+  'Música e Hobbies': [
+    'Instrumentos Musicais',
+    'Livros e Revistas',
+    'Filmes e Música',
+    'Coleções',
+    'Artes e Antiguidades',
+    'Brinquedos e Jogos'
+  ],
+  'Esportes e Lazer': [
+    'Esportes e Ginástica',
+    'Ciclismo',
+    'Camping e Pesca',
+    'Skate e Patins'
+  ],
+  'Moda e Beleza': [
+    'Roupas e Calçados',
+    'Bolsas, Malas e Mochilas',
+    'Beleza e Saúde',
+    'Acessórios',
+    'Artigos Infantis'
+  ],
+  'Agro e Indústria': [
+    'Animais de Fazenda',
+    'Maquinaria Agrícola',
+    'Comércio e Escritório',
+    'Equipamentos Industriais'
   ],
   'Serviços': [
     'Assistência Técnica',
-    'Aulas e Cursos',
-    'Reformas e Serviços',
-    'Saúde e Beleza',
-    'Eventos e Festas',
+    'Aulas',
+    'Consultoria',
+    'Design',
+    'Eventos',
+    'Limpeza',
+    'Reformas',
+    'Saúde',
+    'Turismo',
     'Transporte',
-    'Outros Serviços'
+    'Outros'
   ],
-  'Outros': [
-    'Brinquedos e Hobbies',
-    'Música e Instrumentos',
-    'Livros e Revistas',
-    'Animais e Acessórios',
-    'Colecionáveis',
-    'Agro e Indústria',
-    'Vagas de Emprego',
-    'Diversos'
+  'Vagas de Emprego': [
+    'Administrativo e Financeiro',
+    'Comercial e Vendas',
+    'TI e Tecnologia',
+    'Saúde e Medicina',
+    'Educação',
+    'Engenharia e Arquitetura',
+    'Marketing e Comunicação',
+    'Serviços Gerais',
+    'Transporte e Logística',
+    'Outros'
   ]
 };
 
@@ -107,34 +117,6 @@ export const CATEGORY_KEYS = Object.keys(CATEGORIES);
 // Structured data for UI (Categories Component)
 export const categoriesData = [
   {
-    id: 'Eletrônicos',
-    name: 'Eletrônicos',
-    icon: Smartphone,
-    count: 120, // Placeholder
-    subcategories: CATEGORIES['Eletrônicos'].map(sub => ({ id: sub, name: sub, count: 0 }))
-  },
-  {
-    id: 'Móveis',
-    name: 'Móveis',
-    icon: Sofa,
-    count: 85,
-    subcategories: CATEGORIES['Móveis'].map(sub => ({ id: sub, name: sub, count: 0 }))
-  },
-  {
-    id: 'Roupas',
-    name: 'Roupas',
-    icon: Shirt,
-    count: 230,
-    subcategories: CATEGORIES['Roupas'].map(sub => ({ id: sub, name: sub, count: 0 }))
-  },
-  {
-    id: 'Esportes',
-    name: 'Esportes',
-    icon: Dumbbell,
-    count: 45,
-    subcategories: CATEGORIES['Esportes'].map(sub => ({ id: sub, name: sub, count: 0 }))
-  },
-  {
     id: 'Imóveis',
     name: 'Imóveis',
     icon: Home,
@@ -142,11 +124,53 @@ export const categoriesData = [
     subcategories: CATEGORIES['Imóveis'].map(sub => ({ id: sub, name: sub, count: 0 }))
   },
   {
-    id: 'Veículos',
-    name: 'Veículos',
+    id: 'Autos e Peças',
+    name: 'Autos e Peças',
     icon: Car,
     count: 30,
-    subcategories: CATEGORIES['Veículos'].map(sub => ({ id: sub, name: sub, count: 0 }))
+    subcategories: CATEGORIES['Autos e Peças'].map(sub => ({ id: sub, name: sub, count: 0 }))
+  },
+  {
+    id: 'Para a sua Casa',
+    name: 'Para a sua Casa',
+    icon: Sofa,
+    count: 85,
+    subcategories: CATEGORIES['Para a sua Casa'].map(sub => ({ id: sub, name: sub, count: 0 }))
+  },
+  {
+    id: 'Eletrônicos e Celulares',
+    name: 'Eletrônicos e Celulares',
+    icon: Smartphone,
+    count: 120,
+    subcategories: CATEGORIES['Eletrônicos e Celulares'].map(sub => ({ id: sub, name: sub, count: 0 }))
+  },
+  {
+    id: 'Música e Hobbies',
+    name: 'Música e Hobbies',
+    icon: MoreHorizontal, // Placeholder icon
+    count: 10,
+    subcategories: CATEGORIES['Música e Hobbies'].map(sub => ({ id: sub, name: sub, count: 0 }))
+  },
+  {
+    id: 'Esportes e Lazer',
+    name: 'Esportes e Lazer',
+    icon: Dumbbell,
+    count: 45,
+    subcategories: CATEGORIES['Esportes e Lazer'].map(sub => ({ id: sub, name: sub, count: 0 }))
+  },
+  {
+    id: 'Moda e Beleza',
+    name: 'Moda e Beleza',
+    icon: Shirt,
+    count: 230,
+    subcategories: CATEGORIES['Moda e Beleza'].map(sub => ({ id: sub, name: sub, count: 0 }))
+  },
+  {
+    id: 'Agro e Indústria',
+    name: 'Agro e Indústria',
+    icon: Wrench, // Placeholder icon
+    count: 5,
+    subcategories: CATEGORIES['Agro e Indústria'].map(sub => ({ id: sub, name: sub, count: 0 }))
   },
   {
     id: 'Serviços',
@@ -156,10 +180,10 @@ export const categoriesData = [
     subcategories: CATEGORIES['Serviços'].map(sub => ({ id: sub, name: sub, count: 0 }))
   },
   {
-    id: 'Outros',
-    name: 'Outros',
+    id: 'Vagas de Emprego',
+    name: 'Vagas de Emprego',
     icon: MoreHorizontal,
-    count: 90,
-    subcategories: CATEGORIES['Outros'].map(sub => ({ id: sub, name: sub, count: 0 }))
+    count: 20,
+    subcategories: CATEGORIES['Vagas de Emprego'].map(sub => ({ id: sub, name: sub, count: 0 }))
   },
 ];
