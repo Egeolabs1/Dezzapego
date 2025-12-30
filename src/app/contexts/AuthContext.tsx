@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             const { data, error } = await supabase
                 .from('profiles')
-                .select('id, full_name, avatar_url, email, bio, city, state, reserved_username, verified, verification_status, role')
+                .select('*')
                 .eq('id', userId)
                 .maybeSingle();
 
@@ -53,7 +53,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setSession(session);
             setUser(session?.user ?? null);
             if (session?.user) {
-                fetchProfile(session.user.id);
+                fetchProfile(session.user.id).finally(() => {
+                    setLoading(false);
+                });
             } else {
                 setLoading(false);
             }
@@ -64,11 +66,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setSession(session);
             setUser(session?.user ?? null);
             if (session?.user) {
-                fetchProfile(session.user.id);
+                // Determine if we need to fetch profile (e.g. if inconsistent with session)
+                fetchProfile(session.user.id).finally(() => setLoading(false));
             } else {
                 setProfile(null);
+                setLoading(false);
             }
-            setLoading(false);
         });
 
         return () => subscription.unsubscribe();
