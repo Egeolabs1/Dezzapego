@@ -46,15 +46,15 @@ export function Categories({
                 <button
                   key={category.id}
                   onClick={() => onCategorySelect(isSelected ? '' : category.id)}
-                  className={`flex flex-col items-center gap-2 min-w-[72px] md:min-w-0 transition-all ${isSelected ? 'scale-105' : 'hover:scale-105'}`}
+                  className={`flex flex-col items-center gap-2 w-[85px] shrink-0 md:w-auto md:shrink transition-all ${isSelected ? 'scale-105' : 'hover:scale-105'}`}
                 >
-                  <div className={`w-16 h-16 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-all shadow-sm border-2 ${isSelected
+                  <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center transition-all shadow-sm border-2 ${isSelected
                     ? 'bg-blue-600 text-white border-blue-600 shadow-blue-200'
                     : 'bg-white text-gray-600 border-gray-100 hover:border-blue-200 hover:shadow-md'
                     }`}>
-                    <Icon className="w-7 h-7 md:w-6 md:h-6" />
+                    <Icon className="w-6 h-6 md:w-7 md:h-7" />
                   </div>
-                  <span className={`text-xs md:text-sm font-medium whitespace-nowrap ${isSelected ? 'text-blue-700' : 'text-gray-600'}`}>
+                  <span className={`text-[11px] md:text-sm font-medium text-center leading-3 line-clamp-2 h-7 flex items-start justify-center ${isSelected ? 'text-blue-700' : 'text-gray-600'}`}>
                     {category.name}
                   </span>
                 </button>
