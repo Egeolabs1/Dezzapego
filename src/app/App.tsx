@@ -28,6 +28,7 @@ import TermsOfUse from './pages/TermsOfUse';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import SafetyTips from './pages/SafetyTips';
 import Contact from './pages/Contact';
+import SiteMap from './pages/SiteMap';
 import AdminMessages from './pages/admin/AdminMessages';
 
 // Ad type moved to src/types/index.ts
@@ -78,6 +79,7 @@ function AppContent() {
         <Route path="/termos" element={<TermsOfUse />} />
         <Route path="/privacidade" element={<PrivacyPolicy />} />
         <Route path="/dicas-seguranca" element={<SafetyTips />} />
+        <Route path="/mapa-do-site" element={<SiteMap />} />
         <Route path="/contato" element={<Contact />} />
 
         {/* Admin Routes */}
