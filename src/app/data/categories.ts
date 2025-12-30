@@ -21,7 +21,7 @@ export const CATEGORIES: CategoryMap = {
     'Temporada',
     'Terrenos, sítios e fazendas',
     'Comércio e indústria',
-    'Imóvel Novo'
+    'Lançamento'
   ],
   'Autos e Peças': [
     'Carros, Vans e Utilitários',

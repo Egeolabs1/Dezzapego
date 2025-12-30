@@ -17,7 +17,7 @@ export type CategorySpec = {
 
 export const CATEGORY_SPECS: Record<string, CategorySpec> = {
     'Imóveis': {
-        subcategories: ['Venda - casas e apartamentos', 'Aluguel - casas e apartamentos', 'Temporada', 'Terrenos, sítios e fazendas', 'Comércio e indústria', 'Imóvel Novo'],
+        subcategories: ['Venda - casas e apartamentos', 'Aluguel - casas e apartamentos', 'Temporada', 'Terrenos, sítios e fazendas', 'Comércio e indústria', 'Lançamento'],
         fields: [
             { name: 'type', label: 'Tipo de Imóvel', type: 'select', options: ['Casa', 'Apartamento', 'Terreno', 'Comercial', 'Sítio/Chácara'], required: true },
             { name: 'bedrooms', label: 'Quartos', type: 'number', placeholder: 'Ex: 2' },
