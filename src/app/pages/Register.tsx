@@ -50,7 +50,7 @@ export default function Register() {
             if (error) throw error;
 
             toast.success('Cadastro realizado com sucesso! Verifique seu email se necessário.');
-            navigate('/');
+            navigate('/anunciar');
         } catch (error: any) {
             toast.error(error.message || 'Erro ao realizar cadastro.');
         } finally {
