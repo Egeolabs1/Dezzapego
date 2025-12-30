@@ -238,6 +238,7 @@ export default function NewAd() {
                                     userId={user?.id || ''}
                                     onUpload={handleImageUpload}
                                     onRemove={handleImageRemove}
+                                    onReorder={(newImages) => setFormData(prev => ({ ...prev, images: newImages }))}
                                     currentImages={formData.images}
                                 />
                                 <p className="text-center text-sm text-gray-500 mt-4">

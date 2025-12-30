@@ -7,14 +7,24 @@ interface ImageUploadProps {
     userId: string;
     onUpload: (url: string) => void;
     onRemove: (url: string) => void;
+    onReorder?: (newImages: string[]) => void; // New prop
     currentImages: string[];
     maxImages?: number;
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-export function ImageUpload({ userId, onUpload, onRemove, currentImages = [], maxImages = 6 }: ImageUploadProps) {
+export function ImageUpload({ userId, onUpload, onRemove, onReorder, currentImages = [], maxImages = 6 }: ImageUploadProps) {
     const [uploading, setUploading] = useState(false);
+
+    const handleMakeMain = (index: number) => {
+        if (index === 0 || !onReorder) return;
+        const newImages = [...currentImages];
+        const [selectedImage] = newImages.splice(index, 1);
+        newImages.unshift(selectedImage);
+        onReorder(newImages);
+        toast.success('Imagem definida como principal!');
+    };
 
     const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         try {
@@ -74,14 +84,33 @@ export function ImageUpload({ userId, onUpload, onRemove, currentImages = [], ma
             {currentImages.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                     {currentImages.map((url, index) => (
-                        <div key={url} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group">
+                        <div
+                            key={url}
+                            className={`relative aspect-square rounded-lg overflow-hidden border-2 group cursor-pointer transition-all ${index === 0 ? 'border-purple-600 ring-2 ring-purple-100' : 'border-gray-200 hover:border-purple-300'}`}
+                            onClick={() => handleMakeMain(index)}
+                        >
                             <img
                                 src={url}
                                 alt={`Upload preview ${index + 1}`}
                                 className="w-full h-full object-cover"
                             />
+                            {index === 0 && (
+                                <div className="absolute top-2 left-2 px-2 py-1 bg-purple-600 text-white text-xs font-bold rounded-full shadow-md z-10">
+                                    Principal
+                                </div>
+                            )}
+                            {index !== 0 && (
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                                    <span className="text-white font-medium opacity-0 group-hover:opacity-100 bg-black/50 px-3 py-1 rounded-full text-xs pointer-events-none">
+                                        Definir como Principal
+                                    </span>
+                                </div>
+                            )}
                             <button
-                                onClick={() => onRemove(url)}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onRemove(url);
+                                }}
                                 type="button"
                                 className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 focus:outline-none"
                                 title="Remover imagem"

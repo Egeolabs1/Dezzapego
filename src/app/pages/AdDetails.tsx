@@ -170,8 +170,7 @@ export default function AdDetails() {
             "url": window.location.href,
             "priceCurrency": "BRL",
             "price": ad.price,
-            "availability": "https://schema.org/InStock",
-            "itemCondition": ad.condition === 'new' ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition"
+            "availability": "https://schema.org/InStock"
         },
         "seller": {
             "@type": "Person",
@@ -183,7 +182,7 @@ export default function AdDetails() {
         <div className="bg-gray-50 min-h-screen pb-12">
             <SEO
                 title={ad.title}
-                description={ad.description?.substring(0, 160)}
+                description={`${formatPrice(ad.price)} - ${ad.description?.substring(0, 160)}`}
                 image={ad.images[0]}
                 url={window.location.href}
                 type="product"

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { formatPrice } from '../../lib/formatters';
+
 import { useSearchParams } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Hero } from '../components/Hero';
@@ -8,6 +10,7 @@ import { AdsList } from '../components/AdsList';
 import { AdDetails } from '../components/AdDetails';
 import type { Ad } from '../../types';
 import { useFavorites } from '../hooks/useFavorites';
+
 
 import SEO from '../../components/SEO';
 
@@ -94,7 +97,7 @@ export default function Home() {
             <div className="min-h-screen bg-gray-50">
                 <SEO
                     title={selectedAd.title}
-                    description={selectedAd.description}
+                    description={`${formatPrice(selectedAd.price)} - ${selectedAd.description}`}
                     image={selectedAd.images[0]}
                     url={`https://dezzapego.com/anuncio/${selectedAd.id}`}
                     type="article"
