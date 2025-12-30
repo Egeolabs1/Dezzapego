@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ImageUpload } from '../components/ImageUpload';
-import { Loader2, ArrowLeft, MapPin, Image as ImageIcon, Tag, FileText, DollarSign } from 'lucide-react';
+import { Loader2, ArrowLeft, MapPin, Image as ImageIcon, Tag, FileText, DollarSign, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { CATEGORY_SPECS } from '../data/categorySpecs';
 
@@ -31,7 +31,7 @@ export default function NewAd() {
         subcategory: '',
         images: [] as string[],
         details: {} as Record<string, any>,
-        location: { state: 'SP', city: 'São Paulo', neighborhood: '', lat: null as number | null, lng: null as number | null } // NEW
+        location: { state: 'SP', city: 'São Paulo', neighborhood: '', lat: null as number | null, lng: null as number | null }
     });
 
     // Redirect to login if not authenticated
@@ -50,7 +50,7 @@ export default function NewAd() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // ... (auth checks)
+
         if (!user) {
             toast.error('Você precisa estar logado para anunciar.');
             navigate('/login');
@@ -72,7 +72,6 @@ export default function NewAd() {
         try {
             const numericPrice = parseFloat(formData.price.replace(/[^\d.,]/g, '').replace(',', '.'));
 
-            // Seller snapshot for backward compatibility and display
             const seller = {
                 id: user.id,
                 name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário',
@@ -91,7 +90,7 @@ export default function NewAd() {
                 lng: formData.location.lng,
                 images: formData.images,
                 user_id: user.id,
-                seller: seller, // Required by DB schema
+                seller: seller,
                 featured: false,
                 views: 0,
                 details: formData.details,
@@ -102,7 +101,7 @@ export default function NewAd() {
             const { data, error } = await supabase
                 .from('ads')
                 .insert(payload)
-                .select(); // Validate insert returned data
+                .select();
 
             if (error) throw error;
 
@@ -204,10 +203,6 @@ export default function NewAd() {
             images: prev.images.filter(url => url !== urlToRemove)
         }));
     };
-
-    // ... check user login return ...
-
-    // ... check user login return ...
 
     return (
         <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -369,7 +364,6 @@ export default function NewAd() {
                                                     const address = data.address || {};
                                                     const city = address.city || address.town || address.village || address.municipality || 'São Paulo';
 
-                                                    // Robust State Detection
                                                     let state = address.state_code || '';
                                                     if (!state && address['ISO3166-2-lvl4']) {
                                                         state = address['ISO3166-2-lvl4'].split('-')[1];
@@ -463,6 +457,36 @@ export default function NewAd() {
                                 </p>
                             </div>
                         </section>
+
+                        {/* Featured Ad Option (Visual Only) */}
+                        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4">
+                            <div className="flex items-start gap-4">
+                                <div className="p-2 bg-yellow-100 rounded-full text-yellow-600">
+                                    <Star className="w-6 h-6" />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="text-sm font-medium text-gray-900">Destacar Anúncio</h3>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        Seus anúncios aparecem no topo das buscas e vendem até 3x mais rápido.
+                                    </p>
+                                    <div className="mt-3">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                className="w-4 h-4 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500"
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        toast.info('Funcionalidade de destaque em breve!');
+                                                        e.target.checked = false;
+                                                    }
+                                                }}
+                                            />
+                                            <span className="text-sm font-medium text-gray-700">Quero destacar este anúncio (R$ 9,90)</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <div className="pt-6">
                             <button

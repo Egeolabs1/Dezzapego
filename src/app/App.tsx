@@ -30,6 +30,7 @@ import SafetyTips from './pages/SafetyTips';
 import Contact from './pages/Contact';
 import SiteMap from './pages/SiteMap';
 import AdminMessages from './pages/admin/AdminMessages';
+import Plans from './pages/Plans'; // NEW
 
 // Ad type moved to src/types/index.ts
 
@@ -81,6 +82,7 @@ function AppContent() {
         <Route path="/dicas-seguranca" element={<SafetyTips />} />
         <Route path="/mapa-do-site" element={<SiteMap />} />
         <Route path="/contato" element={<Contact />} />
+        <Route path="/planos" element={<Plans />} />
 
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLayout />}>

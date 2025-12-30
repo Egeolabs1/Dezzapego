@@ -35,6 +35,7 @@ export type Ad = {
     publishedAt: string;
     featured: boolean;
     views: number;
+    featuredExpiresAt?: string; // NEW: For monetization
 };
 
 export type Profile = {

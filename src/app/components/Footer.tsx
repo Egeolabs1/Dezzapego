@@ -25,6 +25,7 @@ export function Footer() {
                             <li><Link to="/" className="hover:text-blue-600 transition-colors">Home</Link></li>
                             <li><Link to="/anunciar" className="hover:text-blue-600 transition-colors">Anunciar Grátis</Link></li>
                             <li><Link to="/favoritos" className="hover:text-blue-600 transition-colors">Meus Favoritos</Link></li>
+                            <li><Link to="/planos" className="hover:text-blue-600 transition-colors">Planos e Preços</Link></li>
                             <li><Link to="/mapa-do-site" className="hover:text-blue-600 transition-colors">Mapa do Site</Link></li>
                             <li><Link to="/contato" className="hover:text-blue-600 transition-colors">Fale Conosco</Link></li>
                         </ul>
