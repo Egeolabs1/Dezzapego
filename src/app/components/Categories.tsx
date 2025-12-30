@@ -37,7 +37,7 @@ export function Categories({
             )}
           </div>
 
-          <div className="flex overflow-x-auto pt-4 pb-4 gap-2 md:grid md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 md:gap-4 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
+          <div className="flex overflow-x-auto pt-4 pb-4 gap-2 md:grid md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-10 md:gap-4 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
             {categoriesData.map((category) => {
               const Icon = category.icon;
               const isSelected = selectedCategory === category.id;
