@@ -23,7 +23,9 @@ export function useAds(filters?: AdsFilters) {
                 // Check if we have credentials
                 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
                 if (!supabaseUrl || supabaseUrl === 'YOUR_SUPABASE_URL') {
-                    console.log('No Supabase credentials found, using mock data.');
+                    if (import.meta.env.DEV) {
+                        console.debug('[useAds] Supabase não configurado; lista vazia.');
+                    }
                     setAds(mockAds);
                     setLoading(false);
                     return;
@@ -105,13 +107,7 @@ export function useAds(filters?: AdsFilters) {
 
                     setAds(mappedAds);
                 } else {
-                    if (filters?.radius) {
-                        // If radius filter is active and no results, show empty
-                        setAds([]);
-                    } else {
-                        console.log('No ads found in Supabase.');
-                        setAds([]); // Fallback to empty list instead of mockAds
-                    }
+                    setAds([]);
                 }
 
             } catch (err: any) {
