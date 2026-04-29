@@ -60,7 +60,7 @@ export default function Register() {
 
     return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] bg-gray-50 px-4">
-            <SEO title="Criar Conta" description="Crie sua conta no Dezzapego e comece a vender ou comprar" />
+            <SEO title="Criar Conta" description="Crie sua conta no Dezzapego e comece a vender ou comprar" noIndex />
             <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-md">
                 <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">Crie sua conta</h1>
 

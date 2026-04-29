@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
-import { formatDate } from '../../../lib/formatters';
 import { Shield, Search, User } from 'lucide-react';
 
 export default function AdminLogs() {

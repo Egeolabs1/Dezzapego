@@ -1,15 +1,11 @@
-import { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
 import { useAds } from '../hooks/useAds';
 import { useFavorites } from '../hooks/useFavorites';
-import { Ad } from '../../types';
 import { Link } from 'react-router-dom';
-import { Loader2, Heart, Calendar, MapPin } from 'lucide-react';
+import { Loader2, Heart, MapPin, Clock } from 'lucide-react';
 import { formatPrice, formatDate } from '../../lib/formatters';
 
 export default function MyFavorites() {
-    // We reuse Header components for consistency
-    const [searchQuery, setSearchQuery] = useState('');
     const { ads, loading: adsLoading } = useAds();
     const { favorites, toggleFavorite, loading: favLoading } = useFavorites();
 
@@ -21,12 +17,6 @@ export default function MyFavorites() {
     return (
         <div className="min-h-screen bg-gray-50">
             <Header
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery} // We might not use this search here, but Header requires it
-                onLogoClick={() => { }} // No-op or navigate home
-                selectedState=""
-                selectedCity=""
-                onLocationChange={() => { }}
                 hideLocationFilter={true} // Optional: hide location if not relevant here
             />
 
@@ -103,6 +93,3 @@ export default function MyFavorites() {
         </div>
     );
 }
-
-// Helper to make the Clock icon work (was missing in imports)
-import { Clock } from 'lucide-react';

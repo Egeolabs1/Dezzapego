@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { FilterProvider } from './contexts/FilterContext';
 import Home from './pages/Home';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 import Register from './pages/Register';
 import { Toaster } from 'sonner';
 import NewAd from './pages/NewAd';
@@ -68,6 +69,7 @@ function AppContent() {
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/redefinir-senha" element={<ResetPassword />} />
         <Route path="/register" element={<Register />} />
         <Route path="/anunciar" element={<NewAd />} />
         <Route path="/meus-anuncios" element={<MyAds />} />

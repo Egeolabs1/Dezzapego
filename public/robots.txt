@@ -1,3 +1,5 @@
+# Gerado por npm run generate:sitemap — domínio em VITE_SITE_URL
 User-agent: *
 Allow: /
+
 Sitemap: https://dezzapego.com/sitemap.xml

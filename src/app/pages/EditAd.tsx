@@ -5,8 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { ImageUpload } from '../components/ImageUpload';
 import { Loader2, ArrowLeft, Save } from 'lucide-react';
 import { toast } from 'sonner';
-
-import { CATEGORIES, CATEGORY_KEYS } from '../data/categories';
+import { CATEGORY_SPECS, getCategoryFields } from '../data/categorySpecs';
+import { AdSeoHints } from '../../components/AdSeoHints';
 
 export default function EditAd() {
     const { id } = useParams<{ id: string }>();
@@ -21,7 +21,8 @@ export default function EditAd() {
         description: '',
         category: '',
         subcategory: '',
-        images: [] as string[]
+        images: [] as string[],
+        details: {} as Record<string, any>
     });
 
     // Redirect if not authenticated
@@ -59,7 +60,8 @@ export default function EditAd() {
                     description: data.description,
                     category: data.category,
                     subcategory: data.subcategory || '',
-                    images: data.images || []
+                    images: data.images || [],
+                    details: data.details || {}
                 });
             } catch (error) {
                 console.error('Error fetching ad:', error);
@@ -91,10 +93,54 @@ export default function EditAd() {
             return;
         }
 
+        const trimmedTitle = formData.title.trim();
+        const trimmedDesc = formData.description.trim();
+        if (trimmedTitle.length < 15) {
+            toast.error('Use um título mais específico (mínimo 15 caracteres) para aparecer bem nas buscas.');
+            return;
+        }
+        if (trimmedDesc.length < 80) {
+            toast.error('Amplie a descrição para pelo menos 80 caracteres: estado do item, medidas e o que está incluso.');
+            return;
+        }
+
+        const fields = getCategoryFields(formData.category, formData.subcategory);
+        if (fields.length > 0) {
+            const missingRequired = fields.filter((field) => {
+                if (!field.required) return false;
+                const value = formData.details[field.name];
+                return value === undefined || value === null || String(value).trim() === '';
+            });
+
+            if (missingRequired.length > 0) {
+                toast.error(`Preencha os campos obrigatórios: ${missingRequired.map((f) => f.label).join(', ')}`);
+                return;
+            }
+        }
+
         setSaving(true);
 
         try {
             const numericPrice = parseFloat(formData.price.replace(/[^\d.,]/g, '').replace(',', '.'));
+
+            const normalizedDetails: Record<string, any> = {};
+            if (fields.length > 0) {
+                fields.forEach((field) => {
+                    const value = formData.details[field.name];
+                    if (field.type === 'checkbox') {
+                        normalizedDetails[field.name] = Boolean(value);
+                    } else if (field.type === 'number') {
+                        if (value === undefined || value === null || String(value).trim() === '') {
+                            normalizedDetails[field.name] = '';
+                        } else {
+                            const n = Number(value);
+                            normalizedDetails[field.name] = Number.isNaN(n) ? value : n;
+                        }
+                    } else {
+                        normalizedDetails[field.name] = value ?? '';
+                    }
+                });
+            }
 
             const { error } = await supabase
                 .from('ads')
@@ -105,6 +151,7 @@ export default function EditAd() {
                     category: formData.category,
                     subcategory: formData.subcategory,
                     images: formData.images,
+                    details: normalizedDetails,
                 })
                 .eq('id', id);
 
@@ -124,10 +171,81 @@ export default function EditAd() {
         const { name, value } = e.target;
         setFormData(prev => {
             if (name === 'category') {
-                return { ...prev, [name]: value, subcategory: '' }; // Reset subcategory
+                return { ...prev, [name]: value, subcategory: '', details: {} }; // Reset subcategory e detalhes
+            }
+            if (name === 'subcategory') {
+                return { ...prev, [name]: value, details: {} };
             }
             return { ...prev, [name]: value };
         });
+    };
+
+    const handleDetailChange = (name: string, value: any) => {
+        setFormData(prev => ({
+            ...prev,
+            details: { ...prev.details, [name]: value }
+        }));
+    };
+
+    const renderDynamicFields = () => {
+        if (!formData.category || !CATEGORY_SPECS[formData.category]) return null;
+
+        const fields = getCategoryFields(formData.category, formData.subcategory);
+
+        return fields.map(field => (
+            <div key={field.name} className="space-y-2">
+                {field.type !== 'checkbox' && (
+                    <label htmlFor={`field-${field.name}`} className="block text-sm font-medium text-gray-700">
+                        {field.label}
+                        {field.required ? <span className="text-red-500 ml-1">*</span> : null}
+                    </label>
+                )}
+                <div className="relative">
+                    {field.type === 'select' ? (
+                        <select
+                            id={`field-${field.name}`}
+                            value={formData.details[field.name] || ''}
+                            onChange={(e) => handleDetailChange(field.name, e.target.value)}
+                            required={field.required}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                            aria-label={field.label}
+                        >
+                            <option value="">Selecione...</option>
+                            {field.options?.map(opt => (
+                                <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                        </select>
+                    ) : field.type === 'checkbox' ? (
+                        <label className="flex items-center gap-3 p-2 border border-gray-200 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors">
+                            <input
+                                type="checkbox"
+                                checked={!!formData.details[field.name]}
+                                onChange={(e) => handleDetailChange(field.name, e.target.checked)}
+                                className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500 border-gray-300"
+                            />
+                            <span className="text-gray-700">
+                                {field.label}
+                                {field.required ? <span className="text-red-500 ml-1">*</span> : null}
+                            </span>
+                        </label>
+                    ) : (
+                        <input
+                            type={field.type === 'number' ? 'number' : 'text'}
+                            placeholder={field.placeholder}
+                            value={formData.details[field.name] || ''}
+                            onChange={(e) => handleDetailChange(field.name, e.target.value)}
+                            required={field.required}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    )}
+                    {field.unit && field.type !== 'checkbox' && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">
+                            {field.unit}
+                        </span>
+                    )}
+                </div>
+            </div>
+        ));
     };
 
     const handleImageUpload = (url: string) => {
@@ -191,6 +309,7 @@ export default function EditAd() {
                             name="title"
                             type="text"
                             required
+                            maxLength={100}
                             value={formData.title}
                             onChange={handleChange}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -229,7 +348,7 @@ export default function EditAd() {
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                             >
                                 <option value="">Selecione uma categoria</option>
-                                {CATEGORY_KEYS.map(cat => (
+                                {Object.keys(CATEGORY_SPECS).map(cat => (
                                     <option key={cat} value={cat}>{cat}</option>
                                 ))}
                             </select>
@@ -250,12 +369,21 @@ export default function EditAd() {
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:text-gray-400"
                             >
                                 <option value="">Selecione...</option>
-                                {formData.category && CATEGORIES[formData.category]?.map(sub => (
+                                {formData.category && CATEGORY_SPECS[formData.category]?.subcategories?.map(sub => (
                                     <option key={sub} value={sub}>{sub}</option>
                                 ))}
                             </select>
                         </div>
                     </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {renderDynamicFields()}
+                    </div>
+                    {formData.category && formData.subcategory && (
+                        <div className="text-xs text-gray-500 -mt-3">
+                            Campos com <span className="text-red-500">*</span> são obrigatórios para esta subcategoria.
+                        </div>
+                    )}
                     {/* Description */}
                     <div className="space-y-2">
                         <label htmlFor="description" className="block text-sm font-medium text-gray-700">
@@ -271,6 +399,8 @@ export default function EditAd() {
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                         />
                     </div>
+
+                    <AdSeoHints titleLen={formData.title.length} descriptionLen={formData.description.length} />
 
                     {/* Submit Button */}
                     <button

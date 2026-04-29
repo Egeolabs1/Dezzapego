@@ -1,9 +1,10 @@
-import { Heart, MapPin, Clock, Eye, Star, LayoutGrid, List as ListIcon, Loader2 } from 'lucide-react';
+import { Heart, LayoutGrid, List as ListIcon, Loader2 } from 'lucide-react';
 import type { Ad } from '../../types';
 import { useMemo, useState } from 'react';
 import { formatPrice, formatDate } from '../../lib/formatters';
 import { useAds } from '../hooks/useAds';
 import { Link } from 'react-router-dom';
+import { getCategoryFields } from '../data/categorySpecs';
 
 type AdsListProps = {
   selectedCategory: string;
@@ -11,6 +12,8 @@ type AdsListProps = {
   selectedTransactionType?: 'venda' | 'aluguel' | '';
   selectedState: string;
   selectedCity?: string;
+  advertiserType?: 'ambos' | 'particular' | 'profissional';
+  sortBy?: 'relevancia' | 'recentes' | 'menor-preco' | 'maior-preco';
   priceRange: [number, number];
   searchQuery: string;
   onAdClick: (ad: Ad) => void;
@@ -27,9 +30,11 @@ export function AdsList({
   selectedTransactionType = '',
   selectedState,
   selectedCity = '',
+  advertiserType = 'ambos',
+  sortBy = 'relevancia',
   priceRange,
   searchQuery,
-  onAdClick,
+  onAdClick: _onAdClick,
   favorites,
   onToggleFavorite,
   detailsFilters = {},
@@ -54,6 +59,8 @@ export function AdsList({
       return undefined;
     };
 
+    const fieldTypeMap = new Map(getCategoryFields(selectedCategory, selectedSubcategory).map((f) => [f.name, f.type]));
+
     return ads.filter((ad) => {
       // Category filter
       if (selectedCategory && ad.category !== selectedCategory) return false;
@@ -73,13 +80,28 @@ export function AdsList({
       // Price filter
       if (ad.price < priceRange[0] || ad.price > priceRange[1]) return false;
 
+      // Advertiser type filter
+      if (advertiserType !== 'ambos') {
+        const sellerType = String(
+          (ad as any).seller?.type ??
+          (ad as any).seller?.sellerType ??
+          (ad as any).seller?.profileType ??
+          ''
+        ).toLowerCase();
+        const isProfessional = sellerType.includes('profissional') || sellerType.includes('professional');
+
+        if (advertiserType === 'profissional' && !isProfessional) return false;
+        if (advertiserType === 'particular' && isProfessional) return false;
+      }
+
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        return (
+        const matchesSearch = (
           ad.title.toLowerCase().includes(query) ||
           ad.description.toLowerCase().includes(query)
         );
+        if (!matchesSearch) return false;
       }
 
       // Dynamic Details Filter
@@ -88,10 +110,62 @@ export function AdsList({
         for (const [key, filterValue] of Object.entries(detailsFilters)) {
           if (!filterValue) continue; // Skip empty filters
 
+          const minRangeMatch = key.match(/^(.*)Min$/);
+          if (minRangeMatch) {
+            const baseKey = minRangeMatch[1];
+            const adValue = getAdValue(ad, baseKey);
+            const minValue = Number(filterValue);
+            const adNumberValue = Number(adValue);
+
+            if (Number.isNaN(minValue)) continue;
+            if (Number.isNaN(adNumberValue) || adNumberValue < minValue) return false;
+            continue;
+          }
+
+          const maxRangeMatch = key.match(/^(.*)Max$/);
+          if (maxRangeMatch) {
+            const baseKey = maxRangeMatch[1];
+            const adValue = getAdValue(ad, baseKey);
+            const maxValue = Number(filterValue);
+            const adNumberValue = Number(adValue);
+
+            if (Number.isNaN(maxValue)) continue;
+            if (Number.isNaN(adNumberValue) || adNumberValue > maxValue) return false;
+            continue;
+          }
+
           const adValue = getAdValue(ad, key);
 
           if (adValue === undefined || adValue === null) {
             return false;
+          }
+
+          if (typeof filterValue === 'boolean') {
+            const boolValue =
+              adValue === true ||
+              adValue === 1 ||
+              String(adValue).toLowerCase() === 'true' ||
+              String(adValue).toLowerCase() === 'sim';
+            if (!boolValue) return false;
+            continue;
+          }
+
+          if (key === 'bedrooms' || key === 'bathrooms' || key === 'garage') {
+            const adNumberValue = Number(adValue);
+            if (Number.isNaN(adNumberValue)) return false;
+
+            if (String(filterValue) === '5+') {
+              if (adNumberValue < 5) return false;
+            } else if (adNumberValue !== Number(filterValue)) {
+              return false;
+            }
+            continue;
+          }
+
+          const fieldType = fieldTypeMap.get(key);
+          if (fieldType === 'select') {
+            if (String(adValue).toLowerCase() !== String(filterValue).toLowerCase()) return false;
+            continue;
           }
 
           // Normalizing for comparison
@@ -107,10 +181,14 @@ export function AdsList({
 
       return true;
     });
-  }, [ads, selectedCategory, selectedSubcategory, selectedTransactionType, selectedState, selectedCity, priceRange, searchQuery, detailsFilters]);
+  }, [ads, selectedCategory, selectedSubcategory, selectedTransactionType, selectedState, selectedCity, advertiserType, priceRange, searchQuery, detailsFilters]);
 
-  // Sort: featured first, then by date
   const sortedAds = [...filteredAds].sort((a, b) => {
+    if (sortBy === 'menor-preco') return a.price - b.price;
+    if (sortBy === 'maior-preco') return b.price - a.price;
+    if (sortBy === 'recentes') return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+
+    // relevancia: destaque primeiro, depois mais recentes
     if (a.featured && !b.featured) return -1;
     if (!a.featured && b.featured) return 1;
     return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
@@ -151,15 +229,6 @@ export function AdsList({
             </button>
           </div>
 
-          <select
-            aria-label="Ordenar anúncios"
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white flex-1 sm:flex-none"
-          >
-            <option>Mais recentes</option>
-            <option>Menor preço</option>
-            <option>Maior preço</option>
-            <option>Mais vistos</option>
-          </select>
         </div>
       </div>
 

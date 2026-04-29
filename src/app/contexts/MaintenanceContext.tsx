@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from './AuthContext';
 
 type MaintenanceContextType = {
     isMaintenanceMode: boolean;
@@ -13,7 +12,6 @@ const MaintenanceContext = createContext<MaintenanceContextType | undefined>(und
 export function MaintenanceProvider({ children }: { children: React.ReactNode }) {
     const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
     const [loading, setLoading] = useState(true);
-    const { user } = useAuth(); // To potentially bypass check for admins early
 
     useEffect(() => {
         fetchSettings();
@@ -40,6 +38,7 @@ export function MaintenanceProvider({ children }: { children: React.ReactNode })
                 .eq('key', 'maintenance_mode')
                 .single();
 
+            if (error) throw error;
             if (data) {
                 setIsMaintenanceMode(data.value === true); // Ensure boolean
             }

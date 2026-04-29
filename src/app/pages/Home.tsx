@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { formatPrice } from '../../lib/formatters';
 
 import { useSearchParams } from 'react-router-dom';
@@ -13,6 +13,12 @@ import { useFavorites } from '../hooks/useFavorites';
 
 
 import SEO from '../../components/SEO';
+import { toAbsoluteUrl } from '../../lib/seo';
+import {
+    buildWebsiteStructuredData,
+    buildListingStructuredData,
+    getListingSeoForHome,
+} from '../../lib/categorySeo';
 
 export default function Home() {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -24,6 +30,8 @@ export default function Home() {
     const selectedState = searchParams.get('state') || '';
     const selectedCity = searchParams.get('city') || '';
     const searchQuery = searchParams.get('q') || '';
+    const advertiserType = (searchParams.get('advertiserType') as 'ambos' | 'particular' | 'profissional') || 'ambos';
+    const sortBy = (searchParams.get('sortBy') as 'relevancia' | 'recentes' | 'menor-preco' | 'maior-preco') || 'relevancia';
 
     const minPrice = searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : 0;
     const maxPrice = searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : 10000000;
@@ -39,6 +47,28 @@ export default function Home() {
 
     const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
     const { favorites, toggleFavorite } = useFavorites();
+
+    const listingSeo = useMemo(
+        () =>
+            getListingSeoForHome({
+                category: selectedCategory,
+                subcategory: selectedSubcategory,
+                transactionType: selectedTransactionType,
+                searchQuery,
+            }),
+        [selectedCategory, selectedSubcategory, selectedTransactionType, searchQuery]
+    );
+
+    const listingStructuredData = useMemo(() => {
+        const q = searchQuery.trim();
+        if (!selectedCategory || q) {
+            return buildWebsiteStructuredData();
+        }
+        return buildListingStructuredData({
+            category: selectedCategory,
+            subcategory: selectedSubcategory || undefined,
+        });
+    }, [selectedCategory, selectedSubcategory, searchQuery]);
 
     const updateSearchParams = (updates: Record<string, string | null>) => {
         setSearchParams(prev => {
@@ -97,9 +127,10 @@ export default function Home() {
             <div className="min-h-screen bg-gray-50">
                 <SEO
                     title={selectedAd.title}
-                    description={`${formatPrice(selectedAd.price)} - ${selectedAd.description}`}
+                    description={`${formatPrice(selectedAd.price)} — ${(selectedAd.description || '').slice(0, 155)}`}
                     image={selectedAd.images[0]}
-                    url={`https://dezzapego.com/anuncio/${selectedAd.id}`}
+                    url={toAbsoluteUrl(`/anuncio/${selectedAd.id}`)}
+                    canonicalUrl={toAbsoluteUrl(`/anuncio/${selectedAd.id}`)}
                     type="article"
                 />
                 <Header />
@@ -115,7 +146,13 @@ export default function Home() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <SEO title="Home" />
+            <SEO
+                title={listingSeo.title}
+                description={listingSeo.description}
+                keywords={listingSeo.keywords}
+                canonicalUrl={listingSeo.canonicalUrl}
+                structuredData={listingStructuredData}
+            />
             <Header />
             <Hero />
             <Categories
@@ -126,15 +163,20 @@ export default function Home() {
                 selectedTransactionType={selectedTransactionType}
                 onTransactionTypeSelect={handleTransactionTypeSelect}
             />
-            <div className="container mx-auto px-2 md:px-4 py-4 md:py-8">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                    <aside className="lg:col-span-1">
+            <div className="max-w-[1600px] mx-auto px-2 md:px-4 py-4 md:py-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+                    <aside className="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-24 self-start">
                         <Filters
                             selectedCategory={selectedCategory}
+                            selectedSubcategory={selectedSubcategory}
                             selectedState={selectedState}
                             onStateChange={(state) => updateSearchParams({ state, city: '' })} // Reset city when state changes
                             selectedCity={selectedCity}
                             onCityChange={(city) => updateSearchParams({ city })}
+                            advertiserType={advertiserType}
+                            onAdvertiserTypeChange={(type) => updateSearchParams({ advertiserType: type })}
+                            sortBy={sortBy}
+                            onSortByChange={(nextSortBy) => updateSearchParams({ sortBy: nextSortBy })}
                             priceRange={priceRange}
                             onPriceRangeChange={handlePriceRangeChange}
                             detailsFilters={detailsFilters}
@@ -145,13 +187,15 @@ export default function Home() {
                             onUserLocationChange={setUserLocation}
                         />
                     </aside>
-                    <main className="lg:col-span-3">
+                    <main className="lg:col-span-8 xl:col-span-9">
                         <AdsList
                             selectedCategory={selectedCategory}
                             selectedSubcategory={selectedSubcategory}
                             selectedTransactionType={selectedTransactionType}
                             selectedState={selectedState}
                             selectedCity={selectedCity}
+                            advertiserType={advertiserType}
+                            sortBy={sortBy}
                             priceRange={priceRange}
                             searchQuery={searchQuery}
                             onAdClick={setSelectedAd}

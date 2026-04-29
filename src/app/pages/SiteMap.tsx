@@ -2,10 +2,16 @@ import { Link } from 'react-router-dom';
 import { categoriesData } from '../data/categories';
 import { ChevronRight, Map, Home } from 'lucide-react';
 import { Header } from '../components/Header';
+import SEO from '../../components/SEO';
 
 export default function SiteMap() {
     return (
         <div className="min-h-screen bg-gray-50 pb-12">
+            <SEO
+                title="Mapa do site"
+                description="Todas as categorias e subcategorias do Dezzapego — navegue por imóveis, autos, eletrônicos e mais."
+                keywords={['mapa do site', 'categorias', 'classificados']}
+            />
             <Header />
             {/* Header / Breadcrumb area */}
             <div className="bg-white border-b border-gray-200">

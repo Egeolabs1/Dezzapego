@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 import { Header } from '../components/Header';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../../components/SEO';
+import { toAbsoluteUrl } from '../../lib/seo';
+import { buildAdDetailStructuredGraph, getKeywordsForAd } from '../../lib/categorySeo';
 
 export default function AdDetails() {
     const { id } = useParams<{ id: string }>();
@@ -158,35 +160,20 @@ export default function AdDetails() {
 
     if (!ad) return null;
 
-    const jsonLd = {
-        "@context": "https://schema.org/",
-        "@type": "Product",
-        "name": ad.title,
-        "image": ad.images,
-        "description": ad.description,
-        "sku": ad.id,
-        "offers": {
-            "@type": "Offer",
-            "url": window.location.href,
-            "priceCurrency": "BRL",
-            "price": ad.price,
-            "availability": "https://schema.org/InStock"
-        },
-        "seller": {
-            "@type": "Person",
-            "name": profile?.full_name || ad.seller.name
-        }
-    };
+    const adPageUrl = toAbsoluteUrl(id ? `/anuncio/${id}` : '/');
+    const sellerDisplayName = profile?.full_name || ad.seller.name;
+    const structuredGraph = buildAdDetailStructuredGraph(ad, adPageUrl, sellerDisplayName);
 
     return (
         <div className="bg-gray-50 min-h-screen pb-12">
             <SEO
                 title={ad.title}
-                description={`${formatPrice(ad.price)} - ${ad.description?.substring(0, 160)}`}
+                description={`${formatPrice(ad.price)} — ${(ad.description ?? '').slice(0, 155)}`}
                 image={ad.images[0]}
-                url={window.location.href}
+                url={adPageUrl}
                 type="product"
-                structuredData={jsonLd}
+                keywords={getKeywordsForAd(ad)}
+                structuredData={structuredGraph}
             />
             <Header />
 

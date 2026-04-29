@@ -1,23 +1,41 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
-// trigger restart
 
-export default defineConfig({
+function siteOriginFromEnv(mode: string) {
+  const env = loadEnv(mode, process.cwd(), '')
+  const raw = env.VITE_SITE_URL || 'https://dezzapego.com'
+  return raw.replace(/\/$/, '')
+}
+
+function htmlInjectSiteOrigin(mode: string) {
+  const origin = siteOriginFromEnv(mode)
+  return {
+    name: 'html-inject-site-origin',
+    transformIndexHtml(html: string) {
+      return html.replaceAll('%SITE_ORIGIN%', origin)
+    },
+  }
+}
+
+export default defineConfig(({ mode }) => ({
   plugins: [
+    htmlInjectSiteOrigin(mode),
     react(),
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Dezzapego - Compre e Venda Fácil',
+        name: 'Dezzapego — Classificados e anúncios',
         short_name: 'Dezzapego',
-        description: 'O melhor lugar para comprar e vender produtos novos e usados com segurança.',
+        description:
+          'Classificados online: imóveis, carros, eletrônicos e mais. Publique grátis ou encontre ofertas no Brasil.',
         theme_color: '#2563eb',
         background_color: '#ffffff',
+        lang: 'pt-BR',
         display: 'standalone',
         orientation: 'portrait',
         icons: [
@@ -51,4 +69,4 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-})
+}))

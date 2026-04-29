@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Ad } from '../../types';
 
+const mockAds: Ad[] = [];
+
 export type AdsFilters = {
     lat?: number;
     lng?: number;

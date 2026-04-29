@@ -5,7 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { ImageUpload } from '../components/ImageUpload';
 import { Loader2, ArrowLeft, MapPin, Image as ImageIcon, Tag, FileText, DollarSign, Star } from 'lucide-react';
 import { toast } from 'sonner';
-import { CATEGORY_SPECS } from '../data/categorySpecs';
+import { CATEGORY_SPECS, getCategoryFields } from '../data/categorySpecs';
+import { AdSeoHints } from '../../components/AdSeoHints';
 
 const CATEGORIES = Object.keys(CATEGORY_SPECS);
 
@@ -47,6 +48,52 @@ export default function NewAd() {
         setFormData(prev => ({ ...prev, details: {} }));
     }, [formData.category]);
 
+    const validateRequiredDetails = () => {
+        const fields = getCategoryFields(formData.category, formData.subcategory);
+        if (!fields.length) return true;
+
+        const missingRequired = fields.filter((field) => {
+            if (!field.required) return false;
+            const value = formData.details[field.name];
+            return value === undefined || value === null || String(value).trim() === '';
+        });
+
+        if (missingRequired.length > 0) {
+            toast.error(`Preencha os campos obrigatórios: ${missingRequired.map((f) => f.label).join(', ')}`);
+            return false;
+        }
+
+        return true;
+    };
+
+    const buildNormalizedDetails = () => {
+        const fields = getCategoryFields(formData.category, formData.subcategory);
+        if (!fields.length) return formData.details;
+
+        const normalizedDetails: Record<string, any> = {};
+        fields.forEach((field) => {
+            const value = formData.details[field.name];
+            if (field.type === 'checkbox') {
+                normalizedDetails[field.name] = Boolean(value);
+                return;
+            }
+
+            if (field.type === 'number') {
+                if (value === undefined || value === null || String(value).trim() === '') {
+                    normalizedDetails[field.name] = '';
+                } else {
+                    const n = Number(value);
+                    normalizedDetails[field.name] = Number.isNaN(n) ? value : n;
+                }
+                return;
+            }
+
+            normalizedDetails[field.name] = value ?? '';
+        });
+
+        return normalizedDetails;
+    };
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -64,6 +111,26 @@ export default function NewAd() {
 
         if (!formData.category) {
             toast.error('Selecione uma categoria.');
+            return;
+        }
+
+        if (!formData.subcategory) {
+            toast.error('Selecione uma subcategoria.');
+            return;
+        }
+
+        const trimmedTitle = formData.title.trim();
+        const trimmedDesc = formData.description.trim();
+        if (trimmedTitle.length < 15) {
+            toast.error('Use um título mais específico (mínimo 15 caracteres) para aparecer bem nas buscas.');
+            return;
+        }
+        if (trimmedDesc.length < 80) {
+            toast.error('Amplie a descrição para pelo menos 80 caracteres: estado do item, medidas e o que está incluso.');
+            return;
+        }
+
+        if (!validateRequiredDetails()) {
             return;
         }
 
@@ -93,7 +160,7 @@ export default function NewAd() {
                 seller: seller,
                 featured: false,
                 views: 0,
-                details: formData.details,
+                details: buildNormalizedDetails(),
             };
 
             console.log('Submitting ad payload:', payload);
@@ -126,6 +193,9 @@ export default function NewAd() {
             if (name === 'category') {
                 return { ...prev, [name]: value, subcategory: '', details: {} };
             }
+            if (name === 'subcategory') {
+                return { ...prev, [name]: value, details: {} };
+            }
             return { ...prev, [name]: value };
         });
     };
@@ -140,12 +210,15 @@ export default function NewAd() {
     const renderDynamicFields = () => {
         if (!formData.category || !CATEGORY_SPECS[formData.category]) return null;
 
-        const fields = CATEGORY_SPECS[formData.category].fields;
+        const fields = getCategoryFields(formData.category, formData.subcategory);
 
         return fields.map(field => (
             <div key={field.name} className="space-y-2">
                 {field.type !== 'checkbox' && (
-                    <label htmlFor={`field-${field.name}`} className="block text-sm font-medium text-gray-700">{field.label}</label>
+                    <label htmlFor={`field-${field.name}`} className="block text-sm font-medium text-gray-700">
+                        {field.label}
+                        {field.required ? <span className="text-red-500 ml-1">*</span> : null}
+                    </label>
                 )}
                 <div className="relative">
                     {field.type === 'select' ? (
@@ -153,6 +226,7 @@ export default function NewAd() {
                             id={`field-${field.name}`}
                             value={formData.details[field.name] || ''}
                             onChange={(e) => handleDetailChange(field.name, e.target.value)}
+                            required={field.required}
                             className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all appearance-none cursor-pointer"
                             aria-label={field.label}
                         >
@@ -169,7 +243,10 @@ export default function NewAd() {
                                 onChange={(e) => handleDetailChange(field.name, e.target.checked)}
                                 className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500 border-gray-300"
                             />
-                            <span className="text-gray-700 font-medium">{field.label}</span>
+                            <span className="text-gray-700 font-medium">
+                                {field.label}
+                                {field.required ? <span className="text-red-500 ml-1">*</span> : null}
+                            </span>
                         </label>
                     ) : (
                         <input
@@ -177,6 +254,7 @@ export default function NewAd() {
                             placeholder={field.placeholder}
                             value={formData.details[field.name] || ''}
                             onChange={(e) => handleDetailChange(field.name, e.target.value)}
+                            required={field.required}
                             className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all placeholder:text-gray-400"
                         />
                     )}
@@ -258,6 +336,7 @@ export default function NewAd() {
                                         type="text"
                                         required
                                         placeholder="Ex: iPhone 13 Pro Max 128GB Grafite"
+                                        maxLength={100}
                                         value={formData.title}
                                         onChange={handleChange}
                                         className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all placeholder:text-gray-400"
@@ -323,6 +402,11 @@ export default function NewAd() {
                                 </div>
 
                                 {renderDynamicFields()}
+                                {formData.category && formData.subcategory && (
+                                    <div className="col-span-2 text-xs text-gray-500 -mt-3">
+                                        Campos com <span className="text-red-500">*</span> são obrigatórios para esta subcategoria.
+                                    </div>
+                                )}
 
                                 <div className="space-y-2 col-span-2">
                                     <label htmlFor="description" className="block text-sm font-medium text-gray-700">Descrição Detalhada</label>
@@ -337,6 +421,11 @@ export default function NewAd() {
                                         className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all resize-none placeholder:text-gray-400"
                                     />
                                 </div>
+
+                                <AdSeoHints
+                                    titleLen={formData.title.length}
+                                    descriptionLen={formData.description.length}
+                                />
                             </div>
                         </section>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
-import { Bell, Send, Trash2, Users, Search } from 'lucide-react';
+import { Bell, Send, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Notification = {
@@ -15,14 +15,12 @@ type Notification = {
 
 export default function AdminNotifications() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
 
     // Form State
     const [title, setTitle] = useState('');
     const [message, setMessage] = useState('');
     const [targetUserId, setTargetUserId] = useState('');
-    const [targetUserEmail, setTargetUserEmail] = useState(''); // Just for UI confirmation if we searched
 
     useEffect(() => {
         fetchNotifications();
@@ -41,8 +39,6 @@ export default function AdminNotifications() {
         } catch (error) {
             console.error('Error fetching notifications:', error);
             toast.error('Erro ao carregar notificações');
-        } finally {
-            setLoading(false);
         }
     }
 
@@ -66,7 +62,6 @@ export default function AdminNotifications() {
             setTitle('');
             setMessage('');
             setTargetUserId('');
-            setTargetUserEmail('');
             fetchNotifications(); // Refresh list
         } catch (error) {
             console.error('Error sending notification:', error);
@@ -88,15 +83,6 @@ export default function AdminNotifications() {
             console.error('Error deleting:', error);
             toast.error('Erro ao excluir');
         }
-    }
-
-    // Helper to find user ID by email (simplified)
-    async function searchUserByEmail(email: string) {
-        // Note: Supabase Auth table is not directly queryable by default unless you have a public profiles table
-        // Assuming we might have a 'users' view or similar. If not, this feature might be limited.
-        // For now, let's assume we can query our 'ads' table to find a seller ID by email? Hacky.
-        // Better: Just input ID for now, or use the 'Users' page to copy ID.
-        toast.info('Funcionalidade de busca por email requer tabela de perfis. Por favor, copie o ID da página de Usuários.');
     }
 
     return (

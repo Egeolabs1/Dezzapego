@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { formatPrice, formatDate } from '../../../lib/formatters';
-import { Loader2, Trash2, Edit, Eye, Search, Star, Download } from 'lucide-react';
+import { Trash2, Edit, Eye, Search, Star, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext';
