@@ -13,6 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 import SEO from '../../components/SEO';
 import { toAbsoluteUrl } from '../../lib/seo';
 import { buildAdDetailStructuredGraph, getKeywordsForAd } from '../../lib/categorySeo';
+import { incrementAdViewOnce } from '../../lib/adViews';
 
 export default function AdDetails() {
     const { id } = useParams<{ id: string }>();
@@ -43,6 +44,12 @@ export default function AdDetails() {
 
                 if (adError) throw adError;
                 setAd(adData);
+
+                // Conta visualização real (1x por sessão/aba) e atualiza UI
+                const nextViews = await incrementAdViewOnce(adData.id);
+                if (nextViews !== null) {
+                    setAd((prev) => (prev ? { ...prev, views: nextViews } : prev));
+                }
 
                 // 2. Fetch Profile (Live Data)
                 if (adData && adData.user_id) {

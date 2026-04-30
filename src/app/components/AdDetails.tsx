@@ -1,6 +1,7 @@
 import { ArrowLeft, Heart, Share2, Flag, MapPin, Clock, Eye, Phone, MessageCircle, User, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Ad } from '../../types';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { incrementAdViewOnce } from '../../lib/adViews';
 
 type AdDetailsProps = {
   ad: Ad;
@@ -12,6 +13,14 @@ type AdDetailsProps = {
 export function AdDetails({ ad, onBack, isFavorite, onToggleFavorite }: AdDetailsProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [viewCount, setViewCount] = useState(ad.views || 0);
+
+  useEffect(() => {
+    setViewCount(ad.views || 0);
+    incrementAdViewOnce(ad.id).then((nextViews) => {
+      if (nextViews !== null) setViewCount(nextViews);
+    });
+  }, [ad.id, ad.views]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -126,7 +135,7 @@ export function AdDetails({ ad, onBack, isFavorite, onToggleFavorite }: AdDetail
                 </div>
                 <div className="flex items-center gap-2 text-gray-600">
                   <Eye className="w-5 h-5" />
-                  <span>{ad.views.toLocaleString('pt-BR')} visualizações</span>
+                  <span>{viewCount.toLocaleString('pt-BR')} visualizações</span>
                 </div>
               </div>
 
@@ -153,7 +162,7 @@ export function AdDetails({ ad, onBack, isFavorite, onToggleFavorite }: AdDetail
                   <Eye className="w-5 h-5 text-blue-600" />
                   <div>
                     <p className="text-sm text-gray-600">Visualizações</p>
-                    <p>{ad.views.toLocaleString('pt-BR')}</p>
+                    <p>{viewCount.toLocaleString('pt-BR')}</p>
                   </div>
                 </div>
               </div>
