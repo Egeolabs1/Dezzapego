@@ -12,10 +12,21 @@ type HeaderProps = {
   // but kept optional to avoid breaking pending refactors if any.
   // Ideally, remove them entirely or use as overrides.
   hideLocationFilter?: boolean;
+  selectedState?: string;
+  selectedCity?: string;
+  onLocationChange?: (state: string, city: string) => void;
 };
 
-export function Header({ hideLocationFilter = false }: HeaderProps) {
+export function Header({
+  hideLocationFilter = false,
+  selectedState: selectedStateOverride,
+  selectedCity: selectedCityOverride,
+  onLocationChange,
+}: HeaderProps) {
   const { searchQuery, setSearchQuery, selectedState, selectedCity, setLocation } = useFilter();
+  const resolvedState = selectedStateOverride ?? selectedState;
+  const resolvedCity = selectedCityOverride ?? selectedCity;
+  const handleLocationChange = onLocationChange ?? setLocation;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
@@ -94,9 +105,9 @@ export function Header({ hideLocationFilter = false }: HeaderProps) {
             {!hideLocationFilter && (
               <div className="flex-shrink-0 scale-90 origin-right">
                 <LocationSelector
-                  selectedState={selectedState}
-                  selectedCity={selectedCity}
-                  onLocationChange={setLocation}
+                  selectedState={resolvedState}
+                  selectedCity={resolvedCity}
+                  onLocationChange={handleLocationChange}
                 />
               </div>
             )}
@@ -106,9 +117,9 @@ export function Header({ hideLocationFilter = false }: HeaderProps) {
           <div className="hidden md:flex items-center gap-3">
             {!hideLocationFilter && (
               <LocationSelector
-                selectedState={selectedState}
-                selectedCity={selectedCity}
-                onLocationChange={setLocation}
+                selectedState={resolvedState}
+                selectedCity={resolvedCity}
+                onLocationChange={handleLocationChange}
               />
             )}
 

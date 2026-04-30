@@ -19,6 +19,26 @@ const STATE_MAP: Record<string, string> = {
     'São Paulo': 'SP', 'Sergipe': 'SE', 'Tocantins': 'TO'
 };
 
+const formatCurrencyInput = (raw: string) => {
+    const digits = raw.replace(/\D/g, '');
+    if (!digits) return '';
+    const value = Number(digits) / 100;
+    return value.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+};
+
+const parseCurrencyInput = (raw: string) => {
+    if (!raw) return 0;
+    const normalized = raw.replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '');
+    const numeric = Number(normalized);
+    return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const getValidImages = (images: string[]) =>
+    images.map((img) => img.trim()).filter(Boolean);
+
 export default function NewAd() {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -82,7 +102,7 @@ export default function NewAd() {
                 if (value === undefined || value === null || String(value).trim() === '') {
                     normalizedDetails[field.name] = '';
                 } else {
-                    const n = Number(value);
+                    const n = field.unit === 'R$' ? parseCurrencyInput(String(value)) : Number(value);
                     normalizedDetails[field.name] = Number.isNaN(n) ? value : n;
                 }
                 return;
@@ -104,7 +124,8 @@ export default function NewAd() {
             return;
         }
 
-        if (formData.images.length === 0) {
+        const validImages = getValidImages(formData.images);
+        if (validImages.length === 0) {
             toast.error('Por favor, adicione pelo menos uma imagem ao seu anúncio.');
             return;
         }
@@ -137,7 +158,7 @@ export default function NewAd() {
         setLoading(true);
 
         try {
-            const numericPrice = parseFloat(formData.price.replace(/[^\d.,]/g, '').replace(',', '.'));
+            const numericPrice = parseCurrencyInput(formData.price);
 
             const seller = {
                 id: user.id,
@@ -155,7 +176,7 @@ export default function NewAd() {
                 location: formData.location,
                 lat: formData.location.lat,
                 lng: formData.location.lng,
-                images: formData.images,
+                images: validImages,
                 user_id: user.id,
                 seller: seller,
                 featured: false,
@@ -190,6 +211,9 @@ export default function NewAd() {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => {
+            if (name === 'price') {
+                return { ...prev, price: formatCurrencyInput(value) };
+            }
             if (name === 'category') {
                 return { ...prev, [name]: value, subcategory: '', details: {} };
             }
@@ -211,61 +235,111 @@ export default function NewAd() {
         if (!formData.category || !CATEGORY_SPECS[formData.category]) return null;
 
         const fields = getCategoryFields(formData.category, formData.subcategory);
+        const cleanCheckboxLabel = (label: string) =>
+            label.replace(/^Detalhe:\s*/i, '').replace(/^Condomínio:\s*/i, '').trim();
 
-        return fields.map(field => (
-            <div key={field.name} className="space-y-2">
-                {field.type !== 'checkbox' && (
-                    <label htmlFor={`field-${field.name}`} className="block text-sm font-medium text-gray-700">
-                        {field.label}
-                        {field.required ? <span className="text-red-500 ml-1">*</span> : null}
-                    </label>
-                )}
-                <div className="relative">
-                    {field.type === 'select' ? (
-                        <select
-                            id={`field-${field.name}`}
-                            value={formData.details[field.name] || ''}
-                            onChange={(e) => handleDetailChange(field.name, e.target.value)}
-                            required={field.required}
-                            className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all appearance-none cursor-pointer"
-                            aria-label={field.label}
-                        >
-                            <option value="">Selecione...</option>
-                            {field.options?.map(opt => (
-                                <option key={opt} value={opt}>{opt}</option>
-                            ))}
-                        </select>
-                    ) : field.type === 'checkbox' ? (
-                        <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors">
-                            <input
-                                type="checkbox"
-                                checked={!!formData.details[field.name]}
-                                onChange={(e) => handleDetailChange(field.name, e.target.checked)}
-                                className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500 border-gray-300"
-                            />
-                            <span className="text-gray-700 font-medium">
-                                {field.label}
-                                {field.required ? <span className="text-red-500 ml-1">*</span> : null}
-                            </span>
-                        </label>
-                    ) : (
-                        <input
-                            type={field.type === 'number' ? 'number' : 'text'}
-                            placeholder={field.placeholder}
-                            value={formData.details[field.name] || ''}
-                            onChange={(e) => handleDetailChange(field.name, e.target.value)}
-                            required={field.required}
-                            className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all placeholder:text-gray-400"
-                        />
-                    )}
-                    {field.unit && field.type !== 'checkbox' && (
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
-                            {field.unit}
-                        </span>
-                    )}
+        const nonCheckboxFields = fields.filter((field) => field.type !== 'checkbox');
+        const propertyCheckboxes = fields.filter((field) => field.type === 'checkbox' && field.name.startsWith('det_'));
+        const condoCheckboxes = fields.filter((field) => field.type === 'checkbox' && field.name.startsWith('cond_'));
+        const genericCheckboxes = fields.filter(
+            (field) => field.type === 'checkbox' && !field.name.startsWith('det_') && !field.name.startsWith('cond_')
+        );
+        const commercialCheckboxes = genericCheckboxes.filter((field) =>
+            /(accept|financing|warranty|delivery|invoice|quote|commission|allowance|insurance)/i.test(field.name)
+        );
+        const featureCheckboxes = genericCheckboxes.filter(
+            (field) => !commercialCheckboxes.some((commercial) => commercial.name === field.name)
+        );
+
+        const renderCheckboxGroup = (groupTitle: string, items: typeof fields) => {
+            if (items.length === 0) return null;
+            return (
+                <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-gray-700">{groupTitle}</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {items.map((field) => (
+                            <label
+                                key={field.name}
+                                className="flex items-center gap-2 p-2.5 border border-gray-200 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={!!formData.details[field.name]}
+                                    onChange={(e) => handleDetailChange(field.name, e.target.checked)}
+                                    className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500 border-gray-300"
+                                />
+                                <span className="text-gray-700 text-sm">
+                                    {cleanCheckboxLabel(field.label)}
+                                    {field.required ? <span className="text-red-500 ml-1">*</span> : null}
+                                </span>
+                            </label>
+                        ))}
+                    </div>
                 </div>
-            </div>
-        ));
+            );
+        };
+
+        return (
+            <>
+                {nonCheckboxFields.map((field) => (
+                    <div key={field.name} className="space-y-2">
+                        <label htmlFor={`field-${field.name}`} className="block text-sm font-medium text-gray-700">
+                            {field.label}
+                            {field.required ? <span className="text-red-500 ml-1">*</span> : null}
+                        </label>
+                        <div className="relative">
+                            {field.type === 'select' ? (
+                                <select
+                                    id={`field-${field.name}`}
+                                    value={formData.details[field.name] || ''}
+                                    onChange={(e) => handleDetailChange(field.name, e.target.value)}
+                                    required={field.required}
+                                    className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all appearance-none cursor-pointer"
+                                    aria-label={field.label}
+                                >
+                                    <option value="">Selecione...</option>
+                                    {field.options?.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <input
+                                    id={`field-${field.name}`}
+                                    type={field.type === 'number' && field.unit !== 'R$' ? 'number' : 'text'}
+                                    inputMode={field.type === 'number' ? 'decimal' : 'text'}
+                                    placeholder={field.placeholder}
+                                    value={formData.details[field.name] || ''}
+                                    onChange={(e) =>
+                                        handleDetailChange(
+                                            field.name,
+                                            field.type === 'number' && field.unit === 'R$'
+                                                ? formatCurrencyInput(e.target.value)
+                                                : e.target.value
+                                        )
+                                    }
+                                    required={field.required}
+                                    className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all placeholder:text-gray-400"
+                                />
+                            )}
+                            {field.unit && (
+                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+                                    {field.unit}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                ))}
+
+                {(genericCheckboxes.length > 0 || propertyCheckboxes.length > 0 || condoCheckboxes.length > 0) && (
+                    <div className="col-span-2 rounded-xl border border-gray-200 bg-gray-50/50 p-4 space-y-4">
+                        {renderCheckboxGroup('Condições comerciais', commercialCheckboxes)}
+                        {renderCheckboxGroup('Características', featureCheckboxes)}
+                        {renderCheckboxGroup('Detalhes do imóvel', propertyCheckboxes)}
+                        {renderCheckboxGroup('Detalhes do condomínio', condoCheckboxes)}
+                    </div>
+                )}
+            </>
+        );
     };
 
     const handleImageUpload = (url: string) => {
@@ -351,6 +425,7 @@ export default function NewAd() {
                                             id="price"
                                             name="price"
                                             type="text"
+                                            inputMode="decimal"
                                             required
                                             placeholder="0,00"
                                             value={formData.price}

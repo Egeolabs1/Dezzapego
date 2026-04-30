@@ -119,6 +119,14 @@ export default function Home() {
         updateSearchParams({ radius: newRadius.toString() });
     };
 
+    const handleHeaderLocationChange = (state: string, city: string) => {
+        if (!state) {
+            updateSearchParams({ state: null, city: null });
+            return;
+        }
+        updateSearchParams({ state, city });
+    };
+
     // Handle deep linking to specific ad if ID is in URL (optional, can be added later)
     // For now, checks existing ad selection logic
 
@@ -133,7 +141,11 @@ export default function Home() {
                     canonicalUrl={toAbsoluteUrl(`/anuncio/${selectedAd.id}`)}
                     type="article"
                 />
-                <Header />
+                <Header
+                    selectedState={selectedState}
+                    selectedCity={selectedCity}
+                    onLocationChange={handleHeaderLocationChange}
+                />
                 <AdDetails
                     ad={selectedAd}
                     onBack={() => setSelectedAd(null)}
@@ -153,7 +165,11 @@ export default function Home() {
                 canonicalUrl={listingSeo.canonicalUrl}
                 structuredData={listingStructuredData}
             />
-            <Header />
+            <Header
+                selectedState={selectedState}
+                selectedCity={selectedCity}
+                onLocationChange={handleHeaderLocationChange}
+            />
             <Hero />
             <Categories
                 selectedCategory={selectedCategory}

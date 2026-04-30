@@ -59,6 +59,12 @@ const IMOVEIS_CONDO_DETAIL_FIELDS: CategoryField[] = [
     { name: 'cond_seguranca_24h', label: 'Condomínio: Segurança 24h', type: 'checkbox' },
 ];
 
+const IMOVEIS_COST_FIELDS: CategoryField[] = [
+    { name: 'condominium', label: 'Valor Condomínio', type: 'number', unit: 'R$', placeholder: 'Ex: 450,00', required: true },
+    { name: 'iptu', label: 'Valor IPTU', type: 'number', unit: 'R$', placeholder: 'Ex: 180,00', required: true },
+    { name: 'iptu_period', label: 'Periodicidade do IPTU', type: 'select', options: ['Mensal', 'Anual'], required: true },
+];
+
 export const CATEGORY_SPECS: Record<string, CategorySpec> = {
     'Imóveis': {
         subcategories: ['Venda - casas e apartamentos', 'Aluguel - casas e apartamentos', 'Temporada', 'Terrenos, sítios e fazendas', 'Comércio e indústria', 'Lançamento'],
@@ -102,6 +108,7 @@ export const CATEGORY_SPECS: Record<string, CategorySpec> = {
                 { name: 'property_status', label: 'Situação do imóvel', type: 'select', options: ['Novo', 'Usado', 'Na planta'], required: true },
                 { name: 'accept_financing', label: 'Aceita financiamento?', type: 'checkbox' },
                 { name: 'accept_exchange_property', label: 'Aceita permuta?', type: 'checkbox' },
+                ...IMOVEIS_COST_FIELDS,
                 ...IMOVEIS_PROPERTY_DETAIL_FIELDS,
                 ...IMOVEIS_CONDO_DETAIL_FIELDS,
             ],
@@ -109,6 +116,7 @@ export const CATEGORY_SPECS: Record<string, CategorySpec> = {
                 { name: 'rental_period', label: 'Período mínimo', type: 'select', options: ['30 dias', '6 meses', '12 meses'], required: true },
                 { name: 'allows_pets', label: 'Aceita pets?', type: 'checkbox' },
                 { name: 'furnished_rental', label: 'Mobiliado para aluguel?', type: 'checkbox' },
+                ...IMOVEIS_COST_FIELDS,
                 ...IMOVEIS_PROPERTY_DETAIL_FIELDS,
                 ...IMOVEIS_CONDO_DETAIL_FIELDS,
             ],
@@ -123,6 +131,7 @@ export const CATEGORY_SPECS: Record<string, CategorySpec> = {
                 { name: 'land_area', label: 'Área do terreno', type: 'number', unit: 'm²', required: true, placeholder: 'Ex: 1000' },
                 { name: 'has_deed', label: 'Possui escritura?', type: 'checkbox' },
                 { name: 'rural_or_urban', label: 'Tipo de área', type: 'select', options: ['Urbana', 'Rural'], required: true },
+                ...IMOVEIS_COST_FIELDS,
                 ...IMOVEIS_PROPERTY_DETAIL_FIELDS,
                 ...IMOVEIS_CONDO_DETAIL_FIELDS,
             ],
@@ -130,6 +139,7 @@ export const CATEGORY_SPECS: Record<string, CategorySpec> = {
                 { name: 'commercial_type', label: 'Tipo comercial', type: 'select', options: ['Loja', 'Sala', 'Galpão', 'Prédio', 'Outro'], required: true },
                 { name: 'monthly_condominium', label: 'Condomínio mensal', type: 'number', unit: 'R$', placeholder: 'Ex: 850' },
                 { name: 'loading_dock', label: 'Tem doca de carga?', type: 'checkbox' },
+                ...IMOVEIS_COST_FIELDS,
                 ...IMOVEIS_PROPERTY_DETAIL_FIELDS,
                 ...IMOVEIS_CONDO_DETAIL_FIELDS,
             ],
@@ -137,6 +147,7 @@ export const CATEGORY_SPECS: Record<string, CategorySpec> = {
                 { name: 'launch_stage', label: 'Fase do lançamento', type: 'select', options: ['Pré-lançamento', 'Lançamento', 'Obras'], required: true },
                 { name: 'delivery_forecast', label: 'Previsão de entrega', type: 'text', required: true, placeholder: 'Ex: Dez/2027' },
                 { name: 'has_showroom', label: 'Tem decorado para visita?', type: 'checkbox' },
+                ...IMOVEIS_COST_FIELDS,
                 ...IMOVEIS_PROPERTY_DETAIL_FIELDS,
                 ...IMOVEIS_CONDO_DETAIL_FIELDS,
             ]
