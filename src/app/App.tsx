@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { FilterProvider } from './contexts/FilterContext';
 import Home from './pages/Home';
@@ -46,6 +46,8 @@ import { useSiteVisitTracking } from './hooks/useSiteVisitTracking';
 import { useProfileIpOnNavigation } from '../lib/profileIpLog';
 
 function AppContent() {
+  const { pathname } = useLocation();
+  const isAdminRoute = pathname.startsWith('/admin');
   const { isMaintenanceMode, loading: maintenanceLoading } = useMaintenance();
   const { user, profile, loading: authLoading } = useAuth();
   useSiteVisitTracking();
@@ -75,7 +77,7 @@ function AppContent() {
   }
 
   return (
-    <div className="pb-16 md:pb-0"> {/* Add padding bottom for mobile nav space */}
+    <div className={isAdminRoute ? '' : 'pb-16 md:pb-0'}>
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
@@ -115,8 +117,8 @@ function AppContent() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      <Footer />
-      {!isMaintenanceMode && <MobileNav />}
+      {!isAdminRoute && <Footer />}
+      {!isAdminRoute && !isMaintenanceMode && <MobileNav />}
       <InstallPWA />
       <CookieConsentBanner />
     </div>
