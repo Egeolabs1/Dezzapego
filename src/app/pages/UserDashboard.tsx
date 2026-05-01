@@ -24,8 +24,10 @@ export default function UserDashboard() {
     const [cpfCnpj, setCpfCnpj] = useState('');
     const [verifyDocUrls, setVerifyDocUrls] = useState<string[]>([]);
     const [verifySelfieUrls, setVerifySelfieUrls] = useState<string[]>([]);
+    const [activeTab, setActiveTab] = useState<'profile' | 'verification' | 'settings'>('profile');
     // Use profile status or default
     const verificationStatus = profile?.verification_status || 'none';
+    const verificationBadgeText = verificationStatus === 'pending' ? 'Em análise' : verificationStatus === 'rejected' ? 'Recusada' : null;
 
     // Stats State
     const [stats, setStats] = useState({ totalAds: 0, totalViews: 0 });
@@ -99,13 +101,13 @@ export default function UserDashboard() {
             const updates = {
                 full_name: name,
                 avatar_url: avatar[0] || null,
-                phone,
+                phone: phone.replace(/\D/g, ''),
                 bio,
                 state,
                 city,
                 website,
                 instagram,
-                cpf_cnpj: cpfCnpj,
+                cpf_cnpj: cpfCnpj.replace(/\D/g, ''),
                 updated_at: new Date().toISOString(),
             };
 
@@ -125,7 +127,12 @@ export default function UserDashboard() {
             toast.success('Perfil atualizado com sucesso!');
         } catch (error) {
             console.error('Error updating profile:', error);
-            toast.error('Erro ao atualizar perfil.');
+            const message = error instanceof Error ? error.message : '';
+            if (/duplicate|already exists|23505/i.test(message)) {
+                toast.error('CPF/CNPJ, telefone ou e-mail já está em uso por outra conta.');
+            } else {
+                toast.error('Erro ao atualizar perfil.');
+            }
         } finally {
             setLoading(false);
         }
@@ -180,6 +187,7 @@ export default function UserDashboard() {
 
     const handleAvatarUpload = (url: string) => setAvatar([url]);
     const handleAvatarRemove = (_url: string) => setAvatar([]);
+    const openVerificationTab = () => setActiveTab('verification');
 
     const handleExportMyData = async () => {
         if (!user) return;
@@ -272,13 +280,56 @@ export default function UserDashboard() {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                     <aside className="lg:col-span-4 xl:col-span-3 space-y-3 lg:sticky lg:top-[4.75rem] self-start">
                         <nav className="flex flex-col gap-2">
-                            <div
-                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium shadow-sm border bg-blue-600 text-white border-blue-600"
-                                aria-current="page"
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('profile')}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium shadow-sm border transition-colors ${
+                                    activeTab === 'profile'
+                                        ? 'bg-blue-600 text-white border-blue-600'
+                                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                                }`}
+                                aria-current={activeTab === 'profile' ? 'page' : undefined}
                             >
                                 <User className="w-5 h-5 shrink-0" />
-                                Meu perfil
-                            </div>
+                                Dados pessoais
+                            </button>
+                            <button
+                                type="button"
+                                onClick={openVerificationTab}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium shadow-sm border transition-colors ${
+                                    activeTab === 'verification'
+                                        ? 'bg-blue-600 text-white border-blue-600'
+                                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                                }`}
+                                aria-current={activeTab === 'verification' ? 'page' : undefined}
+                            >
+                                <Shield className="w-5 h-5 shrink-0" />
+                                Verificação
+                                {verificationBadgeText && (
+                                    <span
+                                        className={`ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+                                            verificationStatus === 'pending'
+                                                ? 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                                                : 'bg-red-50 text-red-700 border-red-200'
+                                        }`}
+                                    >
+                                        {verificationBadgeText}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('settings')}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium shadow-sm border transition-colors ${
+                                    activeTab === 'settings'
+                                        ? 'bg-blue-600 text-white border-blue-600'
+                                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                                }`}
+                                aria-current={activeTab === 'settings' ? 'page' : undefined}
+                            >
+                                <Shield className="w-5 h-5 shrink-0" />
+                                Configurações
+                            </button>
                             <Link
                                 to="/meus-anuncios"
                                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium border border-gray-200 shadow-sm"
@@ -307,140 +358,30 @@ export default function UserDashboard() {
                     </aside>
 
                     <div className="lg:col-span-8 xl:col-span-9 space-y-8 min-w-0">
+                        {activeTab === 'profile' && (
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">
                                 <h2 className="text-xl font-bold text-gray-800 mb-6 pb-4 border-b border-gray-100">
-                                    Edição de Perfil
-                                </h2>
-
-                                {/* Verificação de identidade */}
-                                <div className="mb-8 rounded-xl border border-gray-100 bg-gray-50/80 overflow-hidden">
-                                    <div className="px-5 pt-5">
-                                        <p className="text-sm text-blue-900 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 leading-relaxed">
-                                            <strong>Prazo de análise:</strong> conferimos documentos em até{' '}
-                                            <strong>3 dias úteis</strong>. Em períodos normais respondemos bem antes —
-                                            você será avisado por aqui assim que houver resultado.
-                                        </p>
-                                    </div>
-                                    <div className="p-5 flex flex-col md:flex-row items-start md:items-center gap-4 border-b border-gray-100 bg-gray-50">
-                                        <div className={`p-3 rounded-full border shadow-sm ${
-                                            verificationStatus === 'verified'
-                                                ? 'bg-white border-green-100 text-green-600'
-                                                : verificationStatus === 'rejected'
-                                                  ? 'bg-white border-red-100 text-red-600'
-                                                  : 'bg-white border-gray-100 text-blue-600'
-                                        }`}>
-                                            {verificationStatus === 'verified' ? (
-                                                <ShieldCheck className="w-6 h-6" />
-                                            ) : verificationStatus === 'rejected' ? (
-                                                <AlertCircle className="w-6 h-6" />
-                                            ) : (
-                                                <Shield className="w-6 h-6" />
-                                            )}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="text-base font-bold text-gray-900 flex flex-wrap items-center gap-2">
-                                                Verificação de conta (selo de vendedor)
-                                                {verificationStatus === 'verified' && (
-                                                    <span className="text-green-700 text-xs bg-green-50 px-2 py-0.5 rounded-full border border-green-100">Verificado</span>
-                                                )}
-                                                {verificationStatus === 'pending' && (
-                                                    <span className="text-yellow-800 text-xs bg-yellow-50 px-2 py-0.5 rounded-full border border-yellow-100">Em análise</span>
-                                                )}
-                                                {verificationStatus === 'rejected' && (
-                                                    <span className="text-red-700 text-xs bg-red-50 px-2 py-0.5 rounded-full border border-red-100">Solicitação recusada</span>
-                                                )}
-                                            </h3>
-                                            <p className="text-sm text-gray-600 mt-1">
-                                                {verificationStatus === 'verified' &&
-                                                    'Parabéns! Seu nome de exibição ganha o selo de verificado nos anúncios e lista de busca.'}
-                                                {verificationStatus === 'pending' &&
-                                                    'Estamos revisando suas fotos e dados. O prazo é de até 3 dias úteis; você será avisado por aqui assim que houver decisão.'}
-                                                {verificationStatus === 'rejected' &&
-                                                    'Revise as orientações abaixo, envie novas imagens claras e envie outra solicitação — o novo pedido será analisado em até 3 dias úteis.'}
-                                                {verificationStatus === 'none' &&
-                                                    'Envie RG ou CNH (frente e verso) e uma selfie com o documento ao lado do rosto. Nossa equipe confere manualmente — é gratuito. Após o envio, espere até 3 dias úteis pela resposta.'}
-                                            </p>
-                                            {verificationStatus === 'rejected' && profile?.verification_rejection_reason?.trim() && (
-                                                <p className="text-sm text-red-800 mt-3 p-3 bg-red-50 rounded-lg border border-red-100">
-                                                    <strong>Motivo:</strong> {profile.verification_rejection_reason.trim()}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {(verificationStatus === 'pending' || verificationStatus === 'verified') &&
-                                        ((verifyDocUrls.length > 0 || verifySelfieUrls.length > 0) ? (
-                                            <div className="p-5 grid md:grid-cols-2 gap-4 bg-white">
-                                                <div>
-                                                    <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Documento enviado</p>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {verifyDocUrls.map((url) => (
-                                                            <img key={url} src={url} alt="" className="h-28 w-auto rounded-lg border border-gray-200 object-cover" />
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Selfie com documento</p>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {verifySelfieUrls.map((url) => (
-                                                            <img key={url} src={url} alt="" className="h-28 w-auto rounded-lg border border-gray-200 object-cover" />
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ) : null)}
-
-                                    {(verificationStatus === 'none' || verificationStatus === 'rejected') && (
-                                        <div className="p-5 space-y-6 bg-white">
-                                            <div className="rounded-lg bg-amber-50 border border-amber-100 px-4 py-3 text-sm text-amber-900">
-                                                <p className="font-semibold mb-1">Dicas para aprovação rápida</p>
-                                                <ul className="list-disc list-inside space-y-1 text-amber-900/90">
-                                                    <li>Iluminação uniforme — evite reflexo forte no plástico do RG.</li>
-                                                    <li>Na selfie, seu rosto e os dados do documento devem aparecer legíveis.</li>
-                                                    <li>Formatos JPG/PNG; as imagens são convertidas para WebP no envio.</li>
-                                                </ul>
-                                            </div>
-                                            <div className="space-y-3">
-                                                <label className="block text-sm font-medium text-gray-800">RG ou CNH (até 2 fotos: frente e verso)</label>
-                                                <ImageUpload
-                                                    userId={user.id}
-                                                    uploadSubfolder="verification"
-                                                    maxImages={2}
-                                                    currentImages={verifyDocUrls}
-                                                    onUpload={(url) => setVerifyDocUrls((prev) => [...prev, url])}
-                                                    onRemove={(url) => setVerifyDocUrls((prev) => prev.filter((u) => u !== url))}
-                                                    onReorder={setVerifyDocUrls}
-                                                />
-                                            </div>
-                                            <div className="space-y-3">
-                                                <label className="block text-sm font-medium text-gray-800">
-                                                    Selfie segurando o documento ao lado do rosto <span className="text-red-500">*</span>
-                                                </label>
-                                                <ImageUpload
-                                                    userId={user.id}
-                                                    uploadSubfolder="verification"
-                                                    maxImages={1}
-                                                    currentImages={verifySelfieUrls}
-                                                    onUpload={(url) => setVerifySelfieUrls([url])}
-                                                    onRemove={() => setVerifySelfieUrls([])}
-                                                />
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={handleRequestVerification}
-                                                disabled={submittingVerification}
-                                                className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                                            >
-                                                {submittingVerification ? 'Enviando...' : 'Enviar documentos para análise'}
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <h2 className="text-lg font-bold text-gray-800 mb-6 pb-4 border-b border-gray-100">
                                     Dados Pessoais
                                 </h2>
 
+                                <div className="mb-8 rounded-xl border border-blue-100 bg-blue-50/70 p-4 sm:p-5">
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                                        <div className="flex-1">
+                                            <p className="text-sm text-blue-900 leading-relaxed">
+                                                <strong>Quer ganhar selo de vendedor verificado?</strong> A solicitação de
+                                                documentos agora fica na aba <strong>Verificação</strong>, para manter seus
+                                                dados pessoais separados.
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={openVerificationTab}
+                                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
+                                        >
+                                            Quero ganhar selo
+                                        </button>
+                                    </div>
+                                </div>
                                 <form onSubmit={handleUpdateProfile} className="space-y-6 max-w-4xl">
 
                                     {/* Avatar Section */}
@@ -610,66 +551,218 @@ export default function UserDashboard() {
                                     </div>
                                 </form>
                             </div>
+                        )}
 
-                        <section
-                            className="border border-indigo-200 rounded-xl overflow-hidden bg-white shadow-sm"
-                            aria-labelledby="lgpd-data-title"
-                        >
-                            <div className="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex items-center gap-2">
-                                <Shield className="w-5 h-5 text-indigo-700 shrink-0" />
-                                <h3 id="lgpd-data-title" className="text-lg font-bold text-indigo-900">
-                                    Seus dados (LGPD)
-                                </h3>
-                            </div>
-                            <div className="p-6 space-y-4 text-gray-700 text-sm leading-relaxed">
-                                <p>
-                                    Você tem direito de <strong>acessar</strong> e <strong>portar</strong> seus dados em
-                                    formato legível. Use o botão abaixo para baixar um JSON com seu perfil, anúncios e
-                                    favoritos (quando permitido pelas permissões do banco).
-                                </p>
-                                <p>
-                                    Para <strong>excluir</strong> definitivamente a conta e os dados tratados nesse
-                                    fluxo, use a opção na zona de perigo — o sistema chama a função{' '}
-                                    <code className="text-xs bg-gray-100 px-1 rounded">delete_own_account</code>. Prazos
-                                    de backups e retenções legais estão descritos na{' '}
-                                    <Link to="/privacidade" className="text-blue-600 font-medium hover:underline">
-                                        Política de Privacidade
-                                    </Link>
-                                    .
-                                </p>
-                                <button
-                                    type="button"
-                                    onClick={handleExportMyData}
-                                    disabled={loading}
-                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-indigo-200 bg-white text-indigo-800 font-medium hover:bg-indigo-50 disabled:opacity-50"
-                                >
-                                    <Download className="w-4 h-4" />
-                                    Baixar meus dados (JSON)
-                                </button>
-                            </div>
-                        </section>
+                        {activeTab === 'verification' && (
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">
+                                <h2 className="text-xl font-bold text-gray-800 mb-6 pb-4 border-b border-gray-100">
+                                    Verificação de conta (selo de vendedor)
+                                </h2>
+                                <div className="rounded-xl border border-gray-100 bg-gray-50/80 overflow-hidden">
+                                    <div className="px-5 pt-5">
+                                        <p className="text-sm text-blue-900 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 leading-relaxed">
+                                            <strong>Prazo de análise:</strong> conferimos documentos em até{' '}
+                                            <strong>3 dias úteis</strong>. Você será avisado por aqui assim que houver resultado.
+                                        </p>
+                                    </div>
+                                    <div className="p-5 flex flex-col md:flex-row items-start md:items-center gap-4 border-b border-gray-100 bg-gray-50">
+                                        <div className={`p-3 rounded-full border shadow-sm ${
+                                            verificationStatus === 'verified'
+                                                ? 'bg-white border-green-100 text-green-600'
+                                                : verificationStatus === 'rejected'
+                                                  ? 'bg-white border-red-100 text-red-600'
+                                                  : 'bg-white border-gray-100 text-blue-600'
+                                        }`}>
+                                            {verificationStatus === 'verified' ? (
+                                                <ShieldCheck className="w-6 h-6" />
+                                            ) : verificationStatus === 'rejected' ? (
+                                                <AlertCircle className="w-6 h-6" />
+                                            ) : (
+                                                <Shield className="w-6 h-6" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-base font-bold text-gray-900 flex flex-wrap items-center gap-2">
+                                                Status da verificação
+                                                {verificationStatus === 'verified' && (
+                                                    <span className="text-green-700 text-xs bg-green-50 px-2 py-0.5 rounded-full border border-green-100">Verificado</span>
+                                                )}
+                                                {verificationStatus === 'pending' && (
+                                                    <span className="text-yellow-800 text-xs bg-yellow-50 px-2 py-0.5 rounded-full border border-yellow-100">Em análise</span>
+                                                )}
+                                                {verificationStatus === 'rejected' && (
+                                                    <span className="text-red-700 text-xs bg-red-50 px-2 py-0.5 rounded-full border border-red-100">Solicitação recusada</span>
+                                                )}
+                                            </h3>
+                                            <p className="text-sm text-gray-600 mt-1">
+                                                {verificationStatus === 'verified' &&
+                                                    'Parabéns! Seu nome de exibição ganha o selo de verificado nos anúncios e lista de busca.'}
+                                                {verificationStatus === 'pending' &&
+                                                    'Estamos revisando suas fotos e dados. O prazo é de até 3 dias úteis; você será avisado por aqui assim que houver decisão.'}
+                                                {verificationStatus === 'rejected' &&
+                                                    'Revise as orientações abaixo, envie novas imagens claras e envie outra solicitação — o novo pedido será analisado em até 3 dias úteis.'}
+                                                {verificationStatus === 'none' &&
+                                                    'Envie RG ou CNH (frente e verso) e uma selfie com o documento ao lado do rosto. Após o envio, o status pode levar até 3 dias úteis para ser atualizado.'}
+                                            </p>
+                                            {verificationStatus === 'rejected' && profile?.verification_rejection_reason?.trim() && (
+                                                <p className="text-sm text-red-800 mt-3 p-3 bg-red-50 rounded-lg border border-red-100">
+                                                    <strong>Motivo:</strong> {profile.verification_rejection_reason.trim()}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
 
-                        <section className="border border-red-200 rounded-xl overflow-hidden bg-white shadow-sm" aria-labelledby="danger-zone-title">
-                            <div className="bg-red-50 px-6 py-4 border-b border-red-100 flex items-center gap-2">
-                                <Shield className="w-5 h-5 text-red-600 shrink-0" />
-                                <h3 id="danger-zone-title" className="text-lg font-bold text-red-700">
-                                    Zona de perigo
-                                </h3>
+                                    {(verificationStatus === 'pending' || verificationStatus === 'verified') &&
+                                        ((verifyDocUrls.length > 0 || verifySelfieUrls.length > 0) ? (
+                                            <div className="p-5 grid md:grid-cols-2 gap-4 bg-white">
+                                                <div>
+                                                    <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Documento enviado</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {verifyDocUrls.map((url) => (
+                                                            <img key={url} src={url} alt="" className="h-28 w-auto rounded-lg border border-gray-200 object-cover" />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Selfie com documento</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {verifySelfieUrls.map((url) => (
+                                                            <img key={url} src={url} alt="" className="h-28 w-auto rounded-lg border border-gray-200 object-cover" />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : null)}
+
+                                    {(verificationStatus === 'none' || verificationStatus === 'rejected') && (
+                                        <div className="p-5 space-y-6 bg-white">
+                                            <div className="rounded-lg bg-amber-50 border border-amber-100 px-4 py-3 text-sm text-amber-900">
+                                                <p className="font-semibold mb-1">Dicas para aprovação rápida</p>
+                                                <ul className="list-disc list-inside space-y-1 text-amber-900/90">
+                                                    <li>Iluminação uniforme — evite reflexo forte no plástico do RG.</li>
+                                                    <li>Na selfie, seu rosto e os dados do documento devem aparecer legíveis.</li>
+                                                    <li>Formatos JPG/PNG; as imagens são convertidas para WebP no envio.</li>
+                                                </ul>
+                                            </div>
+                                            <div className="space-y-3">
+                                                <label className="block text-sm font-medium text-gray-800">RG ou CNH (até 2 fotos: frente e verso)</label>
+                                                <ImageUpload
+                                                    userId={user.id}
+                                                    uploadSubfolder="verification"
+                                                    maxImages={2}
+                                                    currentImages={verifyDocUrls}
+                                                    onUpload={(url) => setVerifyDocUrls((prev) => [...prev, url])}
+                                                    onRemove={(url) => setVerifyDocUrls((prev) => prev.filter((u) => u !== url))}
+                                                    onReorder={setVerifyDocUrls}
+                                                />
+                                            </div>
+                                            <div className="space-y-3">
+                                                <label className="block text-sm font-medium text-gray-800">
+                                                    Selfie segurando o documento ao lado do rosto <span className="text-red-500">*</span>
+                                                </label>
+                                                <ImageUpload
+                                                    userId={user.id}
+                                                    uploadSubfolder="verification"
+                                                    maxImages={1}
+                                                    currentImages={verifySelfieUrls}
+                                                    onUpload={(url) => setVerifySelfieUrls([url])}
+                                                    onRemove={() => setVerifySelfieUrls([])}
+                                                />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleRequestVerification}
+                                                disabled={submittingVerification}
+                                                className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                            >
+                                                {submittingVerification ? 'Enviando...' : 'Enviar documentos para análise'}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            <div className="p-6">
-                                <p className="text-gray-600 mb-4">
-                                    A exclusão da conta remove anúncios e dados vinculados ao seu usuário no fluxo
-                                    previsto pelo sistema. Esta ação é irreversível.
-                                </p>
-                                <button
-                                    type="button"
-                                    onClick={handleDeleteAccount}
-                                    className="px-4 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        )}
+
+                        {activeTab === 'settings' && (
+                            <>
+                                <section className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm" aria-labelledby="settings-quick-actions-title">
+                                    <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+                                        <Shield className="w-5 h-5 text-gray-700 shrink-0" />
+                                        <h3 id="settings-quick-actions-title" className="text-lg font-bold text-gray-900">
+                                            Atalhos úteis
+                                        </h3>
+                                    </div>
+                                    <div className="p-6 space-y-3">
+                                        <Link
+                                            to="/meus-anuncios"
+                                            className="block w-full rounded-lg border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                        >
+                                            Gerenciar meus anúncios
+                                        </Link>
+                                    </div>
+                                </section>
+
+                                <section
+                                    className="border border-indigo-200 rounded-xl overflow-hidden bg-white shadow-sm"
+                                    aria-labelledby="lgpd-data-title"
                                 >
-                                    Excluir minha conta
-                                </button>
-                            </div>
-                        </section>
+                                    <div className="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex items-center gap-2">
+                                        <Shield className="w-5 h-5 text-indigo-700 shrink-0" />
+                                        <h3 id="lgpd-data-title" className="text-lg font-bold text-indigo-900">
+                                            Seus dados (LGPD)
+                                        </h3>
+                                    </div>
+                                    <div className="p-6 space-y-4 text-gray-700 text-sm leading-relaxed">
+                                        <p>
+                                            Você tem direito de <strong>acessar</strong> e <strong>portar</strong> seus dados em
+                                            formato legível. Use o botão abaixo para baixar um JSON com seu perfil, anúncios e
+                                            favoritos (quando permitido pelas permissões do banco).
+                                        </p>
+                                        <p>
+                                            Para <strong>excluir</strong> definitivamente a conta e os dados tratados nesse
+                                            fluxo, use a opção na zona de perigo — o sistema chama a função{' '}
+                                            <code className="text-xs bg-gray-100 px-1 rounded">delete_own_account</code>. Prazos
+                                            de backups e retenções legais estão descritos na{' '}
+                                            <Link to="/privacidade" className="text-blue-600 font-medium hover:underline">
+                                                Política de Privacidade
+                                            </Link>
+                                            .
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={handleExportMyData}
+                                            disabled={loading}
+                                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-indigo-200 bg-white text-indigo-800 font-medium hover:bg-indigo-50 disabled:opacity-50"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                            Baixar meus dados (JSON)
+                                        </button>
+                                    </div>
+                                </section>
+
+                                <section className="border border-red-200 rounded-xl overflow-hidden bg-white shadow-sm" aria-labelledby="danger-zone-title">
+                                    <div className="bg-red-50 px-6 py-4 border-b border-red-100 flex items-center gap-2">
+                                        <Shield className="w-5 h-5 text-red-600 shrink-0" />
+                                        <h3 id="danger-zone-title" className="text-lg font-bold text-red-700">
+                                            Zona de perigo
+                                        </h3>
+                                    </div>
+                                    <div className="p-6">
+                                        <p className="text-gray-600 mb-4">
+                                            A exclusão da conta remove anúncios e dados vinculados ao seu usuário no fluxo
+                                            previsto pelo sistema. Esta ação é irreversível.
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={handleDeleteAccount}
+                                            className="px-4 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                        >
+                                            Excluir minha conta
+                                        </button>
+                                    </div>
+                                </section>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

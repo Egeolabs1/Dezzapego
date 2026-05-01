@@ -20,6 +20,11 @@ function isValidEmail(email: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
+function isValidCpfOrCnpj(value: string) {
+    const digits = digitsOnly(value);
+    return digits.length === 11 || digits.length === 14;
+}
+
 function passwordChecks(password: string) {
     return {
         length: password.length >= 8,
@@ -41,7 +46,7 @@ export default function Register() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [accountType, setAccountType] = useState<AccountType>('personal');
-    const [businessDocument, setBusinessDocument] = useState('');
+    const [document, setDocument] = useState('');
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -72,17 +77,17 @@ export default function Register() {
         if (touched || confirmPassword) {
             if (password !== confirmPassword) e.confirmPassword = 'As senhas não coincidem.';
         }
-        if (accountType === 'professional' && (touched || businessDocument.trim())) {
-            const d = digitsOnly(businessDocument);
-            if (d.length !== 14 && d.length !== 0) {
-                e.businessDocument = 'CNPJ deve ter 14 dígitos (ou deixe em branco).';
+        const doc = document.trim();
+        if (touched || doc) {
+            if (!isValidCpfOrCnpj(doc)) {
+                e.document = 'Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.';
             }
         }
         if (touched && !termsAccepted) {
             e.terms = 'Aceite os termos para continuar.';
         }
         return e;
-    }, [name, phone, email, password, confirmPassword, accountType, businessDocument, termsAccepted, touched]);
+    }, [name, phone, email, password, confirmPassword, accountType, document, termsAccepted, touched]);
 
     const pwdStatus = passwordChecks(password);
 
@@ -95,10 +100,7 @@ export default function Register() {
         if (!passwordMeetsPolicy(password)) e.push('senha');
         if (password !== confirmPassword) e.push('confirmação');
         if (!termsAccepted) e.push('termos');
-        if (accountType === 'professional') {
-            const d = digitsOnly(businessDocument);
-            if (d.length > 0 && d.length !== 14) e.push('cnpj');
-        }
+        if (!isValidCpfOrCnpj(document)) e.push('cpf/cnpj');
         if (e.length) {
             toast.error('Corrija os campos destacados antes de continuar.');
             return false;
@@ -114,11 +116,23 @@ export default function Register() {
         try {
             const meta: Record<string, string> = {
                 full_name: name.trim(),
-                phone: phone.trim(),
+                phone: digitsOnly(phone),
+                cpf_cnpj: digitsOnly(document),
                 account_type: accountType,
             };
-            if (accountType === 'professional' && digitsOnly(businessDocument).length === 14) {
-                meta.cpf_cnpj = digitsOnly(businessDocument);
+
+            const normalizedPhone = digitsOnly(phone);
+            const normalizedDocument = digitsOnly(document);
+            const { data: duplicatedProfile, error: duplicatedProfileError } = await supabase
+                .from('profiles')
+                .select('id')
+                .or(`phone.eq.${normalizedPhone},cpf_cnpj.eq.${normalizedDocument}`)
+                .limit(1);
+
+            if (duplicatedProfileError) throw duplicatedProfileError;
+            if (duplicatedProfile && duplicatedProfile.length > 0) {
+                toast.error('Já existe conta cadastrada com este CPF/CNPJ ou telefone.');
+                return;
             }
 
             const { data, error } = await supabase.auth.signUp({
@@ -143,7 +157,11 @@ export default function Register() {
             navigate('/anunciar', { replace: true });
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Erro ao realizar cadastro.';
-            toast.error(msg);
+            if (/already registered|already exists|duplicate|23505/i.test(msg)) {
+                toast.error('Já existe conta com este e-mail, CPF/CNPJ ou telefone.');
+            } else {
+                toast.error(msg);
+            }
         } finally {
             setLoading(false);
         }
@@ -216,27 +234,25 @@ export default function Register() {
                         <FieldError message={errors.phone} />
                     </div>
 
-                    {accountType === 'professional' && (
-                        <div className="space-y-1">
-                            <label htmlFor="cnpj" className="block text-sm font-medium text-gray-700">
-                                CNPJ (opcional)
-                            </label>
-                            <input
-                                id="cnpj"
-                                type="text"
-                                inputMode="numeric"
-                                placeholder="Somente números"
-                                value={businessDocument}
-                                onChange={(e) => setBusinessDocument(e.target.value)}
-                                onBlur={() => setTouched(true)}
-                                className={`flex h-10 w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                    errors.businessDocument ? 'border-red-400' : 'border-gray-300'
-                                }`}
-                            />
-                            <FieldError message={errors.businessDocument} />
-                            <p className="text-xs text-gray-500">Usamos para perfil comercial e confiança nas negociações.</p>
-                        </div>
-                    )}
+                    <div className="space-y-1">
+                        <label htmlFor="document" className="block text-sm font-medium text-gray-700">
+                            CPF ou CNPJ
+                        </label>
+                        <input
+                            id="document"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="Somente números"
+                            value={document}
+                            onChange={(e) => setDocument(e.target.value)}
+                            onBlur={() => setTouched(true)}
+                            className={`flex h-10 w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                errors.document ? 'border-red-400' : 'border-gray-300'
+                            }`}
+                        />
+                        <FieldError message={errors.document} />
+                        <p className="text-xs text-gray-500">Usamos para segurança da conta e prevenção de duplicidade.</p>
+                    </div>
 
                     <div className="space-y-1">
                         <label htmlFor="email" className="block text-sm font-medium text-gray-700">

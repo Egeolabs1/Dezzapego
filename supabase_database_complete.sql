@@ -120,6 +120,18 @@ alter table public.profiles
 alter table public.profiles
   add column if not exists verification_rejection_reason text;
 
+create unique index if not exists profiles_email_unique_idx
+  on public.profiles (lower(trim(email)))
+  where nullif(trim(email), '') is not null;
+
+create unique index if not exists profiles_phone_digits_unique_idx
+  on public.profiles (regexp_replace(phone, '\D', '', 'g'))
+  where nullif(regexp_replace(phone, '\D', '', 'g'), '') is not null;
+
+create unique index if not exists profiles_cpf_cnpj_digits_unique_idx
+  on public.profiles (regexp_replace(cpf_cnpj, '\D', '', 'g'))
+  where nullif(regexp_replace(cpf_cnpj, '\D', '', 'g'), '') is not null;
+
 comment on column public.profiles.verification_rejection_reason is
   'Motivo exibido ao usuário quando a verificação de identidade é recusada.';
 
@@ -204,12 +216,14 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, full_name, avatar_url, email)
+  insert into public.profiles (id, full_name, avatar_url, email, phone, cpf_cnpj)
   values (
     new.id,
     new.raw_user_meta_data->>'full_name',
     new.raw_user_meta_data->>'avatar_url',
-    new.email
+    new.email,
+    nullif(regexp_replace(coalesce(new.raw_user_meta_data->>'phone', ''), '\D', '', 'g'), ''),
+    nullif(regexp_replace(coalesce(new.raw_user_meta_data->>'cpf_cnpj', ''), '\D', '', 'g'), '')
   );
   return new;
 end;
