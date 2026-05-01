@@ -23,7 +23,7 @@ export async function trackSiteVisit(path: string) {
 
         sessionStorage.setItem(recentKey, String(Date.now()));
 
-        await fetch('/api/analytics/site-visit', {
+        await fetch('/api/track-visit', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({

@@ -1,1 +1,3 @@
-export { default } from '../track-visit';
+import handler from '../track-visit';
+
+export default handler;
