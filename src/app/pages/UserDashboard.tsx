@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Header } from '../components/Header';
@@ -32,30 +32,49 @@ export default function UserDashboard() {
 
     // Stats State
     const [stats, setStats] = useState({ totalAds: 0, totalViews: 0 });
+    const hydratedProfileRef = useRef<{ userId: string | null; usedProfileSnapshot: boolean }>({
+        userId: null,
+        usedProfileSnapshot: false,
+    });
 
     useEffect(() => {
-        if (user) {
-            // Prioritize profile data, fallback to metadata (migration) or empty
-            setName(profile?.full_name || user.user_metadata?.full_name || '');
-            setPhone(profile?.phone || user.user_metadata?.phone || '');
-            setBio(profile?.bio || user.user_metadata?.bio || '');
-            setState(profile?.state || user.user_metadata?.state || '');
-            setCity(profile?.city || user.user_metadata?.city || '');
-            setWebsite(profile?.website || user.user_metadata?.website || '');
-            setInstagram(profile?.instagram || user.user_metadata?.instagram || '');
-            setCpfCnpj(profile?.cpf_cnpj || user.user_metadata?.cpf_cnpj || '');
-
-            if (profile?.avatar_url) {
-                setAvatar([profile.avatar_url]);
-            } else if (user.user_metadata?.avatar_url) {
-                setAvatar([user.user_metadata.avatar_url]);
-            }
-
-            fetchStats();
-        } else {
+        if (!user) {
+            hydratedProfileRef.current = { userId: null, usedProfileSnapshot: false };
             navigate('/login');
+            return;
         }
-    }, [user, profile, navigate]); // Added profile dependency
+
+        const isNewUser = hydratedProfileRef.current.userId !== user.id;
+        if (isNewUser) {
+            hydratedProfileRef.current = { userId: user.id, usedProfileSnapshot: false };
+        }
+
+        // Hidrata formulário apenas na entrada da tela (ou 1x quando perfil chegar),
+        // evitando sobrescrever edições não salvas após refreshProfile().
+        const shouldHydrate =
+            isNewUser || (!hydratedProfileRef.current.usedProfileSnapshot && Boolean(profile));
+
+        if (!shouldHydrate) return;
+
+        setName(profile?.full_name || user.user_metadata?.full_name || '');
+        setPhone(profile?.phone || user.user_metadata?.phone || '');
+        setBio(profile?.bio || user.user_metadata?.bio || '');
+        setState(profile?.state || user.user_metadata?.state || '');
+        setCity(profile?.city || user.user_metadata?.city || '');
+        setWebsite(profile?.website || user.user_metadata?.website || '');
+        setInstagram(profile?.instagram || user.user_metadata?.instagram || '');
+        setCpfCnpj(profile?.cpf_cnpj || user.user_metadata?.cpf_cnpj || '');
+
+        if (profile?.avatar_url) {
+            setAvatar([profile.avatar_url]);
+        } else if (user.user_metadata?.avatar_url) {
+            setAvatar([user.user_metadata.avatar_url]);
+        } else {
+            setAvatar([]);
+        }
+
+        hydratedProfileRef.current.usedProfileSnapshot = Boolean(profile);
+    }, [user, profile, navigate]);
 
     useEffect(() => {
         const docs = profile?.verification_docs;
@@ -78,6 +97,11 @@ export default function UserDashboard() {
             setStats({ totalAds: data.length, totalViews });
         }
     };
+
+    useEffect(() => {
+        if (!user) return;
+        fetchStats();
+    }, [user?.id]);
 
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
