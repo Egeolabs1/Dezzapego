@@ -3,36 +3,75 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ImageUpload } from '../components/ImageUpload';
-import { Loader2, ArrowLeft, Save } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, MapPin, Image as ImageIcon, Tag, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-import { CATEGORY_SPECS, getCategoryFields } from '../data/categorySpecs';
+import { CATEGORY_SPECS } from '../data/categorySpecs';
 import { AdSeoHints } from '../../components/AdSeoHints';
+import { AdCategoryFields } from '../components/AdCategoryFields';
+import { AdFormStepper, type StepDef } from '../components/AdFormStepper';
+import { AdFormReview } from '../components/AdFormReview';
+import {
+    buildNormalizedDetails,
+    formatCurrencyFromNumber,
+    formatCurrencyInput,
+    getMissingRequiredDetailLabels,
+    getValidImages,
+    parseCurrencyInput,
+    validateAdBasics,
+    validateAdCategoryStep,
+    validateAdMainFields,
+    validateLocation,
+    type AdLocationForm,
+} from '../../lib/adFormHelpers';
 
-const formatCurrencyInput = (raw: string) => {
-    const digits = raw.replace(/\D/g, '');
-    if (!digits) return '';
-    const value = Number(digits) / 100;
-    return value.toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
+const EDIT_STEPS: StepDef[] = [
+    { id: 'category', label: 'Categoria' },
+    { id: 'main', label: 'Dados principais' },
+    { id: 'details', label: 'Detalhes' },
+    { id: 'media', label: 'Fotos e local' },
+    { id: 'review', label: 'Revisão' },
+];
+
+const STATE_MAP: Record<string, string> = {
+    Acre: 'AC',
+    Alagoas: 'AL',
+    Amapá: 'AP',
+    Amazonas: 'AM',
+    Bahia: 'BA',
+    Ceará: 'CE',
+    'Distrito Federal': 'DF',
+    'Espírito Santo': 'ES',
+    Goiás: 'GO',
+    Maranhão: 'MA',
+    'Mato Grosso': 'MT',
+    'Mato Grosso do Sul': 'MS',
+    'Minas Gerais': 'MG',
+    Pará: 'PA',
+    Paraíba: 'PB',
+    Paraná: 'PR',
+    Pernambuco: 'PE',
+    Piauí: 'PI',
+    'Rio de Janeiro': 'RJ',
+    'Rio Grande do Norte': 'RN',
+    'Rio Grande do Sul': 'RS',
+    Rondônia: 'RO',
+    Roraima: 'RR',
+    'Santa Catarina': 'SC',
+    'São Paulo': 'SP',
+    Sergipe: 'SE',
+    Tocantins: 'TO',
 };
 
-const formatCurrencyFromNumber = (value: number) =>
-    Number(value || 0).toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
-
-const parseCurrencyInput = (raw: string) => {
-    if (!raw) return 0;
-    const normalized = raw.replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '');
-    const numeric = Number(normalized);
-    return Number.isFinite(numeric) ? numeric : 0;
+type FormState = {
+    title: string;
+    price: string;
+    description: string;
+    category: string;
+    subcategory: string;
+    images: string[];
+    details: Record<string, unknown>;
+    location: AdLocationForm;
 };
-
-const getValidImages = (images: string[]) =>
-    images.map((img) => img.trim()).filter(Boolean);
 
 export default function EditAd() {
     const { id } = useParams<{ id: string }>();
@@ -40,23 +79,29 @@ export default function EditAd() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [step, setStep] = useState(0);
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<FormState>({
         title: '',
         price: '',
         description: '',
         category: '',
         subcategory: '',
-        images: [] as string[],
-        details: {} as Record<string, any>
+        images: [],
+        details: {},
+        location: {
+            state: 'SP',
+            city: '',
+            neighborhood: '',
+            lat: null,
+            lng: null,
+        },
     });
 
-    // Redirect if not authenticated
     useEffect(() => {
         if (!user) {
             toast.error('Você precisa estar logado para editar anúncios.');
             navigate('/login');
-            return;
         }
     }, [user, navigate]);
 
@@ -64,21 +109,19 @@ export default function EditAd() {
         async function fetchAd() {
             if (!id || !user) return;
             try {
-                const { data, error } = await supabase
-                    .from('ads')
-                    .select('*')
-                    .eq('id', id)
-                    .single();
+                const { data, error } = await supabase.from('ads').select('*').eq('id', id).single();
 
                 if (error) throw error;
 
-                // Verify ownership (security rule should handle this, but good for UI)
-                // Check if seller ID inside JSONB matches
-                if (data.seller.id !== user.id) {
+                const seller = data.seller as { id?: string } | null;
+                const sellerId = seller?.id;
+                if (data.user_id !== user.id && sellerId !== user.id) {
                     toast.error('Você não tem permissão para editar este anúncio.');
                     navigate('/');
                     return;
                 }
+
+                const loc = (data.location || {}) as Partial<AdLocationForm> & Record<string, unknown>;
 
                 setFormData({
                     title: data.title,
@@ -87,10 +130,18 @@ export default function EditAd() {
                     category: data.category,
                     subcategory: data.subcategory || '',
                     images: data.images || [],
-                    details: data.details || {}
+                    details: data.details || {},
+                    location: {
+                        state: String(loc.state || 'SP')
+                            .toUpperCase()
+                            .slice(0, 2),
+                        city: String(loc.city || ''),
+                        neighborhood: String(loc.neighborhood || ''),
+                        lat: (data.lat as number | null | undefined) ?? (loc.lat as number | null) ?? null,
+                        lng: (data.lng as number | null | undefined) ?? (loc.lng as number | null) ?? null,
+                    },
                 });
-            } catch (error) {
-                console.error('Error fetching ad:', error);
+            } catch {
                 toast.error('Erro ao carregar anúncio.');
                 navigate('/meus-anuncios');
             } finally {
@@ -105,80 +156,56 @@ export default function EditAd() {
         if (!user || !id) return;
 
         const validImages = getValidImages(formData.images);
-        if (validImages.length === 0) {
-            toast.error('Por favor, adicione pelo menos uma imagem ao seu anúncio.');
+        const basics = validateAdBasics({
+            title: formData.title,
+            description: formData.description,
+            category: formData.category,
+            subcategory: formData.subcategory,
+            price: formData.price,
+            images: validImages,
+        });
+        if (basics) {
+            toast.error(basics);
             return;
         }
 
-        if (!formData.category) {
-            toast.error('Selecione uma categoria.');
+        const locErr = validateLocation(formData.location);
+        if (locErr) {
+            toast.error(locErr);
+            setStep(3);
             return;
         }
 
-        if (!formData.subcategory) {
-            toast.error('Selecione uma subcategoria.');
+        const missing = getMissingRequiredDetailLabels(formData.category, formData.subcategory, formData.details);
+        if (missing.length > 0) {
+            toast.error(`Preencha: ${missing.join(', ')}`);
+            setStep(2);
             return;
-        }
-
-        const trimmedTitle = formData.title.trim();
-        const trimmedDesc = formData.description.trim();
-        if (trimmedTitle.length < 15) {
-            toast.error('Use um título mais específico (mínimo 15 caracteres) para aparecer bem nas buscas.');
-            return;
-        }
-        if (trimmedDesc.length < 80) {
-            toast.error('Amplie a descrição para pelo menos 80 caracteres: estado do item, medidas e o que está incluso.');
-            return;
-        }
-
-        const fields = getCategoryFields(formData.category, formData.subcategory);
-        if (fields.length > 0) {
-            const missingRequired = fields.filter((field) => {
-                if (!field.required) return false;
-                const value = formData.details[field.name];
-                return value === undefined || value === null || String(value).trim() === '';
-            });
-
-            if (missingRequired.length > 0) {
-                toast.error(`Preencha os campos obrigatórios: ${missingRequired.map((f) => f.label).join(', ')}`);
-                return;
-            }
         }
 
         setSaving(true);
 
         try {
             const numericPrice = parseCurrencyInput(formData.price);
-
-            const normalizedDetails: Record<string, any> = {};
-            if (fields.length > 0) {
-                fields.forEach((field) => {
-                    const value = formData.details[field.name];
-                    if (field.type === 'checkbox') {
-                        normalizedDetails[field.name] = Boolean(value);
-                    } else if (field.type === 'number') {
-                        if (value === undefined || value === null || String(value).trim() === '') {
-                            normalizedDetails[field.name] = '';
-                        } else {
-                            const n = field.unit === 'R$' ? parseCurrencyInput(String(value)) : Number(value);
-                            normalizedDetails[field.name] = Number.isNaN(n) ? value : n;
-                        }
-                    } else {
-                        normalizedDetails[field.name] = value ?? '';
-                    }
-                });
-            }
+            const normalizedDetails = buildNormalizedDetails(
+                formData.category,
+                formData.subcategory,
+                formData.details,
+            );
 
             const { error } = await supabase
                 .from('ads')
                 .update({
-                    title: formData.title,
-                    price: isNaN(numericPrice) ? 0 : numericPrice,
-                    description: formData.description,
+                    title: formData.title.trim(),
+                    price: Number.isNaN(numericPrice) ? 0 : numericPrice,
+                    description: formData.description.trim(),
                     category: formData.category,
                     subcategory: formData.subcategory,
                     images: validImages,
                     details: normalizedDetails,
+                    location: formData.location,
+                    lat: formData.location.lat,
+                    lng: formData.location.lng,
                 })
                 .eq('id', id);
 
@@ -186,8 +213,7 @@ export default function EditAd() {
 
             toast.success('Anúncio atualizado com sucesso!');
             navigate('/meus-anuncios');
-        } catch (error: any) {
-            console.error('Error updating ad:', error);
+        } catch {
             toast.error('Erro ao atualizar anúncio. Tente novamente.');
         } finally {
             setSaving(false);
@@ -196,12 +222,12 @@ export default function EditAd() {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => {
+        setFormData((prev) => {
             if (name === 'price') {
                 return { ...prev, price: formatCurrencyInput(value) };
             }
             if (name === 'category') {
-                return { ...prev, [name]: value, subcategory: '', details: {} }; // Reset subcategory e detalhes
+                return { ...prev, [name]: value, subcategory: '', details: {} };
             }
             if (name === 'subcategory') {
                 return { ...prev, [name]: value, details: {} };
@@ -210,133 +236,126 @@ export default function EditAd() {
         });
     };
 
-    const handleDetailChange = (name: string, value: any) => {
-        setFormData(prev => ({
+    const handleDetailChange = (name: string, value: unknown) => {
+        setFormData((prev) => ({
             ...prev,
-            details: { ...prev.details, [name]: value }
+            details: { ...prev.details, [name]: value },
         }));
     };
 
-    const renderDynamicFields = () => {
-        if (!formData.category || !CATEGORY_SPECS[formData.category]) return null;
-
-        const fields = getCategoryFields(formData.category, formData.subcategory);
-        const cleanCheckboxLabel = (label: string) =>
-            label.replace(/^Detalhe:\s*/i, '').replace(/^Condomínio:\s*/i, '').trim();
-
-        const nonCheckboxFields = fields.filter((field) => field.type !== 'checkbox');
-        const propertyCheckboxes = fields.filter((field) => field.type === 'checkbox' && field.name.startsWith('det_'));
-        const condoCheckboxes = fields.filter((field) => field.type === 'checkbox' && field.name.startsWith('cond_'));
-        const genericCheckboxes = fields.filter(
-            (field) => field.type === 'checkbox' && !field.name.startsWith('det_') && !field.name.startsWith('cond_')
-        );
-        const commercialCheckboxes = genericCheckboxes.filter((field) =>
-            /(accept|financing|warranty|delivery|invoice|quote|commission|allowance|insurance)/i.test(field.name)
-        );
-        const featureCheckboxes = genericCheckboxes.filter(
-            (field) => !commercialCheckboxes.some((commercial) => commercial.name === field.name)
-        );
-
-        const renderCheckboxGroup = (groupTitle: string, items: typeof fields) => {
-            if (items.length === 0) return null;
-            return (
-                <div className="space-y-2">
-                    <h4 className="text-sm font-semibold text-gray-700">{groupTitle}</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {items.map((field) => (
-                            <label
-                                key={field.name}
-                                className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
-                            >
-                                <input
-                                    type="checkbox"
-                                    checked={!!formData.details[field.name]}
-                                    onChange={(e) => handleDetailChange(field.name, e.target.checked)}
-                                    className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500 border-gray-300"
-                                />
-                                <span className="text-gray-700 text-sm">
-                                    {cleanCheckboxLabel(field.label)}
-                                    {field.required ? <span className="text-red-500 ml-1">*</span> : null}
-                                </span>
-                            </label>
-                        ))}
-                    </div>
-                </div>
+    const validateCurrentStep = (): boolean => {
+        if (step === 0) {
+            const err = validateAdCategoryStep(formData.category, formData.subcategory);
+            if (err) {
+                toast.error(err);
+                return false;
+            }
+            return true;
+        }
+        if (step === 1) {
+            const err = validateAdMainFields({
+                title: formData.title,
+                description: formData.description,
+                price: formData.price,
+            });
+            if (err) {
+                toast.error(err);
+                return false;
+            }
+            return true;
+        }
+        if (step === 2) {
+            const missing = getMissingRequiredDetailLabels(
+                formData.category,
+                formData.subcategory,
+                formData.details,
             );
-        };
+            if (missing.length > 0) {
+                toast.error(`Preencha os campos obrigatórios: ${missing.join(', ')}`);
+                return false;
+            }
+            return true;
+        }
+        if (step === 3) {
+            const imgs = getValidImages(formData.images);
+            if (imgs.length === 0) {
+                toast.error('Adicione pelo menos uma foto.');
+                return false;
+            }
+            const locErr = validateLocation(formData.location);
+            if (locErr) {
+                toast.error(locErr);
+                return false;
+            }
+            return true;
+        }
+        return true;
+    };
 
-        return (
-            <>
-                {nonCheckboxFields.map((field) => (
-                    <div key={field.name} className="space-y-2">
-                        <label htmlFor={`field-${field.name}`} className="block text-sm font-medium text-gray-700">
-                            {field.label}
-                            {field.required ? <span className="text-red-500 ml-1">*</span> : null}
-                        </label>
-                        <div className="relative">
-                            {field.type === 'select' ? (
-                                <select
-                                    id={`field-${field.name}`}
-                                    value={formData.details[field.name] || ''}
-                                    onChange={(e) => handleDetailChange(field.name, e.target.value)}
-                                    required={field.required}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                                    aria-label={field.label}
-                                >
-                                    <option value="">Selecione...</option>
-                                    {field.options?.map(opt => (
-                                        <option key={opt} value={opt}>{opt}</option>
-                                    ))}
-                                </select>
-                            ) : (
-                                <input
-                                    id={`field-${field.name}`}
-                                    type={field.type === 'number' && field.unit !== 'R$' ? 'number' : 'text'}
-                                    inputMode={field.type === 'number' ? 'decimal' : 'text'}
-                                    placeholder={field.placeholder}
-                                    value={formData.details[field.name] || ''}
-                                    onChange={(e) =>
-                                        handleDetailChange(
-                                            field.name,
-                                            field.type === 'number' && field.unit === 'R$'
-                                                ? formatCurrencyInput(e.target.value)
-                                                : e.target.value
-                                        )
-                                    }
-                                    required={field.required}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                            )}
-                            {field.unit && (
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">
-                                    {field.unit}
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                ))}
+    const goNext = () => {
+        if (!validateCurrentStep()) return;
+        setStep((s) => Math.min(s + 1, EDIT_STEPS.length - 1));
+    };
 
-                {(genericCheckboxes.length > 0 || propertyCheckboxes.length > 0 || condoCheckboxes.length > 0) && (
-                    <div className="md:col-span-2 rounded-xl border border-gray-200 bg-gray-50/50 p-3 space-y-4">
-                        {renderCheckboxGroup('Condições comerciais', commercialCheckboxes)}
-                        {renderCheckboxGroup('Características', featureCheckboxes)}
-                        {renderCheckboxGroup('Detalhes do imóvel', propertyCheckboxes)}
-                        {renderCheckboxGroup('Detalhes do condomínio', condoCheckboxes)}
-                    </div>
-                )}
-            </>
+    const goBack = () => setStep((s) => Math.max(s - 1, 0));
+
+    const useMyLocation = () => {
+        if (!navigator.geolocation) {
+            toast.error('Geolocalização não suportada no seu navegador.');
+            return;
+        }
+        const toastId = toast.loading('Obtendo localização...');
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+                try {
+                    const response = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+                    );
+                    const data = await response.json();
+                    const address = data.address || {};
+                    const city =
+                        address.city || address.town || address.village || address.municipality || formData.location.city;
+
+                    let state = address.state_code || '';
+                    if (!state && address['ISO3166-2-lvl4']) {
+                        state = address['ISO3166-2-lvl4'].split('-')[1];
+                    }
+                    if (!state && address.state) {
+                        state = STATE_MAP[address.state] || address.state.substring(0, 2);
+                    }
+                    state = (state || formData.location.state || 'SP').toUpperCase();
+
+                    const neighborhood =
+                        address.suburb || address.neighbourhood || address.residential || address.quarter || '';
+
+                    setFormData((prev) => ({
+                        ...prev,
+                        location: {
+                            ...prev.location,
+                            lat: latitude,
+                            lng: longitude,
+                            city: city || prev.location.city,
+                            state: state.substring(0, 2).toUpperCase(),
+                            neighborhood: neighborhood || prev.location.neighborhood,
+                        },
+                    }));
+                    toast.dismiss(toastId);
+                    toast.success('Localização atualizada!');
+                } catch {
+                    setFormData((prev) => ({
+                        ...prev,
+                        location: { ...prev.location, lat: latitude, lng: longitude },
+                    }));
+                    toast.dismiss(toastId);
+                    toast.success('Coordenadas salvas!');
+                }
+            },
+            (error) => {
+                toast.dismiss(toastId);
+                toast.error('Erro ao obter localização: ' + error.message);
+            },
         );
-    };
-
-    const handleImageUpload = (url: string) => {
-        setFormData(prev => ({ ...prev, images: [...prev.images, url] }));
-    };
-
-    const handleImageRemove = (urlToRemove: string) => {
-        setFormData(prev => ({
-            ...prev,
-            images: prev.images.filter(url => url !== urlToRemove)
-        }));
     };
 
     if (loading) {
@@ -348,159 +367,302 @@ export default function EditAd() {
     }
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-2xl">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
             <button
+                type="button"
                 onClick={() => navigate('/meus-anuncios')}
                 className="flex items-center text-gray-600 hover:text-blue-600 mb-6 transition-colors"
             >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Cancelar e Voltar
+                Cancelar e voltar
             </button>
 
-            <div className="bg-white rounded-xl shadow-lg p-6 md:p-8">
-                <h1 className="text-2xl font-bold text-gray-800 mb-6">Editar Anúncio</h1>
+            <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 border border-gray-100">
+                <h1 className="text-2xl font-bold text-gray-800 mb-2">Editar anúncio</h1>
+                <p className="text-sm text-gray-500 mb-6">Revise cada etapa antes de salvar.</p>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Photos */}
-                    <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">
-                            Fotos do Produto
-                        </label>
-                        <div className="bg-white p-4 rounded-lg border border-gray-200">
-                            <ImageUpload
-                                userId={user?.id || ''}
-                                onUpload={handleImageUpload}
-                                onRemove={handleImageRemove}
-                                currentImages={formData.images}
-                            />
-                        </div>
-                        <p className="text-xs text-gray-500">
-                            Adicione até 6 fotos (máx. 5MB cada).
-                        </p>
-                    </div>
+                <form onSubmit={handleSubmit}>
+                    <AdFormStepper steps={EDIT_STEPS} currentIndex={step} onStepClick={(i) => setStep(i)} />
 
-                    {/* Title */}
-                    <div className="space-y-2">
-                        <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-                            Título do Anúncio
-                        </label>
-                        <input
-                            id="title"
-                            name="title"
-                            type="text"
-                            required
-                            maxLength={100}
-                            value={formData.title}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                    </div>
-
-                    {/* Price */}
-                    <div className="space-y-2">
-                        <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-                            Preço (R$)
-                        </label>
-                        <input
-                            id="price"
-                            name="price"
-                            type="text" // text to allow comma
-                            inputMode="decimal"
-                            required
-                            value={formData.price}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                    </div>
-
-                    {/* Category & Subcategory Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Category */}
-                        <div className="space-y-2">
-                            <label htmlFor="category" className="block text-sm font-medium text-gray-700">
-                                Categoria
-                            </label>
-                            <select
-                                id="category"
-                                name="category"
-                                required
-                                value={formData.category}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                            >
-                                <option value="">Selecione uma categoria</option>
-                                {Object.keys(CATEGORY_SPECS).map(cat => (
-                                    <option key={cat} value={cat}>{cat}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Subcategory */}
-                        <div className="space-y-2">
-                            <label htmlFor="subcategory" className="block text-sm font-medium text-gray-700">
-                                Subcategoria
-                            </label>
-                            <select
-                                id="subcategory"
-                                name="subcategory"
-                                required
-                                disabled={!formData.category}
-                                value={formData.subcategory}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:text-gray-400"
-                            >
-                                <option value="">Selecione...</option>
-                                {formData.category && CATEGORY_SPECS[formData.category]?.subcategories?.map(sub => (
-                                    <option key={sub} value={sub}>{sub}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {renderDynamicFields()}
-                    </div>
-                    {formData.category && formData.subcategory && (
-                        <div className="text-xs text-gray-500 -mt-3">
-                            Campos com <span className="text-red-500">*</span> são obrigatórios para esta subcategoria.
-                        </div>
+                    {step === 0 && (
+                        <section className="space-y-6">
+                            <div className="flex items-center gap-2 text-gray-800 border-b pb-2">
+                                <Tag className="w-5 h-5 text-blue-600" />
+                                <h2 className="text-xl font-semibold">Categoria</h2>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label htmlFor="category" className="block text-sm font-medium text-gray-700">
+                                        Categoria
+                                    </label>
+                                    <select
+                                        id="category"
+                                        name="category"
+                                        value={formData.category}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                    >
+                                        <option value="">Selecione</option>
+                                        {Object.keys(CATEGORY_SPECS).map((cat) => (
+                                            <option key={cat} value={cat}>
+                                                {cat}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label htmlFor="subcategory" className="block text-sm font-medium text-gray-700">
+                                        Subcategoria
+                                    </label>
+                                    <select
+                                        id="subcategory"
+                                        name="subcategory"
+                                        disabled={!formData.category}
+                                        value={formData.subcategory}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100"
+                                    >
+                                        <option value="">Selecione</option>
+                                        {formData.category &&
+                                            CATEGORY_SPECS[formData.category]?.subcategories?.map((sub) => (
+                                                <option key={sub} value={sub}>
+                                                    {sub}
+                                                </option>
+                                            ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </section>
                     )}
-                    {/* Description */}
-                    <div className="space-y-2">
-                        <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                            Descrição
-                        </label>
-                        <textarea
-                            id="description"
-                            name="description"
-                            required
-                            rows={5}
-                            value={formData.description}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                        />
+
+                    {step === 1 && (
+                        <section className="space-y-6">
+                            <div className="flex items-center gap-2 text-gray-800 border-b pb-2">
+                                <FileText className="w-5 h-5 text-blue-600" />
+                                <h2 className="text-xl font-semibold">Dados principais</h2>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                                        Título
+                                    </label>
+                                    <input
+                                        id="title"
+                                        name="title"
+                                        type="text"
+                                        maxLength={100}
+                                        value={formData.title}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label htmlFor="price" className="block text-sm font-medium text-gray-700">
+                                        Preço (R$)
+                                    </label>
+                                    <input
+                                        id="price"
+                                        name="price"
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={formData.price}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                                        Descrição
+                                    </label>
+                                    <textarea
+                                        id="description"
+                                        name="description"
+                                        rows={5}
+                                        value={formData.description}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                                    />
+                                </div>
+                                <AdSeoHints titleLen={formData.title.length} descriptionLen={formData.description.length} />
+                            </div>
+                        </section>
+                    )}
+
+                    {step === 2 && (
+                        <section className="space-y-6">
+                            <div className="flex items-center gap-2 text-gray-800 border-b pb-2">
+                                <FileText className="w-5 h-5 text-blue-600" />
+                                <h2 className="text-xl font-semibold">Detalhes da categoria</h2>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <AdCategoryFields
+                                    category={formData.category}
+                                    subcategory={formData.subcategory}
+                                    details={formData.details}
+                                    onDetailChange={handleDetailChange}
+                                    variant="edit"
+                                />
+                            </div>
+                            {formData.category && formData.subcategory && (
+                                <p className="text-xs text-gray-500">
+                                    Campos com <span className="text-red-500">*</span> são obrigatórios.
+                                </p>
+                            )}
+                        </section>
+                    )}
+
+                    {step === 3 && (
+                        <section className="space-y-8">
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 text-gray-800 border-b pb-2">
+                                    <ImageIcon className="w-5 h-5 text-blue-600" />
+                                    <h2 className="text-xl font-semibold">Fotos</h2>
+                                </div>
+                                <ImageUpload
+                                    variant="ad"
+                                    userId={user?.id || ''}
+                                    onUpload={(url) =>
+                                        setFormData((prev) => ({ ...prev, images: [...prev.images, url] }))
+                                    }
+                                    onRemove={(url) =>
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            images: prev.images.filter((u) => u !== url),
+                                        }))
+                                    }
+                                    onReorder={(newImages) => setFormData((prev) => ({ ...prev, images: newImages }))}
+                                    currentImages={formData.images}
+                                />
+                            </div>
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between border-b pb-2">
+                                    <div className="flex items-center gap-2">
+                                        <MapPin className="w-5 h-5 text-blue-600" />
+                                        <h2 className="text-xl font-semibold">Localização</h2>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={useMyLocation}
+                                        className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                                    >
+                                        <MapPin className="w-4 h-4" />
+                                        Usar minha localização
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                                    <div className="md:col-span-1 space-y-2">
+                                        <label htmlFor="edit-ad-loc-uf" className="text-sm font-medium text-gray-700">
+                                            UF
+                                        </label>
+                                        <input
+                                            id="edit-ad-loc-uf"
+                                            type="text"
+                                            maxLength={2}
+                                            value={formData.location.state}
+                                            onChange={(e) =>
+                                                setFormData((prev) => ({
+                                                    ...prev,
+                                                    location: {
+                                                        ...prev.location,
+                                                        state: e.target.value.toUpperCase().slice(0, 2),
+                                                    },
+                                                }))
+                                            }
+                                            className="w-full px-3 py-2 border rounded-lg uppercase text-center"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2 space-y-2">
+                                        <label htmlFor="edit-ad-loc-city" className="text-sm font-medium text-gray-700">
+                                            Cidade
+                                        </label>
+                                        <input
+                                            id="edit-ad-loc-city"
+                                            type="text"
+                                            value={formData.location.city}
+                                            onChange={(e) =>
+                                                setFormData((prev) => ({
+                                                    ...prev,
+                                                    location: { ...prev.location, city: e.target.value },
+                                                }))
+                                            }
+                                            className="w-full px-3 py-2 border rounded-lg"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-3 space-y-2">
+                                        <label htmlFor="edit-ad-loc-neighborhood" className="text-sm font-medium text-gray-700">
+                                            Bairro
+                                        </label>
+                                        <input
+                                            id="edit-ad-loc-neighborhood"
+                                            type="text"
+                                            value={formData.location.neighborhood || ''}
+                                            onChange={(e) =>
+                                                setFormData((prev) => ({
+                                                    ...prev,
+                                                    location: { ...prev.location, neighborhood: e.target.value },
+                                                }))
+                                            }
+                                            className="w-full px-3 py-2 border rounded-lg"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    )}
+
+                    {step === 4 && (
+                        <section>
+                            <AdFormReview
+                                title={formData.title}
+                                description={formData.description}
+                                price={formData.price}
+                                category={formData.category}
+                                subcategory={formData.subcategory}
+                                images={formData.images}
+                                location={formData.location}
+                            />
+                        </section>
+                    )}
+
+                    <div className="mt-10 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between border-t pt-6">
+                        <button
+                            type="button"
+                            onClick={goBack}
+                            disabled={step === 0 || saving}
+                            className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        >
+                            Anterior
+                        </button>
+                        <div className="flex gap-3 justify-end">
+                            {step < EDIT_STEPS.length - 1 ? (
+                                <button
+                                    type="button"
+                                    onClick={goNext}
+                                    className="px-6 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700"
+                                >
+                                    Próximo
+                                </button>
+                            ) : (
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="px-8 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold flex items-center gap-2 disabled:opacity-70"
+                                >
+                                    {saving ? (
+                                        <>
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                            Salvando...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="w-5 h-5" />
+                                            Salvar alterações
+                                        </>
+                                    )}
+                                </button>
+                            )}
+                        </div>
                     </div>
-
-                    <AdSeoHints titleLen={formData.title.length} descriptionLen={formData.description.length} />
-
-                    {/* Submit Button */}
-                    <button
-                        type="submit"
-                        disabled={saving}
-                        className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                        {saving ? (
-                            <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                                Salvando alterações...
-                            </>
-                        ) : (
-                            <>
-                                <Save className="w-5 h-5" />
-                                Salvar Alterações
-                            </>
-                        )}
-                    </button>
                 </form>
             </div>
         </div>

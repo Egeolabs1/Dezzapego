@@ -10,11 +10,21 @@ interface ImageUploadProps {
     onReorder?: (newImages: string[]) => void; // New prop
     currentImages: string[];
     maxImages?: number;
+    /** 'ad' mostra orientações extras para anúncios (foto obrigatória, capa, formatos). */
+    variant?: 'default' | 'ad';
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-export function ImageUpload({ userId, onUpload, onRemove, onReorder, currentImages = [], maxImages = 6 }: ImageUploadProps) {
+export function ImageUpload({
+    userId,
+    onUpload,
+    onRemove,
+    onReorder,
+    currentImages = [],
+    maxImages = 6,
+    variant = 'default',
+}: ImageUploadProps) {
     const [uploading, setUploading] = useState(false);
 
     const handleMakeMain = (index: number) => {
@@ -79,8 +89,24 @@ export function ImageUpload({ userId, onUpload, onRemove, onReorder, currentImag
         }
     };
 
+    const isAd = variant === 'ad';
+
     return (
         <div className="w-full">
+            {isAd && (
+                <div className="mb-4 rounded-lg border border-purple-100 bg-purple-50/80 px-4 py-3 text-sm text-purple-900">
+                    <p className="font-semibold">Fotos do anúncio</p>
+                    <ul className="mt-2 list-inside list-disc space-y-1 text-purple-800/90">
+                        <li>
+                            É obrigatório enviar <strong>pelo menos 1 foto</strong> (até {maxImages} no total).
+                        </li>
+                        <li>
+                            A <strong>primeira foto</strong> é a capa — clique nela para definir como principal.
+                        </li>
+                        <li>Formatos: JPG, PNG, WebP. Máximo {MAX_FILE_SIZE / (1024 * 1024)}MB por arquivo.</li>
+                    </ul>
+                </div>
+            )}
             {currentImages.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                     {currentImages.map((url, index) => (
@@ -144,7 +170,9 @@ export function ImageUpload({ userId, onUpload, onRemove, onReorder, currentImag
                                 <p className="text-sm text-gray-500 font-medium">
                                     Adicionar fotos ({currentImages.length}/{maxImages})
                                 </p>
-                                <p className="text-xs text-gray-400 mt-1">MAX. 5MB</p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    MAX. {MAX_FILE_SIZE / (1024 * 1024)}MB · JPG, PNG, WebP
+                                </p>
                             </>
                         )}
                     </div>

@@ -22,6 +22,7 @@ import AdminReports from './pages/admin/AdminReports';
 import AdminBanners from './pages/admin/AdminBanners';
 import AdminNotifications from './pages/admin/AdminNotifications';
 import AdminLogs from './pages/admin/AdminLogs';
+import AdminPayments from './pages/admin/AdminPayments';
 import { MobileNav } from './components/MobileNav';
 import { InstallPWA } from './components/InstallPWA';
 import { Footer } from './components/Footer';
@@ -38,10 +39,12 @@ import Plans from './pages/Plans'; // NEW
 import { useMaintenance, MaintenanceProvider } from './contexts/MaintenanceContext';
 import Maintenance from './pages/Maintenance';
 import { useAuth } from './contexts/AuthContext';
+import { useSiteVisitTracking } from './hooks/useSiteVisitTracking';
 
 function AppContent() {
   const { isMaintenanceMode, loading: maintenanceLoading } = useMaintenance();
   const { user, loading: authLoading } = useAuth();
+  useSiteVisitTracking();
 
   // Checking logic:
   // 1. If currently loading, show nothing or spinner
@@ -90,6 +93,7 @@ function AppContent() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="anuncios" element={<AdminAds />} />
+          <Route path="pagamentos" element={<AdminPayments />} />
           <Route path="usuarios" element={<AdminUsers />} />
           <Route path="mensagens" element={<AdminMessages />} />
           <Route path="denuncias" element={<AdminReports />} />
