@@ -1,10 +1,31 @@
-import { getSupabaseAdmin, jsonResponse } from './_payments';
+import { createClient } from '@supabase/supabase-js';
 
 type TrackVisitBody = {
   path?: string;
   sessionId?: string;
   referrer?: string;
 };
+
+function jsonResponse(body: unknown, init?: ResponseInit) {
+  return new Response(JSON.stringify(body), {
+    ...init,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      ...(init?.headers || {}),
+    },
+  });
+}
+
+function getSupabaseForAnalytics() {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Missing SUPABASE_URL/VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+  }
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
 
 export default async function handler(req: Request) {
   if (req.method !== 'POST') {
@@ -22,7 +43,7 @@ export default async function handler(req: Request) {
 
     let supabase;
     try {
-      supabase = getSupabaseAdmin();
+      supabase = getSupabaseForAnalytics();
     } catch (error) {
       // Analytics não pode quebrar a experiência do usuário.
       console.warn('track-visit skipped (missing env):', error);
