@@ -20,7 +20,15 @@ export default async function handler(req: Request) {
       return jsonResponse({ error: 'path e sessionId são obrigatórios.' }, { status: 400 });
     }
 
-    const supabase = getSupabaseAdmin();
+    let supabase;
+    try {
+      supabase = getSupabaseAdmin();
+    } catch (error) {
+      // Analytics não pode quebrar a experiência do usuário.
+      console.warn('track-visit skipped (missing env):', error);
+      return jsonResponse({ ok: true, skipped: 'missing_env' });
+    }
+
     const tenSecondsAgo = new Date(Date.now() - 10_000).toISOString();
     const { data: duplicateVisit } = await supabase
       .from('site_visits')
@@ -48,6 +56,7 @@ export default async function handler(req: Request) {
     return jsonResponse({ ok: true });
   } catch (error) {
     console.error('track-visit error:', error);
-    return jsonResponse({ error: 'Erro ao registrar visita.' }, { status: 500 });
+    // Não retornar 500 aqui para evitar ruído no console do cliente.
+    return jsonResponse({ ok: true, skipped: 'internal_error' });
   }
 }
