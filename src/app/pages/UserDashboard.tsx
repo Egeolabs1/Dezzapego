@@ -12,8 +12,6 @@ export default function UserDashboard() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [submittingVerification, setSubmittingVerification] = useState(false);
-    const [activeTab, setActiveTab] = useState<'profile' | 'ads'>('profile');
-
     // Form State
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
@@ -196,51 +194,55 @@ export default function UserDashboard() {
 
     return (
         <div className="bg-gray-50 min-h-screen">
-            <Header />
+            <Header hideLocationFilter />
 
-            <div className="container mx-auto px-4 py-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-6">Minha Conta</h1>
+            <div className="container mx-auto px-4 py-8 max-w-7xl">
+                <header className="mb-8">
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Minha conta</h1>
+                    <p className="text-gray-600 mt-1 max-w-2xl">
+                        Atualize seu perfil público e acompanhe o desempenho dos seus anúncios em um só lugar.
+                    </p>
+                </header>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    {/* Sidebar Navigation */}
-                    <div className="md:col-span-1 space-y-2">
-                        <button
-                            onClick={() => setActiveTab('profile')}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-medium ${activeTab === 'profile' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
-                                }`}
-                        >
-                            <User className="w-5 h-5" />
-                            Meu Perfil
-                        </button>
-                        <Link to="/meus-anuncios">
-                            <button
-                                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-white text-gray-700 hover:bg-gray-100 transition-colors font-medium border border-transparent hover:border-gray-200"
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                    <aside className="lg:col-span-4 xl:col-span-3 space-y-3 lg:sticky lg:top-[4.75rem] self-start">
+                        <nav className="flex flex-col gap-2">
+                            <div
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium shadow-sm border bg-blue-600 text-white border-blue-600"
+                                aria-current="page"
                             >
-                                <Package className="w-5 h-5" />
-                                Meus Anúncios
-                                <ExternalLink className="w-4 h-4 ml-auto opacity-50" />
-                            </button>
-                        </Link>
-                        <div className="p-4 bg-blue-50 rounded-lg mt-4 border border-blue-100">
-                            <div className="flex items-center gap-2 text-blue-800 font-bold mb-2">
-                                <Shield className="w-4 h-4" />
-                                Status da Conta
+                                <User className="w-5 h-5 shrink-0" />
+                                Meu perfil
                             </div>
-                            <div className="space-y-2 text-sm text-blue-700">
-                                <div className="flex justify-between">
-                                    <span>Anúncios Ativos:</span>
-                                    <span className="font-bold">{stats.totalAds}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Visualizações:</span>
-                                    <span className="font-bold">{stats.totalViews}</span>
-                                </div>
+                            <Link
+                                to="/meus-anuncios"
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium border border-gray-200 shadow-sm"
+                            >
+                                <Package className="w-5 h-5 shrink-0" />
+                                Meus anúncios
+                                <ExternalLink className="w-4 h-4 ml-auto shrink-0 opacity-50" />
+                            </Link>
+                        </nav>
+                        <div className="p-5 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100/80 shadow-sm">
+                            <div className="flex items-center gap-2 text-blue-900 font-bold mb-3">
+                                <Shield className="w-5 h-5" />
+                                Resumo rápido
                             </div>
+                            <dl className="space-y-3 text-sm text-blue-900/85">
+                                <div className="flex justify-between gap-4 pt-2 border-t border-blue-100/80">
+                                    <dt>Anúncios ativos</dt>
+                                    <dd className="font-bold tabular-nums">{stats.totalAds}</dd>
+                                </div>
+                                <div className="flex justify-between gap-4">
+                                    <dt>Visualizações</dt>
+                                    <dd className="font-bold tabular-nums">{stats.totalViews}</dd>
+                                </div>
+                            </dl>
                         </div>
+                    </aside>
 
-                        {/* Main Content */}
-                        <div className="md:col-span-3">
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div className="lg:col-span-8 xl:col-span-9 space-y-8 min-w-0">
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">
                                 <h2 className="text-xl font-bold text-gray-800 mb-6 pb-4 border-b border-gray-100">
                                     Edição de Perfil
                                 </h2>
@@ -279,7 +281,7 @@ export default function UserDashboard() {
                                     Dados Pessoais
                                 </h2>
 
-                                <form onSubmit={handleUpdateProfile} className="space-y-6 max-w-2xl">
+                                <form onSubmit={handleUpdateProfile} className="space-y-6 max-w-4xl">
 
                                     {/* Avatar Section */}
                                     <div className="space-y-2">
@@ -448,26 +450,27 @@ export default function UserDashboard() {
                                     </div>
                                 </form>
                             </div>
-                        </div>
 
-                        {/* Danger Zone */}
-                        <div className="mt-8 border border-red-200 rounded-xl overflow-hidden bg-white">
+                        <section className="border border-red-200 rounded-xl overflow-hidden bg-white shadow-sm" aria-labelledby="danger-zone-title">
                             <div className="bg-red-50 px-6 py-4 border-b border-red-100 flex items-center gap-2">
-                                <Shield className="w-5 h-5 text-red-600" />
-                                <h3 className="text-lg font-bold text-red-700">Zona de Perigo</h3>
+                                <Shield className="w-5 h-5 text-red-600 shrink-0" />
+                                <h3 id="danger-zone-title" className="text-lg font-bold text-red-700">
+                                    Zona de perigo
+                                </h3>
                             </div>
                             <div className="p-6">
                                 <p className="text-gray-600 mb-4">
-                                    Uma vez que você excluir sua conta, não há como voltar atrás. Por favor, tenha certeza.
+                                    Ao excluir sua conta, seus anúncios e dados serão removidos de forma irreversível.
                                 </p>
                                 <button
+                                    type="button"
                                     onClick={handleDeleteAccount}
-                                    className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                    className="px-4 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                                 >
                                     Excluir minha conta
                                 </button>
                             </div>
-                        </div>
+                        </section>
                     </div>
                 </div>
             </div>

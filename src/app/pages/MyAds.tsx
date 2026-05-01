@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Loader2, Plus, ArrowLeft, Trash2, Edit, Star, CreditCard, QrCode, X } from 'lucide-react';
+import { Header } from '../components/Header';
+import { Loader2, Plus, Trash2, Edit, Star, CreditCard, QrCode, X, LayoutGrid } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Ad } from '../../types';
 import { formatPrice } from '../../lib/formatters';
@@ -170,46 +171,58 @@ export default function MyAds() {
 
     if (!user) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)]">
-                <p className="text-gray-600 mb-4">Você precisa estar logado para ver seus anúncios.</p>
-                <Link
-                    to="/login"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                    Ir para Login
-                </Link>
+            <div className="min-h-screen bg-gray-50">
+                <Header hideLocationFilter />
+                <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+                    <p className="text-gray-600 mb-4 text-center">Você precisa estar logado para ver seus anúncios.</p>
+                    <Link to="/login" className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                        Ir para o login
+                    </Link>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
+        <div className="min-h-screen bg-gray-50">
+            <Header hideLocationFilter />
+
+            <main className="container mx-auto px-4 py-8 max-w-7xl">
+            <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
                 <div>
-                    <button
-                        onClick={() => navigate('/')}
-                        className="flex items-center text-gray-600 hover:text-blue-600 mb-2 transition-colors"
-                    >
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Voltar para a Home
-                    </button>
-                    <h1 className="text-3xl font-bold text-gray-800">Meus Anúncios</h1>
+                    <p className="text-sm font-medium text-blue-700 mb-1">Área do anunciante</p>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+                        <LayoutGrid className="w-8 h-8 text-blue-600 hidden sm:block" aria-hidden />
+                        Meus anúncios
+                    </h1>
+                    <p className="text-gray-600 mt-2 max-w-xl">
+                        Edite, exclua ou destaque seus anúncios. Alterações ficam disponíveis no site após salvar.
+                    </p>
                 </div>
-                <Link
-                    to="/anunciar"
-                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Criar Novo Anúncio
-                </Link>
-            </div>
+                <div className="flex flex-col sm:flex-row gap-3 shrink-0 w-full sm:w-auto">
+                    <button
+                        type="button"
+                        onClick={() => navigate('/dashboard')}
+                        className="flex items-center justify-center px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                    >
+                        Minha conta
+                    </button>
+                    <Link
+                        to="/anunciar"
+                        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold shadow-sm"
+                    >
+                        <Plus className="w-5 h-5" />
+                        Criar anúncio
+                    </Link>
+                </div>
+            </header>
 
             {loading ? (
-                <div className="flex justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                <div className="flex justify-center py-16">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-600" aria-label="Carregando" />
                 </div>
             ) : ads.length === 0 ? (
-                <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
+                <div className="text-center py-16 bg-white rounded-2xl border border-gray-200 shadow-sm">
                     <p className="text-lg text-gray-600 mb-4">Você ainda não tem anúncios publicados.</p>
                     <Link
                         to="/anunciar"
@@ -300,6 +313,7 @@ export default function MyAds() {
                     })}
                 </div>
             )}
+            </main>
             {selectedAd && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-xl max-w-xl w-full p-6 relative">
