@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { Loader2, Trash2, Plus, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { convertImageFileToWebp } from '../../../lib/imageToWebp';
 
 export default function AdminBanners() {
     const [banners, setBanners] = useState<any[]>([]);
@@ -32,25 +33,30 @@ export default function AdminBanners() {
     async function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
         if (!event.target.files || event.target.files.length === 0) return;
 
-        const file = event.target.files[0];
+        const rawFile = event.target.files[0];
         setUploading(true);
 
         try {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `banner_${Math.random()}.${fileExt}`;
-            const filePath = `${fileName}`;
+            const file = await convertImageFileToWebp(rawFile, { maxEdge: 3200 });
+            const fileName = `banner_${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}.webp`;
+            const filePath = fileName;
+
+            const uploadOpts = {
+                contentType: file.type || 'image/webp',
+                upsert: false as const,
+            };
 
             // Upload to 'banners' bucket (or fallback to 'ads' if not created)
             let { error: uploadError } = await supabase.storage
                 .from('banners')
-                .upload(filePath, file);
+                .upload(filePath, file, uploadOpts);
 
             // Fallback bucket logic if 'banners' bucket missing
             let bucketName = 'banners';
             if (uploadError && (uploadError as any).statusCode === 404) {
                 const { error: fallbackError } = await supabase.storage
                     .from('ads')
-                    .upload(filePath, file);
+                    .upload(filePath, file, uploadOpts);
                 if (fallbackError) throw fallbackError;
                 bucketName = 'ads';
             } else if (uploadError) {

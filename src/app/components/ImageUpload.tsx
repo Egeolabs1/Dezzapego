@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { convertImageFileToWebp } from '../../lib/imageToWebp';
 
 interface ImageUploadProps {
     userId: string;
@@ -59,13 +60,22 @@ export function ImageUpload({
 
             await Promise.all(validFiles.map(async (file) => {
                 try {
-                    const fileExt = file.name.split('.').pop();
-                    const fileName = `${Math.random()}.${fileExt}`;
+                    const webpFile = await convertImageFileToWebp(file);
+
+                    if (webpFile.size > MAX_FILE_SIZE) {
+                        toast.error(`"${file.name}" continua maior que ${MAX_FILE_SIZE / (1024 * 1024)}MB após otimização.`);
+                        return;
+                    }
+
+                    const fileName = `${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}.webp`;
                     const filePath = `${userId}/${fileName}`;
 
                     const { error: uploadError } = await supabase.storage
                         .from('ads')
-                        .upload(filePath, file);
+                        .upload(filePath, webpFile, {
+                            contentType: webpFile.type || 'image/webp',
+                            upsert: false,
+                        });
 
                     if (uploadError) throw uploadError;
 
@@ -73,7 +83,12 @@ export function ImageUpload({
                     onUpload(data.publicUrl);
                     successCount++;
                 } catch (error) {
+                    const msg =
+                        error instanceof Error
+                            ? error.message
+                            : 'Erro ao processar/enviar.';
                     console.error('Error uploading file:', file.name, error);
+                    toast.error(`${file.name}: ${msg}`);
                 }
             }));
 
@@ -103,7 +118,11 @@ export function ImageUpload({
                         <li>
                             A <strong>primeira foto</strong> é a capa — clique nela para definir como principal.
                         </li>
-                        <li>Formatos: JPG, PNG, WebP. Máximo {MAX_FILE_SIZE / (1024 * 1024)}MB por arquivo.</li>
+                        <li>
+                            Envie JPG ou PNG — o site converte para <strong>WebP</strong> (menos espaço) antes de gravar no
+                            armazenamento.
+                        </li>
+                        <li>Máximo {MAX_FILE_SIZE / (1024 * 1024)}MB por arquivo no envio.</li>
                     </ul>
                 </div>
             )}
@@ -162,7 +181,7 @@ export function ImageUpload({
                         {uploading ? (
                             <>
                                 <Loader2 className="w-8 h-8 mb-2 text-blue-500 animate-spin" />
-                                <p className="text-xs text-gray-500">Enviando...</p>
+                                <p className="text-xs text-gray-500">Convertendo para WebP e enviando…</p>
                             </>
                         ) : (
                             <>
@@ -171,7 +190,7 @@ export function ImageUpload({
                                     Adicionar fotos ({currentImages.length}/{maxImages})
                                 </p>
                                 <p className="text-xs text-gray-400 mt-1">
-                                    MAX. {MAX_FILE_SIZE / (1024 * 1024)}MB · JPG, PNG, WebP
+                                    Até {MAX_FILE_SIZE / (1024 * 1024)}MB · convertido para WebP
                                 </p>
                             </>
                         )}
