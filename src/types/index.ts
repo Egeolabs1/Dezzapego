@@ -53,7 +53,14 @@ export type Profile = {
     rating: number;
     verified: boolean;
     verification_status: 'none' | 'pending' | 'verified' | 'rejected';
-    verification_docs: { doc: string[], selfie: string[] } | null;
+    /** URLs públicas das imagens enviadas (bucket ads: userId/verification/...) */
+    verification_docs: { doc: string[]; selfie: string[] } | null;
+    /** Preenchido pelo admin quando a solicitação é recusada */
+    verification_rejection_reason?: string | null;
     created_at: string;
     role?: 'user' | 'admin'; // NEW
+    /** Conta suspensa: bloqueia novas ações em anúncios (RLS) e força logout no app */
+    is_suspended?: boolean | null;
+    /** Motivo exibido ao usuário após suspensão (opcional) */
+    suspended_reason?: string | null;
 };

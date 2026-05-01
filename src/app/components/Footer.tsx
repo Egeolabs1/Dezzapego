@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { ShieldCheck, Heart, Mail } from 'lucide-react';
+import { ShieldCheck, Heart, Mail, Cookie } from 'lucide-react';
+import { openConsentPreferences } from '../../lib/privacyConsent';
 
 export function Footer() {
     const currentYear = new Date().getFullYear();
@@ -52,6 +53,16 @@ export function Footer() {
                                     <ShieldCheck className="w-3 h-3" />
                                     Dicas de Segurança
                                 </Link>
+                            </li>
+                            <li>
+                                <button
+                                    type="button"
+                                    onClick={() => openConsentPreferences()}
+                                    className="hover:text-blue-600 transition-colors flex items-center gap-1 text-left"
+                                >
+                                    <Cookie className="w-3 h-3 shrink-0" />
+                                    Cookies e preferências
+                                </button>
                             </li>
                         </ul>
                     </div>

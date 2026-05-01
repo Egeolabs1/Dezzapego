@@ -9,6 +9,12 @@ Este guia explica como configurar as políticas de segurança no bucket de image
 
 ---
 
+## Uploads da verificação de identidade (mesmo bucket)
+
+As fotos de documento ficam em **`ads`** no caminho `{user_id}/verification/...webp` — as mesmas regras da seção seguinte aplicam-se: primeiro segmento da pasta continua sendo o UUID do usuário, então o **DELETE apenas do dono** continua válido (`storage.foldername(name))[1]`).
+
+---
+
 ## Passo a Passo
 
 ### 1. Acessar Storage Policies
@@ -106,3 +112,9 @@ Depois de criar as 4 políticas, você deve ver:
 - ✅ 2 políticas de DELETE (owner + admin)
 
 Se todas estiverem corretas, sua segurança está perfeita! 🔒
+
+---
+
+## Suspensão de conta (LGPD / moderação)
+
+A flag `profiles.is_suspended` e as políticas RLS em `public.ads` (insert/update/delete do próprio usuário) **não alteram** as políticas de Storage acima: o bucket continua regido por pasta `user_id` e dono/admin. Usuários suspensos deixam de poder alterar anúncios via app/RLS; revisar objetos órfãos no Storage, se desejado, é processo operacional separado.

@@ -117,6 +117,21 @@ alter table public.profiles
   add column if not exists instagram text,
   add column if not exists cpf_cnpj text;
 
+alter table public.profiles
+  add column if not exists verification_rejection_reason text;
+
+comment on column public.profiles.verification_rejection_reason is
+  'Motivo exibido ao usuário quando a verificação de identidade é recusada.';
+
+alter table public.profiles
+  add column if not exists is_suspended boolean default false,
+  add column if not exists suspended_reason text;
+
+comment on column public.profiles.is_suspended is
+  'Quando true, o titular não pode inserir/atualizar/apagar próprios anúncios (RLS) e o app encerra a sessão.';
+comment on column public.profiles.suspended_reason is
+  'Motivo da suspensão (pode ser exibido ao usuário após logout).';
+
 alter table public.profiles enable row level security;
 
 select public.create_policy_if_missing(
@@ -156,6 +171,14 @@ as $$
 $$;
 
 grant execute on function public.is_admin() to authenticated, anon;
+
+select public.create_policy_if_missing(
+  'public', 'profiles', 'Admins can update any profile',
+  $pol$create policy "Admins can update any profile"
+    on public.profiles for update
+    using (public.is_admin())
+    with check (public.is_admin())$pol$
+);
 
 
 -- ---------------------------------------------------------------------------
@@ -593,23 +616,40 @@ select public.create_policy_if_missing(
     on public.ads for select using (true)$pol$
 );
 
-select public.create_policy_if_missing(
-  'public', 'ads', 'Users can insert their own ads',
-  $pol$create policy "Users can insert their own ads"
-    on public.ads for insert to authenticated with check (auth.uid() = user_id)$pol$
-);
+-- Migração LGPD suspensão: políticas de escrita do próprio usuário em ads
+-- (create_policy_if_missing não atualiza políticas existentes — DROP + CREATE idempotente)
+drop policy if exists "Users can insert their own ads" on public.ads;
+create policy "Users can insert their own ads"
+  on public.ads for insert to authenticated
+  with check (
+    auth.uid() = user_id
+    and not coalesce(
+      (select p.is_suspended from public.profiles p where p.id = auth.uid()),
+      false
+    )
+  );
 
-select public.create_policy_if_missing(
-  'public', 'ads', 'Users can update their own ads',
-  $pol$create policy "Users can update their own ads"
-    on public.ads for update using (auth.uid() = user_id)$pol$
-);
+drop policy if exists "Users can update their own ads" on public.ads;
+create policy "Users can update their own ads"
+  on public.ads for update
+  using (
+    auth.uid() = user_id
+    and not coalesce(
+      (select p.is_suspended from public.profiles p where p.id = auth.uid()),
+      false
+    )
+  );
 
-select public.create_policy_if_missing(
-  'public', 'ads', 'Users can delete their own ads',
-  $pol$create policy "Users can delete their own ads"
-    on public.ads for delete using (auth.uid() = user_id)$pol$
-);
+drop policy if exists "Users can delete their own ads" on public.ads;
+create policy "Users can delete their own ads"
+  on public.ads for delete
+  using (
+    auth.uid() = user_id
+    and not coalesce(
+      (select p.is_suspended from public.profiles p where p.id = auth.uid()),
+      false
+    )
+  );
 
 select public.create_policy_if_missing(
   'public', 'ads', 'Admins can delete any ad',

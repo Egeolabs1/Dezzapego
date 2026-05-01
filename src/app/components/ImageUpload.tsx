@@ -13,6 +13,12 @@ interface ImageUploadProps {
     maxImages?: number;
     /** 'ad' mostra orientações extras para anúncios (foto obrigatória, capa, formatos). */
     variant?: 'default' | 'ad';
+    /** Bucket Supabase Storage (padrão: anúncios). */
+    storageBucket?: string;
+    /**
+     * Subpasta após userId no path, ex. "verification" → `{userId}/verification/arquivo.webp`
+     */
+    uploadSubfolder?: string;
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -25,6 +31,8 @@ export function ImageUpload({
     currentImages = [],
     maxImages = 6,
     variant = 'default',
+    storageBucket = 'ads',
+    uploadSubfolder,
 }: ImageUploadProps) {
     const [uploading, setUploading] = useState(false);
 
@@ -68,10 +76,11 @@ export function ImageUpload({
                     }
 
                     const fileName = `${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}.webp`;
-                    const filePath = `${userId}/${fileName}`;
+                    const prefix = uploadSubfolder ? `${userId}/${uploadSubfolder}` : userId;
+                    const filePath = `${prefix}/${fileName}`;
 
                     const { error: uploadError } = await supabase.storage
-                        .from('ads')
+                        .from(storageBucket)
                         .upload(filePath, webpFile, {
                             contentType: webpFile.type || 'image/webp',
                             upsert: false,
@@ -79,7 +88,7 @@ export function ImageUpload({
 
                     if (uploadError) throw uploadError;
 
-                    const { data } = supabase.storage.from('ads').getPublicUrl(filePath);
+                    const { data } = supabase.storage.from(storageBucket).getPublicUrl(filePath);
                     onUpload(data.publicUrl);
                     successCount++;
                 } catch (error) {

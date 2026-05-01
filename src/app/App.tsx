@@ -26,6 +26,8 @@ import AdminPayments from './pages/admin/AdminPayments';
 import { MobileNav } from './components/MobileNav';
 import { InstallPWA } from './components/InstallPWA';
 import { Footer } from './components/Footer';
+import { CookieConsentBanner } from './components/CookieConsentBanner';
+import AccountSuspended from './pages/AccountSuspended';
 import TermsOfUse from './pages/TermsOfUse';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import SafetyTips from './pages/SafetyTips';
@@ -58,7 +60,7 @@ function AppContent() {
     // Allow access to login page so admins can actually log in!
     // We do this by checking the pathname
     const path = window.location.pathname;
-    const publicRoutes = ['/login', '/admin', '/contato', '/termos', '/privacidade', '/dicas-seguranca'];
+    const publicRoutes = ['/login', '/admin', '/contato', '/termos', '/privacidade', '/dicas-seguranca', '/conta-suspensa'];
     const isPublicRoute = publicRoutes.some(route => path.startsWith(route));
 
     if (!isPublicRoute) {
@@ -87,6 +89,7 @@ function AppContent() {
         <Route path="/dicas-seguranca" element={<SafetyTips />} />
         <Route path="/mapa-do-site" element={<SiteMap />} />
         <Route path="/contato" element={<Contact />} />
+        <Route path="/conta-suspensa" element={<AccountSuspended />} />
         <Route path="/planos" element={<Plans />} />
 
         {/* Admin Routes */}
@@ -108,6 +111,7 @@ function AppContent() {
       <Footer />
       {!isMaintenanceMode && <MobileNav />}
       <InstallPWA />
+      <CookieConsentBanner />
     </div>
   );
 }

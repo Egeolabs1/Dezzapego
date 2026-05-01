@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Header } from '../components/Header';
 import { ImageUpload } from '../components/ImageUpload';
-import { Loader2, User, Save, Package, Shield, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Loader2, User, Save, Package, Shield, ExternalLink, ShieldCheck, AlertCircle, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -22,6 +22,8 @@ export default function UserDashboard() {
     const [website, setWebsite] = useState('');
     const [instagram, setInstagram] = useState('');
     const [cpfCnpj, setCpfCnpj] = useState('');
+    const [verifyDocUrls, setVerifyDocUrls] = useState<string[]>([]);
+    const [verifySelfieUrls, setVerifySelfieUrls] = useState<string[]>([]);
     // Use profile status or default
     const verificationStatus = profile?.verification_status || 'none';
 
@@ -51,6 +53,14 @@ export default function UserDashboard() {
             navigate('/login');
         }
     }, [user, profile, navigate]); // Added profile dependency
+
+    useEffect(() => {
+        const docs = profile?.verification_docs;
+        if (!docs || typeof docs !== 'object') return;
+        const d = docs as { doc?: unknown; selfie?: unknown };
+        setVerifyDocUrls(Array.isArray(d.doc) ? (d.doc as string[]) : []);
+        setVerifySelfieUrls(Array.isArray(d.selfie) ? (d.selfie as string[]) : []);
+    }, [profile?.id, profile?.verification_docs]);
 
     const fetchStats = async () => {
         if (!user) return;
@@ -123,29 +133,44 @@ export default function UserDashboard() {
 
     const handleRequestVerification = async () => {
         if (!user) return;
-        if (!name || !phone || !cpfCnpj || avatar.length === 0) {
-            toast.error('Complete seu perfil (Nome, Telefone, Avatar e CPF/CNPJ) para solicitar verificação.');
+        if (!name.trim() || !phone.trim() || !cpfCnpj.trim() || avatar.length === 0) {
+            toast.error('Preencha nome, telefone, foto de perfil e CPF/CNPJ antes de solicitar.');
+            return;
+        }
+        if (verifyDocUrls.filter(Boolean).length < 1) {
+            toast.error('Envie pelo menos uma foto nítida do documento oficial (RG ou CNH — frente e verso podem ser 2 fotos).');
+            return;
+        }
+        if (verifySelfieUrls.filter(Boolean).length < 1) {
+            toast.error('Envie uma selfie segurando o documento ao lado do rosto.');
             return;
         }
 
         setSubmittingVerification(true);
         try {
-            // Update Profile Table
+            const verification_docs = {
+                doc: verifyDocUrls.map((u) => u.trim()).filter(Boolean),
+                selfie: verifySelfieUrls.map((u) => u.trim()).filter(Boolean),
+            };
+
             const { error } = await supabase
                 .from('profiles')
                 .update({
                     verification_status: 'pending',
-                    verified: false
+                    verified: false,
+                    verification_docs,
+                    verification_rejection_reason: null,
+                    updated_at: new Date().toISOString(),
                 })
                 .eq('id', user.id);
 
             if (error) throw error;
 
             await refreshProfile();
-            toast.success('Solicitação enviada! Analisaremos seu perfil em breve.');
+            toast.success('Documentos enviados! Nossa equipe vai analisar em breve.');
         } catch (error) {
             console.error('Error requesting verification:', error);
-            toast.error('Erro ao solicitar verificação.');
+            toast.error('Erro ao enviar solicitação de verificação.');
         } finally {
             setSubmittingVerification(false);
         }
@@ -154,12 +179,50 @@ export default function UserDashboard() {
     const handleAvatarUpload = (url: string) => setAvatar([url]);
     const handleAvatarRemove = (_url: string) => setAvatar([]);
 
+    const handleExportMyData = async () => {
+        if (!user) return;
+        setLoading(true);
+        try {
+            const [profileRes, adsRes, favRes] = await Promise.all([
+                supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+                supabase.from('ads').select('*').eq('user_id', user.id),
+                supabase.from('favorites').select('*').eq('user_id', user.id),
+            ]);
+
+            if (profileRes.error) throw profileRes.error;
+            if (adsRes.error) throw adsRes.error;
+
+            const payload = {
+                exported_at: new Date().toISOString(),
+                schema_note: 'Portabilidade LGPD — snapshot dos dados vinculados à sua conta neste momento.',
+                profile: profileRes.data ?? null,
+                ads: adsRes.data ?? [],
+                favorites: favRes.error ? { error: favRes.error.message } : (favRes.data ?? []),
+            };
+
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `dezzapego-meus-dados-${user.id.slice(0, 8)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast.success('Download iniciado.');
+        } catch (e) {
+            console.error(e);
+            toast.error('Não foi possível gerar o arquivo. Tente de novo ou use o contato.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleDeleteAccount = async () => {
         if (!user) return;
 
         const confirmDelete = window.confirm(
             'TEM CERTEZA QUE DESEJA EXCLUIR SUA CONTA?\n\n' +
-            'Esta ação é irreversível. Todos os seus dados, anúncios e fotos serão apagados permanentemente.'
+            'Esta ação é irreversível. Seus anúncios, favoritos e dados da conta serão removidos conforme o fluxo técnico do site (RPC delete_own_account). ' +
+            'Retenções mínimas por lei ou backup podem constar na Política de Privacidade em /privacidade.'
         );
 
         if (!confirmDelete) return;
@@ -247,33 +310,121 @@ export default function UserDashboard() {
                                     Edição de Perfil
                                 </h2>
 
-                                {/* Verification Status Section */}
-                                <div className="mb-8 p-5 bg-gray-50 rounded-xl border border-gray-100 flex flex-col md:flex-row items-start md:items-center gap-4">
-                                    <div className="p-3 bg-white rounded-full border border-gray-100 shadow-sm text-blue-600">
-                                        {verificationStatus === 'verified' ? <ShieldCheck className="w-6 h-6" /> : <Shield className="w-6 h-6" />}
+                                {/* Verificação de identidade */}
+                                <div className="mb-8 rounded-xl border border-gray-100 bg-gray-50/80 overflow-hidden">
+                                    <div className="p-5 flex flex-col md:flex-row items-start md:items-center gap-4 border-b border-gray-100 bg-gray-50">
+                                        <div className={`p-3 rounded-full border shadow-sm ${
+                                            verificationStatus === 'verified'
+                                                ? 'bg-white border-green-100 text-green-600'
+                                                : verificationStatus === 'rejected'
+                                                  ? 'bg-white border-red-100 text-red-600'
+                                                  : 'bg-white border-gray-100 text-blue-600'
+                                        }`}>
+                                            {verificationStatus === 'verified' ? (
+                                                <ShieldCheck className="w-6 h-6" />
+                                            ) : verificationStatus === 'rejected' ? (
+                                                <AlertCircle className="w-6 h-6" />
+                                            ) : (
+                                                <Shield className="w-6 h-6" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-base font-bold text-gray-900 flex flex-wrap items-center gap-2">
+                                                Verificação de conta (selo de vendedor)
+                                                {verificationStatus === 'verified' && (
+                                                    <span className="text-green-700 text-xs bg-green-50 px-2 py-0.5 rounded-full border border-green-100">Verificado</span>
+                                                )}
+                                                {verificationStatus === 'pending' && (
+                                                    <span className="text-yellow-800 text-xs bg-yellow-50 px-2 py-0.5 rounded-full border border-yellow-100">Em análise</span>
+                                                )}
+                                                {verificationStatus === 'rejected' && (
+                                                    <span className="text-red-700 text-xs bg-red-50 px-2 py-0.5 rounded-full border border-red-100">Solicitação recusada</span>
+                                                )}
+                                            </h3>
+                                            <p className="text-sm text-gray-600 mt-1">
+                                                {verificationStatus === 'verified' &&
+                                                    'Parabéns! Seu nome de exibição ganha o selo de verificado nos anúncios e lista de busca.'}
+                                                {verificationStatus === 'pending' &&
+                                                    'Estamos revisando suas fotos e dados. Você será notificado por aqui quando houver decisão.'}
+                                                {verificationStatus === 'rejected' &&
+                                                    'Revise as orientações abaixo, envie novas imagens claras e envie outra solicitação.'}
+                                                {verificationStatus === 'none' &&
+                                                    'Envie RG ou CNH (frente e verso) e uma selfie com o documento ao lado do rosto. Nossa equipe confere manualmente — é gratuito.'}
+                                            </p>
+                                            {verificationStatus === 'rejected' && profile?.verification_rejection_reason?.trim() && (
+                                                <p className="text-sm text-red-800 mt-3 p-3 bg-red-50 rounded-lg border border-red-100">
+                                                    <strong>Motivo:</strong> {profile.verification_rejection_reason.trim()}
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="flex-1">
-                                        <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                                            Verificação de Conta
-                                            {verificationStatus === 'verified' && <span className="text-blue-600 text-xs bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">Verificado com Sucesso</span>}
-                                            {verificationStatus === 'pending' && <span className="text-yellow-600 text-xs bg-yellow-50 px-2 py-0.5 rounded-full border border-yellow-100">Em Análise</span>}
-                                        </h3>
-                                        <p className="text-sm text-gray-500 mt-1">
-                                            {verificationStatus === 'verified'
-                                                ? 'Sua conta está verificada! Você possui o selo de autenticidade em seus anúncios.'
-                                                : verificationStatus === 'pending'
-                                                    ? 'Sua solicitação está sendo analisada pela nossa equipe. Responderemos em breve.'
-                                                    : 'Obtenha o selo de verificado para transmitir mais confiança aos compradores.'}
-                                        </p>
-                                    </div>
-                                    {verificationStatus === 'none' && (
-                                        <button
-                                            onClick={handleRequestVerification}
-                                            disabled={submittingVerification}
-                                            className="whitespace-nowrap px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                                        >
-                                            {submittingVerification ? 'Enviando...' : 'Solicitar Verificação'}
-                                        </button>
+
+                                    {(verificationStatus === 'pending' || verificationStatus === 'verified') &&
+                                        ((verifyDocUrls.length > 0 || verifySelfieUrls.length > 0) ? (
+                                            <div className="p-5 grid md:grid-cols-2 gap-4 bg-white">
+                                                <div>
+                                                    <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Documento enviado</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {verifyDocUrls.map((url) => (
+                                                            <img key={url} src={url} alt="" className="h-28 w-auto rounded-lg border border-gray-200 object-cover" />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Selfie com documento</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {verifySelfieUrls.map((url) => (
+                                                            <img key={url} src={url} alt="" className="h-28 w-auto rounded-lg border border-gray-200 object-cover" />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : null)}
+
+                                    {(verificationStatus === 'none' || verificationStatus === 'rejected') && (
+                                        <div className="p-5 space-y-6 bg-white">
+                                            <div className="rounded-lg bg-amber-50 border border-amber-100 px-4 py-3 text-sm text-amber-900">
+                                                <p className="font-semibold mb-1">Dicas para aprovação rápida</p>
+                                                <ul className="list-disc list-inside space-y-1 text-amber-900/90">
+                                                    <li>Iluminação uniforme — evite reflexo forte no plástico do RG.</li>
+                                                    <li>Na selfie, seu rosto e os dados do documento devem aparecer legíveis.</li>
+                                                    <li>Formatos JPG/PNG; as imagens são convertidas para WebP no envio.</li>
+                                                </ul>
+                                            </div>
+                                            <div className="space-y-3">
+                                                <label className="block text-sm font-medium text-gray-800">RG ou CNH (até 2 fotos: frente e verso)</label>
+                                                <ImageUpload
+                                                    userId={user.id}
+                                                    uploadSubfolder="verification"
+                                                    maxImages={2}
+                                                    currentImages={verifyDocUrls}
+                                                    onUpload={(url) => setVerifyDocUrls((prev) => [...prev, url])}
+                                                    onRemove={(url) => setVerifyDocUrls((prev) => prev.filter((u) => u !== url))}
+                                                    onReorder={setVerifyDocUrls}
+                                                />
+                                            </div>
+                                            <div className="space-y-3">
+                                                <label className="block text-sm font-medium text-gray-800">
+                                                    Selfie segurando o documento ao lado do rosto <span className="text-red-500">*</span>
+                                                </label>
+                                                <ImageUpload
+                                                    userId={user.id}
+                                                    uploadSubfolder="verification"
+                                                    maxImages={1}
+                                                    currentImages={verifySelfieUrls}
+                                                    onUpload={(url) => setVerifySelfieUrls([url])}
+                                                    onRemove={() => setVerifySelfieUrls([])}
+                                                />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleRequestVerification}
+                                                disabled={submittingVerification}
+                                                className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                            >
+                                                {submittingVerification ? 'Enviando...' : 'Enviar documentos para análise'}
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
 
@@ -451,6 +602,44 @@ export default function UserDashboard() {
                                 </form>
                             </div>
 
+                        <section
+                            className="border border-indigo-200 rounded-xl overflow-hidden bg-white shadow-sm"
+                            aria-labelledby="lgpd-data-title"
+                        >
+                            <div className="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex items-center gap-2">
+                                <Shield className="w-5 h-5 text-indigo-700 shrink-0" />
+                                <h3 id="lgpd-data-title" className="text-lg font-bold text-indigo-900">
+                                    Seus dados (LGPD)
+                                </h3>
+                            </div>
+                            <div className="p-6 space-y-4 text-gray-700 text-sm leading-relaxed">
+                                <p>
+                                    Você tem direito de <strong>acessar</strong> e <strong>portar</strong> seus dados em
+                                    formato legível. Use o botão abaixo para baixar um JSON com seu perfil, anúncios e
+                                    favoritos (quando permitido pelas permissões do banco).
+                                </p>
+                                <p>
+                                    Para <strong>excluir</strong> definitivamente a conta e os dados tratados nesse
+                                    fluxo, use a opção na zona de perigo — o sistema chama a função{' '}
+                                    <code className="text-xs bg-gray-100 px-1 rounded">delete_own_account</code>. Prazos
+                                    de backups e retenções legais estão descritos na{' '}
+                                    <Link to="/privacidade" className="text-blue-600 font-medium hover:underline">
+                                        Política de Privacidade
+                                    </Link>
+                                    .
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={handleExportMyData}
+                                    disabled={loading}
+                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-indigo-200 bg-white text-indigo-800 font-medium hover:bg-indigo-50 disabled:opacity-50"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    Baixar meus dados (JSON)
+                                </button>
+                            </div>
+                        </section>
+
                         <section className="border border-red-200 rounded-xl overflow-hidden bg-white shadow-sm" aria-labelledby="danger-zone-title">
                             <div className="bg-red-50 px-6 py-4 border-b border-red-100 flex items-center gap-2">
                                 <Shield className="w-5 h-5 text-red-600 shrink-0" />
@@ -460,7 +649,8 @@ export default function UserDashboard() {
                             </div>
                             <div className="p-6">
                                 <p className="text-gray-600 mb-4">
-                                    Ao excluir sua conta, seus anúncios e dados serão removidos de forma irreversível.
+                                    A exclusão da conta remove anúncios e dados vinculados ao seu usuário no fluxo
+                                    previsto pelo sistema. Esta ação é irreversível.
                                 </p>
                                 <button
                                     type="button"

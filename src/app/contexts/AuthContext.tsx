@@ -1,7 +1,22 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
+import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 import { Profile } from '../../types';
+
+const SUSPENDED_NOTICE_KEY = 'dezzapego_suspended_notice';
+
+async function handleSuspendedProfile(reason: string | null) {
+    const text = (reason?.trim() || 'Sua conta foi suspensa.').slice(0, 500);
+    try {
+        sessionStorage.setItem(SUSPENDED_NOTICE_KEY, text);
+    } catch {
+        /* ignore */
+    }
+    toast.error(text);
+    await supabase.auth.signOut();
+    window.location.href = '/conta-suspensa';
+}
 
 type AuthContextType = {
     user: User | null;
@@ -34,6 +49,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 console.error('Error fetching profile:', error);
             }
             if (data) {
+                if (data.is_suspended === true) {
+                    await handleSuspendedProfile(
+                        typeof data.suspended_reason === 'string' ? data.suspended_reason : null,
+                    );
+                    return;
+                }
                 setProfile(data);
             }
         } catch (err) {
