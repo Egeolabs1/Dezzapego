@@ -68,7 +68,7 @@ export default function ResetPassword() {
                 <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-md text-center">
                     <h1 className="text-2xl font-bold mb-3 text-gray-800">Link inválido ou expirado</h1>
                     <p className="text-gray-600 mb-6">
-                        Solicite uma nova recuperação de senha na tela de login.
+                        Solicite um novo e-mail de recuperação na tela de login e abra o link mais recente enviado.
                     </p>
                     <Link
                         to="/login"
@@ -86,6 +86,9 @@ export default function ResetPassword() {
             <SEO title="Redefinir senha" description="Defina uma nova senha para sua conta no Dezzapego" noIndex />
             <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-md">
                 <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">Definir nova senha</h1>
+                <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                    Este link de redefinição é temporário. Após salvar a nova senha, faça login novamente.
+                </div>
 
                 <form onSubmit={handleResetPassword} className="space-y-4">
                     <div className="space-y-2">

@@ -153,7 +153,7 @@ export default function Register() {
                 await recordSignupIpAndFirstAccess({ userId: data.user.id });
             }
 
-            toast.success('Cadastro realizado! Você já pode anunciar.');
+            toast.success('Cadastro realizado! Se necessário, confirme o e-mail para ativar totalmente sua conta.');
             navigate('/anunciar', { replace: true });
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Erro ao realizar cadastro.';
@@ -173,6 +173,9 @@ export default function Register() {
             <div className="w-full max-w-lg bg-white p-8 rounded-xl shadow-md border border-gray-100">
                 <h1 className="text-2xl font-bold mb-1 text-center text-gray-800">Crie sua conta</h1>
                 <p className="text-center text-sm text-gray-500 mb-6">Preencha com atenção para proteger sua conta e facilitar contatos.</p>
+                <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                    Após criar sua conta, enviaremos um <strong>e-mail de confirmação</strong>. Você precisa confirmar o e-mail para concluir o cadastro e entrar.
+                </div>
 
                 <form onSubmit={handleRegister} className="space-y-4" noValidate>
                     <div className="flex gap-2 p-1 bg-gray-100 rounded-lg mb-2">

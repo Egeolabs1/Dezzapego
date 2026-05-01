@@ -64,10 +64,13 @@ const AD_STEPS: StepDef[] = [
 ];
 
 export default function NewAd() {
-    const { user } = useAuth();
+    const { user, profile, refreshProfile } = useAuth();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [step, setStep] = useState(0);
+    const [showPublishRequirements, setShowPublishRequirements] = useState(false);
+    const [requiredPhone, setRequiredPhone] = useState('');
+    const [requiredDocument, setRequiredDocument] = useState('');
 
     const [formData, setFormData] = useState({
         title: '',
@@ -93,9 +96,42 @@ export default function NewAd() {
         }
     }, [user, navigate]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const onlyDigits = (value: string) => value.replace(/\D/g, '');
+    const formatPhoneMask = (value: string) => {
+        const d = onlyDigits(value).slice(0, 11);
+        if (d.length <= 2) return d;
+        if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+        if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+        return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+    };
+    const formatDocumentMask = (value: string) => {
+        const d = onlyDigits(value).slice(0, 14);
+        if (d.length <= 11) {
+            if (d.length <= 3) return d;
+            if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+            if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+            return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+        }
+        if (d.length <= 2) return d;
+        if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
+        if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+        if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+        return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+    };
+    const hasPhoneForPublish = (value: string) => onlyDigits(value).length >= 10;
+    const hasDocumentForPublish = (value: string) => {
+        const len = onlyDigits(value).length;
+        return len === 11 || len === 14;
+    };
+    const profileHasRequiredData = () =>
+        hasPhoneForPublish(profile?.phone || '') && hasDocumentForPublish(profile?.cpf_cnpj || '');
 
+    useEffect(() => {
+        setRequiredPhone(formatPhoneMask(profile?.phone || user?.user_metadata?.phone || ''));
+        setRequiredDocument(formatDocumentMask(profile?.cpf_cnpj || user?.user_metadata?.cpf_cnpj || ''));
+    }, [profile?.phone, profile?.cpf_cnpj, user?.user_metadata?.phone, user?.user_metadata?.cpf_cnpj]);
+
+    const publishAd = async () => {
         if (!user) {
             toast.error('Você precisa estar logado para anunciar.');
             navigate('/login');
@@ -173,6 +209,53 @@ export default function NewAd() {
             const msg = error instanceof Error ? error.message : 'Erro ao criar anúncio. Tente novamente.';
             toast.error(msg);
         } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user) {
+            toast.error('Você precisa estar logado para anunciar.');
+            navigate('/login');
+            return;
+        }
+        if (!profileHasRequiredData()) {
+            setRequiredPhone(formatPhoneMask(profile?.phone || user.user_metadata?.phone || ''));
+            setRequiredDocument(formatDocumentMask(profile?.cpf_cnpj || user.user_metadata?.cpf_cnpj || ''));
+            setShowPublishRequirements(true);
+            return;
+        }
+        await publishAd();
+    };
+
+    const handleSaveRequirementsAndPublish = async () => {
+        if (!user) return;
+        if (!hasPhoneForPublish(requiredPhone)) {
+            toast.error('Informe um telefone/WhatsApp válido com DDD.');
+            return;
+        }
+        if (!hasDocumentForPublish(requiredDocument)) {
+            toast.error('Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const { error } = await supabase.from('profiles').upsert({
+                id: user.id,
+                phone: onlyDigits(requiredPhone),
+                cpf_cnpj: onlyDigits(requiredDocument),
+                updated_at: new Date().toISOString(),
+            });
+            if (error) throw error;
+            await refreshProfile();
+            setShowPublishRequirements(false);
+            toast.success('Dados obrigatórios salvos. Publicando anúncio...');
+            await publishAd();
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : 'Não foi possível salvar os dados.';
+            toast.error(msg);
             setLoading(false);
         }
     };
@@ -693,6 +776,63 @@ export default function NewAd() {
                     </form>
                 </div>
             </div>
+            {showPublishRequirements && (
+                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+                    <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 space-y-5">
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-900">Dados obrigatórios para publicar</h3>
+                            <p className="text-sm text-gray-600 mt-1">
+                                Falta completar seu <strong>telefone/WhatsApp</strong> e <strong>CPF/CNPJ</strong>.
+                                Preencha abaixo para concluir a publicação.
+                            </p>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="space-y-1">
+                                <label className="block text-sm font-medium text-gray-700">Telefone / WhatsApp</label>
+                                <input
+                                    type="tel"
+                                    placeholder="(00) 00000-0000"
+                                    value={requiredPhone}
+                                    onChange={(e) => setRequiredPhone(formatPhoneMask(e.target.value))}
+                                    className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="block text-sm font-medium text-gray-700">CPF ou CNPJ</label>
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    placeholder="Somente números"
+                                    value={requiredDocument}
+                                    onChange={(e) => setRequiredDocument(formatDocumentMask(e.target.value))}
+                                    className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setShowPublishRequirements(false)}
+                                disabled={loading}
+                                className="px-4 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleSaveRequirementsAndPublish}
+                                disabled={loading}
+                                className="px-5 py-2.5 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700 disabled:opacity-60 inline-flex items-center gap-2"
+                            >
+                                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                                Salvar e publicar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

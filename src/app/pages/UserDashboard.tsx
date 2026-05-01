@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Header } from '../components/Header';
 import { ImageUpload } from '../components/ImageUpload';
-import { Loader2, User, Save, Package, Shield, ExternalLink, ShieldCheck, AlertCircle, Download } from 'lucide-react';
+import { Loader2, User, Save, Package, Shield, ExternalLink, ShieldCheck, AlertCircle, Download, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -336,6 +336,14 @@ export default function UserDashboard() {
                             >
                                 <Package className="w-5 h-5 shrink-0" />
                                 Meus anúncios
+                                <ExternalLink className="w-4 h-4 ml-auto shrink-0 opacity-50" />
+                            </Link>
+                            <Link
+                                to="/favoritos"
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium border border-gray-200 shadow-sm"
+                            >
+                                <Heart className="w-5 h-5 shrink-0" />
+                                Favoritos
                                 <ExternalLink className="w-4 h-4 ml-auto shrink-0 opacity-50" />
                             </Link>
                         </nav>

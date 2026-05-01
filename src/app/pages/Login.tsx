@@ -48,7 +48,7 @@ export default function Login() {
             });
 
             if (error) throw error;
-            toast.success('Enviamos um link de recuperação para seu e-mail.');
+            toast.success('Enviamos um link de recuperação para seu e-mail. Verifique também spam e promoções.');
         } catch (error: any) {
             toast.error(error.message || 'Erro ao solicitar recuperação de senha.');
         } finally {
@@ -61,6 +61,10 @@ export default function Login() {
             <SEO title="Entrar" description="Acesse sua conta no Dezzapego" noIndex />
             <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-md">
                 <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">Entrar no Dezzapego</h1>
+                <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                    Para recuperar senha, informe seu e-mail e clique em <strong>Esqueci minha senha</strong>. Você
+                    receberá um link para redefinição.
+                </div>
 
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
