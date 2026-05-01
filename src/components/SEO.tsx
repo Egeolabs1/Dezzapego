@@ -54,6 +54,8 @@ export default function SEO({
         type === 'article' ||
         type === 'product' ||
         (absoluteImage && !absoluteImage.endsWith('.svg'));
+    const ogImageWidth = import.meta.env.VITE_OG_IMAGE_WIDTH || (absoluteImage.endsWith('/og-default.png') ? '1200' : '');
+    const ogImageHeight = import.meta.env.VITE_OG_IMAGE_HEIGHT || (absoluteImage.endsWith('/og-default.png') ? '630' : '');
 
     const robotsContent = noIndex
         ? 'noindex, nofollow'
@@ -93,11 +95,11 @@ export default function SEO({
             <meta property="og:description" content={description} />
             <meta property="og:image" content={absoluteImage} />
             <meta property="og:image:alt" content={title} />
-            {import.meta.env.VITE_OG_IMAGE_WIDTH ? (
-                <meta property="og:image:width" content={import.meta.env.VITE_OG_IMAGE_WIDTH} />
+            {ogImageWidth ? (
+                <meta property="og:image:width" content={ogImageWidth} />
             ) : null}
-            {import.meta.env.VITE_OG_IMAGE_HEIGHT ? (
-                <meta property="og:image:height" content={import.meta.env.VITE_OG_IMAGE_HEIGHT} />
+            {ogImageHeight ? (
+                <meta property="og:image:height" content={ogImageHeight} />
             ) : null}
             <meta property="og:url" content={resolvedUrl} />
 

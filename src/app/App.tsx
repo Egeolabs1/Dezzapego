@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { FilterProvider } from './contexts/FilterContext';
 import Home from './pages/Home';
@@ -13,37 +14,46 @@ import MyFavorites from './pages/MyFavorites'; // NEW
 import SellerProfile from './pages/SellerProfile';
 import EditAd from './pages/EditAd';
 import UserDashboard from './pages/UserDashboard';
-import AdminLayout from './pages/admin/AdminLayout';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminAds from './pages/admin/AdminAds';
-import AdminUsers from './pages/admin/AdminUsers';
-import AdminVerification from './pages/admin/AdminVerification';
-import AdminSettings from './pages/admin/AdminSettings';
-import AdminReports from './pages/admin/AdminReports';
-import AdminBanners from './pages/admin/AdminBanners';
-import AdminNotifications from './pages/admin/AdminNotifications';
-import AdminLogs from './pages/admin/AdminLogs';
-import AdminPayments from './pages/admin/AdminPayments';
 import { MobileNav } from './components/MobileNav';
 import { InstallPWA } from './components/InstallPWA';
 import { Footer } from './components/Footer';
 import { CookieConsentBanner } from './components/CookieConsentBanner';
+import { AdSenseLoader } from './components/AdSenseLoader';
 import AccountSuspended from './pages/AccountSuspended';
 import TermsOfUse from './pages/TermsOfUse';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import SafetyTips from './pages/SafetyTips';
 import Contact from './pages/Contact';
 import SiteMap from './pages/SiteMap';
-import AdminMessages from './pages/admin/AdminMessages';
 import Plans from './pages/Plans'; // NEW
-
-// Ad type moved to src/types/index.ts
-
 import { useMaintenance, MaintenanceProvider } from './contexts/MaintenanceContext';
 import Maintenance from './pages/Maintenance';
 import { useAuth } from './contexts/AuthContext';
 import { useSiteVisitTracking } from './hooks/useSiteVisitTracking';
 import { useProfileIpOnNavigation } from '../lib/profileIpLog';
+
+// Ad type moved to src/types/index.ts
+
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminAds = lazy(() => import('./pages/admin/AdminAds'));
+const AdminPayments = lazy(() => import('./pages/admin/AdminPayments'));
+const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
+const AdminVerification = lazy(() => import('./pages/admin/AdminVerification'));
+const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'));
+const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
+const AdminBanners = lazy(() => import('./pages/admin/AdminBanners'));
+const AdminNotifications = lazy(() => import('./pages/admin/AdminNotifications'));
+const AdminLogs = lazy(() => import('./pages/admin/AdminLogs'));
+const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
+
+function RouteFallback() {
+  return (
+    <div className="min-h-[40vh] flex items-center justify-center text-sm text-gray-500">
+      Carregando...
+    </div>
+  );
+}
 
 function AppContent() {
   const { pathname } = useLocation();
@@ -78,6 +88,7 @@ function AppContent() {
 
   return (
     <div className={isAdminRoute ? '' : 'pb-16 md:pb-0'}>
+      <Suspense fallback={<RouteFallback />}>
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
@@ -117,10 +128,12 @@ function AppContent() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
       {!isAdminRoute && <Footer />}
       {!isAdminRoute && !isMaintenanceMode && <MobileNav />}
       <InstallPWA />
       <CookieConsentBanner />
+      {!isAdminRoute && <AdSenseLoader />}
     </div>
   );
 }

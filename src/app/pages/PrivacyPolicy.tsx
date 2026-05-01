@@ -129,7 +129,39 @@ export default function PrivacyPolicy() {
                             </section>
 
                             <section>
-                                <h2 className="text-2xl font-bold text-gray-900 mb-4">5. Compartilhamento</h2>
+                                <h2 className="text-2xl font-bold text-gray-900 mb-4">5. Publicidade e Google AdSense</h2>
+                                <p>
+                                    O Dezzapego pode exibir anúncios de terceiros, inclusive por meio do Google AdSense.
+                                    Esses parceiros podem usar cookies, identificadores de dispositivo e sinais de
+                                    consentimento para medir anúncios, limitar frequência, prevenir fraude e, quando você
+                                    autorizar, personalizar publicidade.
+                                </p>
+                                <p className="mt-2">
+                                    Você pode gerenciar preferências no banner de cookies do site. Também é possível
+                                    ajustar preferências diretamente nas{' '}
+                                    <a
+                                        href="https://adssettings.google.com/"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 hover:underline"
+                                    >
+                                        Configurações de anúncios do Google
+                                    </a>{' '}
+                                    e consultar como o Google utiliza dados em{' '}
+                                    <a
+                                        href="https://policies.google.com/technologies/partner-sites"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 hover:underline"
+                                    >
+                                        sites e apps de parceiros
+                                    </a>
+                                    .
+                                </p>
+                            </section>
+
+                            <section>
+                                <h2 className="text-2xl font-bold text-gray-900 mb-4">6. Compartilhamento</h2>
                                 <p>
                                     Dados de anúncio e de perfil público ficam visíveis conforme as regras da plataforma.
                                     Seu e-mail de login não é exibido publicamente como contato, salvo onde você
@@ -142,7 +174,7 @@ export default function PrivacyPolicy() {
                             </section>
 
                             <section>
-                                <h2 className="text-2xl font-bold text-gray-900 mb-4">6. Direitos do titular (arts. 18 e 19 LGPD)</h2>
+                                <h2 className="text-2xl font-bold text-gray-900 mb-4">7. Direitos do titular (arts. 18 e 19 LGPD)</h2>
                                 <p>Você pode, conforme a lei:</p>
                                 <ul className="list-disc pl-5 space-y-1">
                                     <li>
@@ -174,7 +206,7 @@ export default function PrivacyPolicy() {
                             </section>
 
                             <section>
-                                <h2 className="text-2xl font-bold text-gray-900 mb-4">7. Retenção e backups</h2>
+                                <h2 className="text-2xl font-bold text-gray-900 mb-4">8. Retenção e backups</h2>
                                 <p>
                                     Mantemos dados pelo tempo necessário à finalidade e às obrigações legais. Após exclusão
                                     da conta ou eliminação solicitada, podemos reter por prazo limitado registros mínimos
@@ -188,7 +220,7 @@ export default function PrivacyPolicy() {
                             </section>
 
                             <section>
-                                <h2 className="text-2xl font-bold text-gray-900 mb-4">8. Segurança</h2>
+                                <h2 className="text-2xl font-bold text-gray-900 mb-4">9. Segurança</h2>
                                 <p>
                                     Adotamos medidas técnicas e administrativas para proteger dados contra acessos não
                                     autorizados, perda acidental ou ilícita. Nenhum sistema é 100% invulnerável; em caso de
@@ -197,7 +229,7 @@ export default function PrivacyPolicy() {
                             </section>
 
                             <section>
-                                <h2 className="text-2xl font-bold text-gray-900 mb-4">9. Alterações desta política</h2>
+                                <h2 className="text-2xl font-bold text-gray-900 mb-4">10. Alterações desta política</h2>
                                 <p>
                                     Podemos atualizar este texto; a data abaixo indica a última revisão relevante. Mudanças
                                     materiais em cookies podem exigir novo consentimento, refletido na versão do banner.

@@ -75,8 +75,22 @@ export default function Terms() {
                                 <p>O Dezzapego se reserva o direito de remover qualquer anúncio que viole estas regras e banir o usuário responsável, sem aviso prévio.</p>
                             </section>
 
+                            <section className="bg-blue-50 p-6 rounded-xl border border-blue-100">
+                                <h2 className="text-xl font-bold text-blue-900 mb-3">3. Publicidade no site</h2>
+                                <p>
+                                    O Dezzapego pode exibir anúncios próprios ou de terceiros, incluindo redes como o
+                                    Google AdSense, para manter a plataforma gratuita e sustentável. A exibição e a
+                                    personalização de publicidade seguem a nossa Política de Privacidade e as preferências
+                                    de consentimento de cookies disponíveis no site.
+                                </p>
+                                <p className="mt-3">
+                                    Anúncios de terceiros não significam recomendação, garantia ou responsabilidade do
+                                    Dezzapego sobre produtos, serviços ou páginas externas anunciadas.
+                                </p>
+                            </section>
+
                             <section className="bg-gray-50 p-6 rounded-xl border border-gray-200 mt-8">
-                                <h2 className="text-xl font-bold text-gray-900 mb-4">3. Dicas de Segurança para Negócios</h2>
+                                <h2 className="text-xl font-bold text-gray-900 mb-4">4. Dicas de Segurança para Negócios</h2>
                                 <p className="mb-4">Para sua segurança, siga sempre estas recomendações:</p>
                                 <ul className="list-disc pl-5 space-y-2">
                                     <li><strong>Nunca pague antecipadamente:</strong> Não faça depósitos ou transferências antes de ver o produto.</li>

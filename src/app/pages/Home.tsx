@@ -8,6 +8,7 @@ import { Categories } from '../components/Categories';
 import { Filters } from '../components/Filters';
 import { AdsList } from '../components/AdsList';
 import { AdDetails } from '../components/AdDetails';
+import { AdSenseSlot } from '../components/AdSenseSlot';
 import type { Ad } from '../../types';
 import { useFavorites } from '../hooks/useFavorites';
 
@@ -179,6 +180,14 @@ export default function Home() {
                 selectedTransactionType={selectedTransactionType}
                 onTransactionTypeSelect={handleTransactionTypeSelect}
             />
+            <div className="max-w-[1600px] mx-auto px-2 md:px-4 pt-4">
+                <AdSenseSlot
+                    slot={import.meta.env.VITE_ADSENSE_HOME_TOP_SLOT}
+                    format="auto"
+                    minHeightClass="min-h-[120px]"
+                    className="hidden md:block"
+                />
+            </div>
             <div className="max-w-[1600px] mx-auto px-2 md:px-4 py-4 md:py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
                     <aside className="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-24 self-start">

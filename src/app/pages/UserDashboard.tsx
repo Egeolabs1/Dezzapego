@@ -167,7 +167,9 @@ export default function UserDashboard() {
             if (error) throw error;
 
             await refreshProfile();
-            toast.success('Documentos enviados! Nossa equipe vai analisar em breve.');
+            toast.success(
+                'Documentos enviados! A análise pode levar até 3 dias úteis — em geral bem antes. Acompanhe o status aqui na sua conta.',
+            );
         } catch (error) {
             console.error('Error requesting verification:', error);
             toast.error('Erro ao enviar solicitação de verificação.');
@@ -312,6 +314,13 @@ export default function UserDashboard() {
 
                                 {/* Verificação de identidade */}
                                 <div className="mb-8 rounded-xl border border-gray-100 bg-gray-50/80 overflow-hidden">
+                                    <div className="px-5 pt-5">
+                                        <p className="text-sm text-blue-900 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 leading-relaxed">
+                                            <strong>Prazo de análise:</strong> conferimos documentos em até{' '}
+                                            <strong>3 dias úteis</strong>. Em períodos normais respondemos bem antes —
+                                            você será avisado por aqui assim que houver resultado.
+                                        </p>
+                                    </div>
                                     <div className="p-5 flex flex-col md:flex-row items-start md:items-center gap-4 border-b border-gray-100 bg-gray-50">
                                         <div className={`p-3 rounded-full border shadow-sm ${
                                             verificationStatus === 'verified'
@@ -345,11 +354,11 @@ export default function UserDashboard() {
                                                 {verificationStatus === 'verified' &&
                                                     'Parabéns! Seu nome de exibição ganha o selo de verificado nos anúncios e lista de busca.'}
                                                 {verificationStatus === 'pending' &&
-                                                    'Estamos revisando suas fotos e dados. Você será notificado por aqui quando houver decisão.'}
+                                                    'Estamos revisando suas fotos e dados. O prazo é de até 3 dias úteis; você será avisado por aqui assim que houver decisão.'}
                                                 {verificationStatus === 'rejected' &&
-                                                    'Revise as orientações abaixo, envie novas imagens claras e envie outra solicitação.'}
+                                                    'Revise as orientações abaixo, envie novas imagens claras e envie outra solicitação — o novo pedido será analisado em até 3 dias úteis.'}
                                                 {verificationStatus === 'none' &&
-                                                    'Envie RG ou CNH (frente e verso) e uma selfie com o documento ao lado do rosto. Nossa equipe confere manualmente — é gratuito.'}
+                                                    'Envie RG ou CNH (frente e verso) e uma selfie com o documento ao lado do rosto. Nossa equipe confere manualmente — é gratuito. Após o envio, espere até 3 dias úteis pela resposta.'}
                                             </p>
                                             {verificationStatus === 'rejected' && profile?.verification_rejection_reason?.trim() && (
                                                 <p className="text-sm text-red-800 mt-3 p-3 bg-red-50 rounded-lg border border-red-100">

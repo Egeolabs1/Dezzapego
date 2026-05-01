@@ -1,10 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, Users, LogOut, Menu, Settings, Flag, Image as ImageIcon, Shield, Bell, Home, MessageSquare, CreditCard, BadgeCheck } from 'lucide-react';
+import {
+    LayoutDashboard,
+    ShoppingBag,
+    Users,
+    LogOut,
+    Menu,
+    Settings,
+    Flag,
+    Image as ImageIcon,
+    Shield,
+    Bell,
+    Home,
+    MessageSquare,
+    CreditCard,
+    BadgeCheck,
+    type LucideIcon,
+} from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Logo } from '../../components/Logo';
 import { supabase } from '../../../lib/supabase';
 import { toast } from 'sonner';
+import { useAdminPanelAlerts } from '../../hooks/useAdminPanelAlerts';
+
+type NavItem = {
+    icon: LucideIcon;
+    label: string;
+    path: string;
+    badge?: number;
+};
 
 export default function AdminLayout() {
 
@@ -12,6 +36,7 @@ export default function AdminLayout() {
     const location = useLocation();
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const alerts = useAdminPanelAlerts(Boolean(user), navigate);
 
     // Strict auth check for Admin
     useEffect(() => {
@@ -44,19 +69,27 @@ export default function AdminLayout() {
 
     if (!user) return null;
 
-    const navItems = [
-        { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
-        { icon: ShoppingBag, label: 'Anúncios', path: '/admin/anuncios' },
-        { icon: CreditCard, label: 'Pagamentos', path: '/admin/pagamentos' },
-        { icon: MessageSquare, label: 'Mensagens', path: '/admin/mensagens' },
-        { icon: BadgeCheck, label: 'Verificação de contas', path: '/admin/verificacao' },
-        { icon: Users, label: 'Usuários', path: '/admin/usuarios' },
-        { icon: Flag, label: 'Denúncias', path: '/admin/denuncias' },
-        { icon: Bell, label: 'Notificações', path: '/admin/notificacoes' },
-        { icon: ImageIcon, label: 'Banners', path: '/admin/banners' },
-        { icon: Shield, label: 'Logs', path: '/admin/logs' },
-        { icon: Settings, label: 'Configurações', path: '/admin/configuracoes' },
-    ];
+    const navItems: NavItem[] = useMemo(
+        () => [
+            { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
+            { icon: ShoppingBag, label: 'Anúncios', path: '/admin/anuncios' },
+            { icon: CreditCard, label: 'Pagamentos', path: '/admin/pagamentos' },
+            { icon: MessageSquare, label: 'Mensagens', path: '/admin/mensagens', badge: alerts.unreadMessages },
+            {
+                icon: BadgeCheck,
+                label: 'Verificação de contas',
+                path: '/admin/verificacao',
+                badge: alerts.pendingVerifications,
+            },
+            { icon: Users, label: 'Usuários', path: '/admin/usuarios' },
+            { icon: Flag, label: 'Denúncias', path: '/admin/denuncias' },
+            { icon: Bell, label: 'Notificações', path: '/admin/notificacoes' },
+            { icon: ImageIcon, label: 'Banners', path: '/admin/banners' },
+            { icon: Shield, label: 'Logs', path: '/admin/logs' },
+            { icon: Settings, label: 'Configurações', path: '/admin/configuracoes' },
+        ],
+        [alerts.unreadMessages, alerts.pendingVerifications],
+    );
 
     const handleSignOut = async () => {
         await signOut();
@@ -91,8 +124,13 @@ export default function AdminLayout() {
                                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                         }`}
                                 >
-                                    <Icon className="w-5 h-5" />
-                                    {item.label}
+                                    <Icon className="w-5 h-5 shrink-0" />
+                                    <span className="flex-1 min-w-0 truncate">{item.label}</span>
+                                    {item.badge != null && item.badge > 0 ? (
+                                        <span className="shrink-0 min-w-[1.25rem] h-6 px-1.5 rounded-full bg-red-500 text-white text-xs font-semibold inline-flex items-center justify-center tabular-nums">
+                                            {item.badge > 99 ? '99+' : item.badge}
+                                        </span>
+                                    ) : null}
                                 </Link>
                             );
                         })}

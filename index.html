@@ -7,8 +7,13 @@
   <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin="" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+  <!--
+    AdSense recomenda CSP com nonce por requisição. Como este SPA é estático,
+    usamos uma política HTTPS mais permissiva para permitir adsbygoogle e criativos
+    externos sem manter allowlist frágil de domínios que mudam com o tempo.
+  -->
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-inline' https://qtdueuqsjplotuavwwxg.supabase.co https://vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https://qtdueuqsjplotuavwwxg.supabase.co https://via.placeholder.com https://vercel.live; connect-src 'self' https://qtdueuqsjplotuavwwxg.supabase.co wss://qtdueuqsjplotuavwwxg.supabase.co https://nominatim.openstreetmap.org https://vercel.live wss://vercel.live; frame-src 'self' https://vercel.live;">
+    content="default-src 'self'; object-src 'none'; base-uri 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https: wss://qtdueuqsjplotuavwwxg.supabase.co wss://vercel.live; frame-src 'self' https:; worker-src 'self' blob:; manifest-src 'self';">
   <title>Dezzapego — Classificados e anúncios no Brasil</title>
   <!-- canonical e og:url: domínio injetado no build via VITE_SITE_URL -->
   <link rel="canonical" href="%SITE_ORIGIN%/" />
@@ -25,7 +30,9 @@
   <meta property="og:description"
     content="Classificados online: imóveis, carros, eletrônicos e mais. Publique anúncios grátis ou encontre ofertas perto de você no Dezzapego." />
   <meta property="og:url" content="%SITE_ORIGIN%/" />
-  <meta property="og:image" content="%SITE_ORIGIN%/icon.svg" />
+  <meta property="og:image" content="%SITE_ORIGIN%/og-default.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
 </head>
 
 <body>

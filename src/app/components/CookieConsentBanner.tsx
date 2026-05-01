@@ -17,11 +17,14 @@ export function CookieConsentBanner() {
     const [open, setOpen] = useState(!hasConsentRecorded());
     const [settingsMode, setSettingsMode] = useState(false);
     const [analyticsToggle, setAnalyticsToggle] = useState(getConsent()?.analytics ?? false);
+    const [adsToggle, setAdsToggle] = useState(getConsent()?.adsPersonalization ?? false);
 
     useEffect(() => {
         const onOpen = () => {
+            const current = getConsent();
             setSettingsMode(true);
-            setAnalyticsToggle(getConsent()?.analytics ?? false);
+            setAnalyticsToggle(current?.analytics ?? false);
+            setAdsToggle(current?.adsPersonalization ?? false);
             setOpen(true);
         };
         window.addEventListener(OPEN_CONSENT_EVENT, onOpen);
@@ -32,19 +35,19 @@ export function CookieConsentBanner() {
     if (!open) return null;
 
     const acceptEssentials = () => {
-        setConsent(false);
+        setConsent({ analytics: false, adsPersonalization: false });
         setSettingsMode(false);
         setOpen(false);
     };
 
     const acceptAll = () => {
-        setConsent(true);
+        setConsent({ analytics: true, adsPersonalization: true });
         setSettingsMode(false);
         setOpen(false);
     };
 
     const savePreferences = () => {
-        setConsent(analyticsToggle);
+        setConsent({ analytics: analyticsToggle, adsPersonalization: adsToggle });
         setSettingsMode(false);
         setOpen(false);
     };
@@ -61,8 +64,8 @@ export function CookieConsentBanner() {
                 </p>
                 <p className="mt-2 text-sm text-gray-600 leading-relaxed">
                     Usamos cookies e armazenamento local estritamente necessários para o funcionamento do site (sessão,
-                    preferências). Com seu consentimento, também registramos páginas visitadas de forma agregada para
-                    melhorar o serviço. Consulte a{' '}
+                    preferências). Com seu consentimento, também registramos páginas visitadas de forma agregada e
+                    podemos exibir publicidade personalizada do Google. Consulte a{' '}
                     <Link to="/privacidade" className="text-blue-600 underline hover:text-blue-800">
                         Política de Privacidade
                     </Link>{' '}
@@ -70,18 +73,32 @@ export function CookieConsentBanner() {
                 </p>
 
                 {settingsMode && (
-                    <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                        <input
-                            type="checkbox"
-                            className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            checked={analyticsToggle}
-                            onChange={(e) => setAnalyticsToggle(e.target.checked)}
-                        />
-                        <span className="text-sm text-gray-700">
-                            <strong>Estatísticas de uso</strong> — envio anônimo de rotas visitadas para análise interna
-                            (sem venda a terceiros para publicidade pelo Dezzapego).
-                        </span>
-                    </label>
+                    <div className="mt-4 space-y-3">
+                        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                            <input
+                                type="checkbox"
+                                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                checked={analyticsToggle}
+                                onChange={(e) => setAnalyticsToggle(e.target.checked)}
+                            />
+                            <span className="text-sm text-gray-700">
+                                <strong>Estatísticas de uso</strong> — envio anônimo de rotas visitadas para análise interna.
+                            </span>
+                        </label>
+                        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                            <input
+                                type="checkbox"
+                                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                checked={adsToggle}
+                                onChange={(e) => setAdsToggle(e.target.checked)}
+                            />
+                            <span className="text-sm text-gray-700">
+                                <strong>Publicidade personalizada</strong> — permite que parceiros como o Google usem
+                                sinais de consentimento para anúncios mais relevantes. Sem isso, poderemos exibir
+                                anúncios limitados ou não personalizados.
+                            </span>
+                        </label>
+                    </div>
                 )}
 
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
@@ -104,8 +121,10 @@ export function CookieConsentBanner() {
                             <button
                                 type="button"
                                 onClick={() => {
+                                    const current = getConsent();
                                     setSettingsMode(true);
-                                    setAnalyticsToggle(getConsent()?.analytics ?? false);
+                                    setAnalyticsToggle(current?.analytics ?? false);
+                                    setAdsToggle(current?.adsPersonalization ?? false);
                                 }}
                                 className="order-3 text-sm text-blue-600 underline hover:text-blue-800 sm:order-3"
                             >
