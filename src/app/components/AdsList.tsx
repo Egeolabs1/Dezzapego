@@ -250,7 +250,7 @@ export function AdsList({
                 <img
                   src={ad.images[0]}
                   alt={ad.title}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  className="w-full h-full object-contain bg-white p-1"
                   loading="lazy"
                 />
                 <div className={`absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${viewMode === 'grid' ? 'translate-x-4 group-hover:translate-x-0' : ''}`}>

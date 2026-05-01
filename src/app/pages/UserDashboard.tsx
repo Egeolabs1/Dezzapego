@@ -11,6 +11,7 @@ export default function UserDashboard() {
     const { user, profile, refreshProfile } = useAuth(); // ADDED profile, refreshProfile
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
+    const [savingAvatar, setSavingAvatar] = useState(false);
     const [submittingVerification, setSubmittingVerification] = useState(false);
     // Form State
     const [name, setName] = useState('');
@@ -185,8 +186,42 @@ export default function UserDashboard() {
         }
     };
 
-    const handleAvatarUpload = (url: string) => setAvatar([url]);
-    const handleAvatarRemove = (_url: string) => setAvatar([]);
+    const persistAvatar = async (avatarUrl: string | null) => {
+        if (!user) return;
+        setSavingAvatar(true);
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({
+                    avatar_url: avatarUrl,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', user.id);
+
+            if (error) throw error;
+
+            await supabase.auth.updateUser({
+                data: { avatar_url: avatarUrl },
+            });
+
+            await refreshProfile();
+            toast.success(avatarUrl ? 'Foto de perfil atualizada.' : 'Foto de perfil removida.');
+        } catch (error) {
+            console.error('Error persisting avatar:', error);
+            toast.error('Não foi possível salvar a foto de perfil.');
+        } finally {
+            setSavingAvatar(false);
+        }
+    };
+
+    const handleAvatarUpload = (url: string) => {
+        setAvatar([url]);
+        void persistAvatar(url);
+    };
+    const handleAvatarRemove = (_url: string) => {
+        setAvatar([]);
+        void persistAvatar(null);
+    };
     const openVerificationTab = () => setActiveTab('verification');
 
     const handleExportMyData = async () => {
@@ -413,7 +448,10 @@ export default function UserDashboard() {
                                                         userId={user.id}
                                                     />
                                                 </div>
-                                                <p className="text-xs text-gray-500 mt-2">Recomendado: 400x400px. JPG ou PNG.</p>
+                                                <p className="text-xs text-gray-500 mt-2">
+                                                    Recomendado: 400x400px. JPG ou PNG.
+                                                    {savingAvatar ? ' Salvando foto...' : ''}
+                                                </p>
                                             </div>
                                         </div>
                                     </div>

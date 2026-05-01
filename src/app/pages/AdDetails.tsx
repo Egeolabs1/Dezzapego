@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import {
     Loader2, MapPin, Calendar, Share2, MessageCircle,
-    Flag, X, AlertTriangle, ShieldCheck, ChevronRight, Heart, User, Trash2, Pencil
+    Flag, X, AlertTriangle, ShieldCheck, ChevronRight, Heart, User, Trash2, Pencil, ChevronLeft
 } from 'lucide-react';
 import { Ad, Profile } from '../../types';
 import { formatPrice } from '../../lib/formatters';
@@ -22,6 +22,7 @@ export default function AdDetails() {
     const [ad, setAd] = useState<Ad | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
+    const [showImageFullscreen, setShowImageFullscreen] = useState(false);
 
     // Report Modal State
     const [showReportModal, setShowReportModal] = useState(false);
@@ -101,6 +102,14 @@ export default function AdDetails() {
             navigator.clipboard.writeText(window.location.href);
             toast.success('Link copiado!');
         }
+    };
+
+    const goToPrevImage = () => {
+        setActiveImageIndex((prev) => (prev - 1 + ad!.images.length) % ad!.images.length);
+    };
+
+    const goToNextImage = () => {
+        setActiveImageIndex((prev) => (prev + 1) % ad!.images.length);
     };
 
     const handleReportSubmit = async (e: FormEvent) => {
@@ -236,8 +245,9 @@ export default function AdDetails() {
                                 <img
                                     src={ad.images[activeImageIndex]}
                                     alt={ad.title}
-                                    className="w-full h-full object-contain mix-blend-multiply"
+                                    className="w-full h-full object-contain bg-white cursor-zoom-in"
                                     loading="lazy"
+                                    onClick={() => setShowImageFullscreen(true)}
                                 />
                                 {ad.featured && (
                                     <div className="absolute top-4 left-4 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide shadow-sm">
@@ -259,7 +269,7 @@ export default function AdDetails() {
                                                     : 'border-transparent hover:border-gray-300 opacity-70 hover:opacity-100'
                                                     }`}
                                             >
-                                                <img src={img} alt={`View ${idx}`} className="w-full h-full object-cover" loading="lazy" />
+                                                <img src={img} alt={`View ${idx}`} className="w-full h-full object-contain bg-white" loading="lazy" />
                                             </button>
                                         ))}
                                     </div>
@@ -552,6 +562,52 @@ export default function AdDetails() {
                             </div>
                         </form>
                     </div>
+                </div>
+            )}
+
+            {showImageFullscreen && (
+                <div className="fixed inset-0 z-[70] bg-black/95 flex items-center justify-center p-4">
+                    <button
+                        type="button"
+                        onClick={() => setShowImageFullscreen(false)}
+                        className="absolute top-4 right-4 text-white/90 hover:text-white bg-black/40 rounded-full p-2"
+                        aria-label="Fechar visualização"
+                    >
+                        <X className="w-6 h-6" />
+                    </button>
+
+                    {ad.images.length > 1 && (
+                        <>
+                            <button
+                                type="button"
+                                onClick={goToPrevImage}
+                                className="absolute left-4 md:left-8 text-white/90 hover:text-white bg-black/40 rounded-full p-2"
+                                aria-label="Imagem anterior"
+                            >
+                                <ChevronLeft className="w-7 h-7" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={goToNextImage}
+                                className="absolute right-4 md:right-8 text-white/90 hover:text-white bg-black/40 rounded-full p-2"
+                                aria-label="Próxima imagem"
+                            >
+                                <ChevronRight className="w-7 h-7" />
+                            </button>
+                        </>
+                    )}
+
+                    <img
+                        src={ad.images[activeImageIndex]}
+                        alt={`${ad.title} - imagem ${activeImageIndex + 1}`}
+                        className="max-w-[95vw] max-h-[90vh] object-contain"
+                    />
+
+                    {ad.images.length > 1 && (
+                        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 bg-black/50 text-white text-sm px-3 py-1 rounded-full">
+                            {activeImageIndex + 1} / {ad.images.length}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

@@ -49,7 +49,7 @@ export default function MyFavorites() {
                                     <img
                                         src={ad.images[0]}
                                         alt={ad.title}
-                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                        className="w-full h-full object-contain bg-white p-1"
                                     />
                                     <button
                                         className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-lg hover:bg-red-50 text-red-500 transition-colors z-10"
