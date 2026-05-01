@@ -392,6 +392,8 @@ create table if not exists public.reports (
   user_id uuid references auth.users,
   reason text not null,
   description text,
+  reporter_name text,
+  reporter_email text,
   status text default 'pending',
   created_at timestamptz default now()
 );
@@ -405,9 +407,9 @@ select public.create_policy_if_missing(
 );
 
 select public.create_policy_if_missing(
-  'public', 'reports', 'No public read access',
-  $pol$create policy "No public read access"
-    on public.reports for select using (false)$pol$
+  'public', 'reports', 'Admins can view all reports',
+  $pol$create policy "Admins can view all reports"
+    on public.reports for select using (public.is_admin())$pol$
 );
 
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Header } from '../components/Header';
 
@@ -16,12 +16,30 @@ export default function Contact() {
     const [email, setEmail] = useState(user?.email || '');
     const [subject, setSubject] = useState('');
     const [message, setMessage] = useState('');
+    const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+    const turnstileRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        // @ts-ignore
+        if (window.turnstile && turnstileRef.current) {
+            // @ts-ignore
+            window.turnstile.render(turnstileRef.current, {
+                sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
+                callback: (token: string) => setTurnstileToken(token),
+            });
+        }
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!name || !email || !subject || !message) {
             toast.error('Por favor, preencha todos os campos.');
+            return;
+        }
+
+        if (!turnstileToken) {
+            toast.error('Por favor, complete a verificação de segurança.');
             return;
         }
 
@@ -48,6 +66,9 @@ export default function Contact() {
             }
             setSubject('');
             setMessage('');
+            setTurnstileToken(null);
+            // @ts-ignore
+            if (window.turnstile) window.turnstile.reset();
 
         } catch (error) {
             console.error('Error sending message:', error);
@@ -162,6 +183,10 @@ export default function Contact() {
                                         placeholder="Descreva sua dúvida ou problema..."
                                         required
                                     />
+                                </div>
+
+                                <div className="mb-6 flex justify-center">
+                                    <div ref={turnstileRef} className="cf-turnstile"></div>
                                 </div>
 
                                 <button

@@ -1,4 +1,4 @@
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useState, FormEvent, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import {
@@ -28,7 +28,30 @@ export default function AdDetails() {
     const [showReportModal, setShowReportModal] = useState(false);
     const [reportReason, setReportReason] = useState('');
     const [reportDescription, setReportDescription] = useState('');
+    const [reporterName, setReporterName] = useState('');
+    const [reporterEmail, setReporterEmail] = useState('');
     const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+    const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+    const turnstileRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (showReportModal) {
+            // Give it a small timeout to ensure the modal is rendered
+            const timer = setTimeout(() => {
+                // @ts-ignore
+                if (window.turnstile && turnstileRef.current) {
+                    // @ts-ignore
+                    window.turnstile.render(turnstileRef.current, {
+                        sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
+                        callback: (token: string) => setTurnstileToken(token),
+                    });
+                }
+            }, 100);
+            return () => clearTimeout(timer);
+        } else {
+            setTurnstileToken(null);
+        }
+    }, [showReportModal]);
 
     const [profile, setProfile] = useState<Profile | null>(null); // NEW
 
@@ -116,12 +139,20 @@ export default function AdDetails() {
         e.preventDefault();
         if (!ad || !reportReason) return;
 
+        if (!turnstileToken) {
+            toast.error('Por favor, complete a verificação de segurança.');
+            return;
+        }
+
         setIsSubmittingReport(true);
         try {
             const { error } = await supabase.from('reports').insert({
                 ad_id: ad.id,
+                user_id: user?.id || null,
                 reason: reportReason,
-                description: reportDescription
+                description: reportDescription,
+                reporter_name: reporterName,
+                reporter_email: reporterEmail
             });
 
             if (error) throw error;
@@ -130,6 +161,11 @@ export default function AdDetails() {
             setShowReportModal(false);
             setReportReason('');
             setReportDescription('');
+            setReporterName('');
+            setReporterEmail('');
+            setTurnstileToken(null);
+            // @ts-ignore
+            if (window.turnstile) window.turnstile.reset();
         } catch (error) {
             console.error('Error reporting ad:', error);
             // Fallback for demo if table doesn't exist yet
@@ -517,6 +553,32 @@ export default function AdDetails() {
 
                         <form onSubmit={handleReportSubmit} className="space-y-5">
                             <div>
+                                <label htmlFor="reporterName" className="block text-sm font-semibold text-gray-700 mb-2">Seu Nome</label>
+                                <input
+                                    id="reporterName"
+                                    type="text"
+                                    required
+                                    value={reporterName}
+                                    onChange={e => setReporterName(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                    placeholder="Digite seu nome completo"
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="reporterEmail" className="block text-sm font-semibold text-gray-700 mb-2">Seu E-mail</label>
+                                <input
+                                    id="reporterEmail"
+                                    type="email"
+                                    required
+                                    value={reporterEmail}
+                                    onChange={e => setReporterEmail(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                    placeholder="seu@email.com"
+                                />
+                            </div>
+
+                            <div>
                                 <label htmlFor="reportReason" className="block text-sm font-semibold text-gray-700 mb-2">Qual o motivo da denúncia?</label>
                                 <select
                                     id="reportReason"
@@ -540,10 +602,14 @@ export default function AdDetails() {
                                     id="reportDescription"
                                     value={reportDescription}
                                     onChange={e => setReportDescription(e.target.value)}
-                                    rows={4}
+                                    rows={3}
                                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
                                     placeholder="Descreva o que há de errado com este anúncio..."
                                 />
+                            </div>
+
+                            <div className="flex justify-center py-2">
+                                <div ref={turnstileRef} className="cf-turnstile"></div>
                             </div>
 
                             <div className="flex gap-3 pt-2">
@@ -556,7 +622,7 @@ export default function AdDetails() {
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={!reportReason || isSubmittingReport}
+                                    disabled={!reportReason || !reporterName || !reporterEmail || isSubmittingReport}
                                     className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 disabled:opacity-50 transition-all shadow-md hover:shadow-lg"
                                 >
                                     {isSubmittingReport ? 'Enviando...' : 'Confirmar Denúncia'}
