@@ -132,6 +132,18 @@ comment on column public.profiles.is_suspended is
 comment on column public.profiles.suspended_reason is
   'Motivo da suspensão (pode ser exibido ao usuário após logout).';
 
+alter table public.profiles
+  add column if not exists signup_ip text,
+  add column if not exists last_access_ip text,
+  add column if not exists last_access_at timestamptz;
+
+comment on column public.profiles.signup_ip is
+  'IPv4/IPv6 público informado pelo cliente na conclusão do cadastro ou no primeiro login (aprox.).';
+comment on column public.profiles.last_access_ip is
+  'Último IPv4/IPv6 público informado pelo cliente em acesso à plataforma.';
+comment on column public.profiles.last_access_at is
+  'Último registro de atividade/IP reportado pelo app.';
+
 alter table public.profiles enable row level security;
 
 select public.create_policy_if_missing(
@@ -209,6 +221,59 @@ select public.create_trigger_if_missing(
     after insert on auth.users
     for each row execute function public.handle_new_user()$trg$
 );
+
+
+-- ---------------------------------------------------------------------------
+-- 3b. IP de cadastro e registro de acesso (titular autenticado)
+-- ---------------------------------------------------------------------------
+
+create or replace function public.record_my_signup_meta(p_ip text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_raw text := trim(coalesce(p_ip, ''));
+  v_ip text := left(nullif(trim(coalesce(v_raw, '')), ''), 64);
+begin
+  if auth.uid() is null then
+    raise exception 'not authenticated';
+  end if;
+
+  update public.profiles
+  set
+    signup_ip = coalesce(signup_ip, v_ip),
+    updated_at = now()
+  where id = auth.uid();
+end;
+$$;
+
+create or replace function public.record_my_access(p_ip text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_raw text := trim(coalesce(p_ip, ''));
+  v_ip text := left(nullif(v_raw, ''), 64);
+begin
+  if auth.uid() is null then
+    raise exception 'not authenticated';
+  end if;
+
+  update public.profiles
+  set
+    last_access_ip = case when v_ip is null then last_access_ip else v_ip end,
+    last_access_at = now(),
+    updated_at = now()
+  where id = auth.uid();
+end;
+$$;
+
+grant execute on function public.record_my_signup_meta(text) to authenticated;
+grant execute on function public.record_my_access(text) to authenticated;
 
 
 -- ---------------------------------------------------------------------------

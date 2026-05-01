@@ -14,20 +14,17 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Profile } from '../../../types';
+import {
+    approveProfileVerification,
+    parseVerificationDocs,
+    rejectProfileVerification,
+} from '../../../lib/adminVerification';
 
 type SellerStats = Partial<Profile> & {
     id: string;
     count: number;
     name: string;
 };
-
-function parseVerificationDocs(raw: unknown): { doc: string[]; selfie: string[] } {
-    if (!raw || typeof raw !== 'object') return { doc: [], selfie: [] };
-    const o = raw as Record<string, unknown>;
-    const doc = Array.isArray(o.doc) ? (o.doc as string[]).filter(Boolean) : [];
-    const selfie = Array.isArray(o.selfie) ? (o.selfie as string[]).filter(Boolean) : [];
-    return { doc, selfie };
-}
 
 function csvEscape(value: string | number | boolean | null | undefined): string {
     if (value === null || value === undefined) return '""';
@@ -62,7 +59,7 @@ export default function AdminUsers() {
     async function fetchSellers() {
         try {
             const { data: profiles, error: profilesError } = await supabase.from('profiles').select(
-                'id, full_name, email, phone, verified, verification_status, verification_docs, verification_rejection_reason, created_at, is_suspended, suspended_reason',
+                'id, full_name, email, phone, verified, verification_status, verification_docs, verification_rejection_reason, created_at, signup_ip, last_access_ip, last_access_at, is_suspended, suspended_reason',
             );
 
             if (profilesError) {
@@ -187,16 +184,7 @@ export default function AdminUsers() {
             return;
         }
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    verified: true,
-                    verification_status: 'verified',
-                    verification_rejection_reason: null,
-                })
-                .eq('id', seller.id);
-
-            if (error) throw error;
+            await approveProfileVerification(seller.id);
 
             setSellers((prev) =>
                 prev.map((s) =>
@@ -222,18 +210,9 @@ export default function AdminUsers() {
             window.prompt(
                 'Motivo da recusa (o usuário verá esta mensagem). Ex.: documento ilegível, dados não conferem:',
             ) ?? '';
+        const trimmed = reason.trim();
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    verified: false,
-                    verification_status: 'rejected',
-                    verification_rejection_reason:
-                        reason.trim() || 'Documentação não aprovada. Envie fotos mais nítidas.',
-                })
-                .eq('id', seller.id);
-
-            if (error) throw error;
+            await rejectProfileVerification(seller.id, trimmed);
 
             setSellers((prev) =>
                 prev.map((s) =>
@@ -243,7 +222,7 @@ export default function AdminUsers() {
                               verified: false,
                               verification_status: 'rejected',
                               verification_rejection_reason:
-                                  reason.trim() || 'Documentação não aprovada. Envie fotos mais nítidas.',
+                                  trimmed || 'Documentação não aprovada. Envie fotos mais nítidas.',
                           }
                         : s,
                 ),
@@ -291,6 +270,9 @@ export default function AdminUsers() {
             'email',
             'phone',
             'created_at',
+            'signup_ip',
+            'last_access_ip',
+            'last_access_at',
             'verification_status',
             'verified',
             'is_suspended',
@@ -304,6 +286,9 @@ export default function AdminUsers() {
                 csvEscape(s.email ?? ''),
                 csvEscape(s.phone ?? ''),
                 csvEscape(s.created_at ?? ''),
+                csvEscape(s.signup_ip ?? ''),
+                csvEscape(s.last_access_ip ?? ''),
+                csvEscape(s.last_access_at ?? ''),
                 csvEscape(s.verification_status ?? ''),
                 csvEscape(s.verified ? 'true' : 'false'),
                 csvEscape(s.is_suspended ? 'true' : 'false'),

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
+import { flushProfileSignupAndAccess } from '../../lib/profileIpLog';
 import { Profile } from '../../types';
 
 const SUSPENDED_NOTICE_KEY = 'dezzapego_suspended_notice';
@@ -56,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     return;
                 }
                 setProfile(data);
+                void flushProfileSignupAndAccess(data as Profile, userId);
             }
         } catch (err) {
             console.error('Profile fetch error:', err);

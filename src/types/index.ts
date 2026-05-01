@@ -63,4 +63,9 @@ export type Profile = {
     is_suspended?: boolean | null;
     /** Motivo exibido ao usuário após suspensão (opcional) */
     suspended_reason?: string | null;
+    /** IP público na conclusão do cadastro ou primeiro login com sessão (cliente/API externa). */
+    signup_ip?: string | null;
+    /** IP da última atividade registrada pelo app */
+    last_access_ip?: string | null;
+    last_access_at?: string | null;
 };

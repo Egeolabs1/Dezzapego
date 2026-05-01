@@ -99,6 +99,12 @@ export default function PrivacyPolicy() {
                                 </ul>
                                 <h3 className="text-lg font-bold text-gray-900 mt-4">3.3. Uso do site e segurança</h3>
                                 <ul className="list-disc pl-5 space-y-1">
+                                    <li>
+                                        <strong>Endereço IP:</strong> registramos o IP público associado ao cadastro e
+                                        atualizamos registro de último acesso em intervalos controlados enquanto você
+                                        usa o site autenticado (medição via serviço externo no navegador; a data de
+                                        criação da conta continua no campo <code className="text-xs bg-gray-100 px-1 rounded">created_at</code> do perfil).
+                                    </li>
                                     <li>Logs técnicos (ex.: IP, agente do navegador, rotas acessadas) para segurança e
                                         diagnóstico.</li>
                                     <li>

@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
-import { Users, ShoppingBag, DollarSign, Activity, TrendingUp, BarChart3, Eye, Flag, Star, CreditCard, Globe2 } from 'lucide-react';
+import { Users, ShoppingBag, DollarSign, Activity, TrendingUp, BarChart3, Eye, Flag, Star, CreditCard, Globe2, BadgeCheck } from 'lucide-react';
 import { formatPrice } from '../../../lib/formatters';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line, Legend } from 'recharts';
 
@@ -12,6 +13,7 @@ type DashboardStats = {
     avgPrice: number;
     featuredAds: number;
     pendingReports: number;
+    pendingVerifications: number;
     siteVisits: number;
     uniqueVisitors: number;
     revenueCents: number;
@@ -39,6 +41,7 @@ const initialStats: DashboardStats = {
     avgPrice: 0,
     featuredAds: 0,
     pendingReports: 0,
+    pendingVerifications: 0,
     siteVisits: 0,
     uniqueVisitors: 0,
     revenueCents: 0,
@@ -73,14 +76,19 @@ export default function AdminDashboard() {
                 if (error) throw error;
                 const safeAds = ads || [];
 
-                const [{ data: paymentsData }, { data: visitsData }] = await Promise.all([
-                    supabase
-                        .from('featured_payments')
-                        .select('id, status, provider, amount_cents, gross_amount_cents, created_at'),
-                    supabase
-                        .from('site_visits')
-                        .select('id, session_id, path, referrer, created_at'),
-                ]);
+                const [{ data: paymentsData }, { data: visitsData }, { count: pendingVerificationCount }] =
+                    await Promise.all([
+                        supabase
+                            .from('featured_payments')
+                            .select('id, status, provider, amount_cents, gross_amount_cents, created_at'),
+                        supabase
+                            .from('site_visits')
+                            .select('id, session_id, path, referrer, created_at'),
+                        supabase
+                            .from('profiles')
+                            .select('id', { count: 'exact', head: true })
+                            .eq('verification_status', 'pending'),
+                    ]);
 
                 const safePayments = paymentsData || [];
                 const safeVisits = visitsData || [];
@@ -202,6 +210,7 @@ export default function AdminDashboard() {
                     avgPrice,
                     featuredAds,
                     pendingReports,
+                    pendingVerifications: pendingVerificationCount ?? 0,
                     siteVisits: safeVisits.length,
                     uniqueVisitors,
                     revenueCents,
@@ -256,6 +265,17 @@ export default function AdminDashboard() {
                 <StatCard title="Pagamentos Confirmados" value={String(stats.paidPayments)} icon={<CreditCard className="w-6 h-6" />} tint="green" />
                 <StatCard title="Expirados/Reembolsados" value={`${stats.expiredPayments}/${stats.refundedPayments}`} icon={<CreditCard className="w-6 h-6" />} tint="slate" />
                 <StatCard title="Denúncias Pendentes" value={String(stats.pendingReports)} icon={<Flag className="w-6 h-6" />} tint="red" />
+                <Link
+                    to="/admin/verificacao"
+                    className="block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                >
+                    <StatCard
+                        title="Verificações de conta pendentes"
+                        value={String(stats.pendingVerifications)}
+                        icon={<BadgeCheck className="w-6 h-6" />}
+                        tint="yellow"
+                    />
+                </Link>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

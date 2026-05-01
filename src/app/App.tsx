@@ -17,6 +17,7 @@ import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminAds from './pages/admin/AdminAds';
 import AdminUsers from './pages/admin/AdminUsers';
+import AdminVerification from './pages/admin/AdminVerification';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminReports from './pages/admin/AdminReports';
 import AdminBanners from './pages/admin/AdminBanners';
@@ -42,11 +43,16 @@ import { useMaintenance, MaintenanceProvider } from './contexts/MaintenanceConte
 import Maintenance from './pages/Maintenance';
 import { useAuth } from './contexts/AuthContext';
 import { useSiteVisitTracking } from './hooks/useSiteVisitTracking';
+import { useProfileIpOnNavigation } from '../lib/profileIpLog';
 
 function AppContent() {
   const { isMaintenanceMode, loading: maintenanceLoading } = useMaintenance();
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   useSiteVisitTracking();
+  useProfileIpOnNavigation(
+    user?.id,
+    Boolean(user?.id && profile && profile.is_suspended !== true),
+  );
 
   // Checking logic:
   // 1. If currently loading, show nothing or spinner
@@ -98,6 +104,7 @@ function AppContent() {
           <Route path="anuncios" element={<AdminAds />} />
           <Route path="pagamentos" element={<AdminPayments />} />
           <Route path="usuarios" element={<AdminUsers />} />
+          <Route path="verificacao" element={<AdminVerification />} />
           <Route path="mensagens" element={<AdminMessages />} />
           <Route path="denuncias" element={<AdminReports />} />
           <Route path="banners" element={<AdminBanners />} />

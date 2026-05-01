@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, Users, LogOut, Menu, Settings, Flag, Image as ImageIcon, Shield, Bell, Home, MessageSquare, CreditCard } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Users, LogOut, Menu, Settings, Flag, Image as ImageIcon, Shield, Bell, Home, MessageSquare, CreditCard, BadgeCheck } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Logo } from '../../components/Logo';
 import { supabase } from '../../../lib/supabase';
@@ -49,6 +49,7 @@ export default function AdminLayout() {
         { icon: ShoppingBag, label: 'Anúncios', path: '/admin/anuncios' },
         { icon: CreditCard, label: 'Pagamentos', path: '/admin/pagamentos' },
         { icon: MessageSquare, label: 'Mensagens', path: '/admin/mensagens' },
+        { icon: BadgeCheck, label: 'Verificação de contas', path: '/admin/verificacao' },
         { icon: Users, label: 'Usuários', path: '/admin/usuarios' },
         { icon: Flag, label: 'Denúncias', path: '/admin/denuncias' },
         { icon: Bell, label: 'Notificações', path: '/admin/notificacoes' },

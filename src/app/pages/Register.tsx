@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import SEO from '../../components/SEO';
 import { FieldError } from '../components/FieldError';
+import { recordSignupIpAndFirstAccess } from '../../lib/profileIpLog';
 
 type AccountType = 'personal' | 'professional';
 
@@ -132,6 +133,10 @@ export default function Register() {
                 toast.success('Conta criada! Verifique seu e-mail para confirmar o cadastro antes de entrar.');
                 navigate('/login', { replace: true });
                 return;
+            }
+
+            if (data.session && data.user?.id) {
+                await recordSignupIpAndFirstAccess({ userId: data.user.id });
             }
 
             toast.success('Cadastro realizado! Você já pode anunciar.');
