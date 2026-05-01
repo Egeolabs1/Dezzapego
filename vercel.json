@@ -5,6 +5,17 @@
             "destination": "/api/sitemap.xml"
         },
         {
+            "source": "/anuncio/:id",
+            "has": [
+                {
+                    "type": "header",
+                    "key": "user-agent",
+                    "value": "(facebookexternalhit|Facebot|WhatsApp|Twitterbot|Slackbot|Discordbot|LinkedInBot|TelegramBot|Googlebot|bingbot)"
+                }
+            ],
+            "destination": "/api/og-ad?id=:id"
+        },
+        {
             "source": "/((?!.*\\..*).*)",
             "destination": "/index.html"
         }

@@ -190,6 +190,8 @@ export default function AdDetails() {
                 type="product"
                 keywords={getKeywordsForAd(ad)}
                 structuredData={structuredGraph}
+                ogTitle="Dezzapego"
+                ogDescription={ad.title}
             />
             <Header />
 

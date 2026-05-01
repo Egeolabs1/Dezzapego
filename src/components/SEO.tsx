@@ -19,6 +19,10 @@ interface SEOProps {
     /** Não indexar (login, páginas de conta, etc.) */
     noIndex?: boolean;
     structuredData?: Record<string, unknown> | Record<string, unknown>[];
+    /** Override apenas para compartilhamento social */
+    ogTitle?: string;
+    /** Override apenas para descrição de compartilhamento social */
+    ogDescription?: string;
 }
 
 const DEFAULT_DESCRIPTION =
@@ -35,6 +39,8 @@ export default function SEO({
     keywords,
     noIndex = false,
     structuredData,
+    ogTitle,
+    ogDescription,
 }: SEOProps) {
     const origin = getSiteOrigin();
     const pathname = typeof window !== 'undefined' ? window.location.pathname || '/' : '/';
@@ -49,6 +55,8 @@ export default function SEO({
     const canonical =
         canonicalUrl != null ? toAbsoluteUrl(canonicalUrl) : `${origin}${pathname}`;
     const fullTitle = `${title} | ${siteName}`;
+    const shareTitle = ogTitle || fullTitle;
+    const shareDescription = ogDescription || description;
     const ogType = type === 'product' ? 'product' : type === 'article' ? 'article' : 'website';
     const useLargeTwitterCard =
         type === 'article' ||
@@ -91,8 +99,8 @@ export default function SEO({
             <meta property="og:locale" content="pt_BR" />
             <meta property="og:site_name" content={siteName} />
             <meta property="og:type" content={ogType} />
-            <meta property="og:title" content={fullTitle} />
-            <meta property="og:description" content={description} />
+            <meta property="og:title" content={shareTitle} />
+            <meta property="og:description" content={shareDescription} />
             <meta property="og:image" content={absoluteImage} />
             <meta property="og:image:alt" content={title} />
             {ogImageWidth ? (
@@ -104,8 +112,8 @@ export default function SEO({
             <meta property="og:url" content={resolvedUrl} />
 
             <meta name="twitter:card" content={useLargeTwitterCard ? 'summary_large_image' : 'summary'} />
-            <meta name="twitter:title" content={fullTitle} />
-            <meta name="twitter:description" content={description} />
+            <meta name="twitter:title" content={shareTitle} />
+            <meta name="twitter:description" content={shareDescription} />
             <meta name="twitter:image" content={absoluteImage} />
 
             {structuredScripts.map((data, idx) => (

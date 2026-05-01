@@ -141,6 +141,8 @@ export default function Home() {
                     url={toAbsoluteUrl(`/anuncio/${selectedAd.id}`)}
                     canonicalUrl={toAbsoluteUrl(`/anuncio/${selectedAd.id}`)}
                     type="article"
+                    ogTitle="Dezzapego"
+                    ogDescription={selectedAd.title}
                 />
                 <Header
                     selectedState={selectedState}
@@ -165,6 +167,8 @@ export default function Home() {
                 keywords={listingSeo.keywords}
                 canonicalUrl={listingSeo.canonicalUrl}
                 structuredData={listingStructuredData}
+                ogTitle="Dezzapego"
+                ogDescription="Imóveis, carros, eletrônicos e mais. Publique anúncios grátis no Dezzapego."
             />
             <Header
                 selectedState={selectedState}
