@@ -97,9 +97,18 @@ export function AdsList({
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
+        const detailsString = (ad as any).details 
+          ? Object.values((ad as any).details).join(' ').toLowerCase() 
+          : '';
+
         const matchesSearch = (
           ad.title.toLowerCase().includes(query) ||
-          ad.description.toLowerCase().includes(query)
+          ad.description.toLowerCase().includes(query) ||
+          ad.category.toLowerCase().includes(query) ||
+          ad.subcategory.toLowerCase().includes(query) ||
+          ad.location?.city?.toLowerCase().includes(query) ||
+          ad.location?.state?.toLowerCase().includes(query) ||
+          detailsString.includes(query)
         );
         if (!matchesSearch) return false;
       }
