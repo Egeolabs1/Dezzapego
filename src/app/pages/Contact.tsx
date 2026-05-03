@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Header } from '../components/Header';
 
@@ -17,12 +17,47 @@ export default function Contact() {
     const [subject, setSubject] = useState('');
     const [message, setMessage] = useState('');
     const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+    const turnstileContainerRef = useRef<HTMLDivElement>(null);
+    const widgetIdRef = useRef<string | null>(null);
+
+    const renderTurnstile = useCallback(() => {
+        // @ts-ignore
+        if (!window.turnstile || !turnstileContainerRef.current) return;
+        // Already rendered
+        if (widgetIdRef.current !== null) return;
+        // @ts-ignore
+        widgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
+            sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
+            callback: (token: string) => setTurnstileToken(token),
+            'error-callback': () => setTurnstileToken(null),
+        });
+    }, []);
 
     useEffect(() => {
-        const handler = (e: Event) => setTurnstileToken((e as CustomEvent).detail);
-        window.addEventListener('turnstile-contact', handler);
-        return () => window.removeEventListener('turnstile-contact', handler);
-    }, []);
+        // Try immediately, or wait for api.js to load
+        // @ts-ignore
+        if (window.turnstile) {
+            renderTurnstile();
+        } else {
+            const interval = setInterval(() => {
+                // @ts-ignore
+                if (window.turnstile) {
+                    clearInterval(interval);
+                    renderTurnstile();
+                }
+            }, 100);
+            return () => clearInterval(interval);
+        }
+        return () => {
+            // Cleanup widget on unmount
+            // @ts-ignore
+            if (window.turnstile && widgetIdRef.current !== null) {
+                // @ts-ignore
+                window.turnstile.remove(widgetIdRef.current);
+                widgetIdRef.current = null;
+            }
+        };
+    }, [renderTurnstile]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -62,7 +97,10 @@ export default function Contact() {
             setMessage('');
             setTurnstileToken(null);
             // @ts-ignore
-            if (window.turnstile) window.turnstile.reset();
+            if (window.turnstile && widgetIdRef.current !== null) {
+                // @ts-ignore
+                window.turnstile.reset(widgetIdRef.current);
+            }
 
         } catch (error) {
             console.error('Error sending message:', error);
@@ -180,11 +218,7 @@ export default function Contact() {
                                 </div>
 
                                 <div className="mb-6 flex justify-center">
-                                    <div
-                                        className="cf-turnstile cf-turnstile-contact"
-                                        data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
-                                        data-callback="onTurnstileContactSuccess"
-                                    />
+                                    <div ref={turnstileContainerRef} />
                                 </div>
 
                                 <button

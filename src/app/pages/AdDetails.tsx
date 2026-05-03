@@ -1,4 +1,4 @@
-import { useEffect, useState, FormEvent, useRef } from 'react';
+import { useEffect, useState, FormEvent, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import {
@@ -32,18 +32,47 @@ export default function AdDetails() {
     const [reporterEmail, setReporterEmail] = useState('');
     const [isSubmittingReport, setIsSubmittingReport] = useState(false);
     const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+    const turnstileContainerRef = useRef<HTMLDivElement>(null);
+    const widgetIdRef = useRef<string | null>(null);
 
-    useEffect(() => {
-        const handler = (e: Event) => setTurnstileToken((e as CustomEvent).detail);
-        window.addEventListener('turnstile-report', handler);
-        return () => window.removeEventListener('turnstile-report', handler);
+    const renderTurnstile = useCallback(() => {
+        // @ts-ignore
+        if (!window.turnstile || !turnstileContainerRef.current) return;
+        if (widgetIdRef.current !== null) return;
+        // @ts-ignore
+        widgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
+            sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
+            callback: (token: string) => setTurnstileToken(token),
+            'error-callback': () => setTurnstileToken(null),
+        });
     }, []);
 
     useEffect(() => {
-        if (!showReportModal) {
+        if (showReportModal) {
+            // @ts-ignore
+            if (window.turnstile) {
+                setTimeout(renderTurnstile, 100);
+            } else {
+                const interval = setInterval(() => {
+                    // @ts-ignore
+                    if (window.turnstile) {
+                        clearInterval(interval);
+                        setTimeout(renderTurnstile, 100);
+                    }
+                }, 100);
+                return () => clearInterval(interval);
+            }
+        } else {
+            // Cleanup widget when modal closes
+            // @ts-ignore
+            if (window.turnstile && widgetIdRef.current !== null) {
+                // @ts-ignore
+                window.turnstile.remove(widgetIdRef.current);
+                widgetIdRef.current = null;
+            }
             setTurnstileToken(null);
         }
-    }, [showReportModal]);
+    }, [showReportModal, renderTurnstile]);
 
     const [profile, setProfile] = useState<Profile | null>(null); // NEW
 
@@ -601,12 +630,7 @@ export default function AdDetails() {
                             </div>
 
                             <div className="flex justify-center py-2">
-                                <div
-                                    key={showReportModal ? 'open' : 'closed'}
-                                    className="cf-turnstile"
-                                    data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
-                                    data-callback="onTurnstileReportSuccess"
-                                />
+                                <div ref={turnstileContainerRef} />
                             </div>
 
                             <div className="flex gap-3 pt-2">
