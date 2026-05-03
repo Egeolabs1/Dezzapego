@@ -7,6 +7,7 @@ import { Hero } from '../components/Hero';
 import { Categories } from '../components/Categories';
 import { Filters } from '../components/Filters';
 import { AdsList } from '../components/AdsList';
+import { useFilter } from '../contexts/FilterContext';
 import { AdDetails } from '../components/AdDetails';
 import { AdSenseSlot } from '../components/AdSenseSlot';
 import type { Ad } from '../../types';
@@ -23,6 +24,7 @@ import {
 
 export default function Home() {
     const [searchParams, setSearchParams] = useSearchParams();
+    const { searchQuery, setSearchQuery } = useFilter();
 
     // Derived state from URL
     const selectedCategory = searchParams.get('category') || '';
@@ -45,6 +47,24 @@ export default function Home() {
     // but might be too complex for simple URL params without encoding.
     const [detailsFilters, setDetailsFilters] = useState<Record<string, any>>({});
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+    // Sync context with URL on mount
+    useEffect(() => {
+        const q = searchParams.get('q');
+        if (q && q !== searchQuery) {
+            setSearchQuery(q);
+        }
+    }, []);
+
+    // Sync URL with context (with debounce)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchQuery !== (searchParams.get('q') || '')) {
+                updateSearchParams({ q: searchQuery });
+            }
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
     const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
     const { favorites, toggleFavorite } = useFavorites();

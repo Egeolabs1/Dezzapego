@@ -39,6 +39,17 @@ export function Header({
     setUserMenuOpen(false);
   };
 
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const params = new URLSearchParams(window.location.search);
+    if (searchQuery.trim()) {
+      params.set('q', searchQuery.trim());
+    } else {
+      params.delete('q');
+    }
+    navigate(`/?${params.toString()}`);
+  };
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -74,23 +85,22 @@ export function Header({
             </div>
           </button>
 
-          {/* Search Bar - Desktop */}
           <div className="hidden md:flex flex-1 max-w-2xl mx-8">
-            <div className="relative w-full">
+            <form onSubmit={handleSearchSubmit} className="relative w-full">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
                 placeholder="Buscar por produtos, marcas ou categorias..."
                 className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-            </div>
+            </form>
           </div>
 
-          {/* Search Bar & Location - Mobile (Inline) */}
           <div className="flex md:hidden flex-1 items-center gap-2 mx-2 min-w-0">
-            <div className="relative flex-1 min-w-0">
+            <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-0">
               <div className="absolute left-2.5 top-1/2 -translate-y-1/2">
                 <Search className="w-3.5 h-3.5 text-gray-400" />
               </div>
@@ -98,10 +108,11 @@ export function Header({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
                 placeholder="Buscar..."
                 className="w-full pl-8 pr-2 py-1.5 bg-gray-100 border-none rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
               />
-            </div>
+            </form>
             {!hideLocationFilter && (
               <div className="flex-shrink-0 scale-90 origin-right">
                 <LocationSelector
