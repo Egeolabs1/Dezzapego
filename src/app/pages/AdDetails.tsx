@@ -14,6 +14,7 @@ import SEO from '../../components/SEO';
 import { toAbsoluteUrl } from '../../lib/seo';
 import { buildAdDetailStructuredGraph, getKeywordsForAd } from '../../lib/categorySeo';
 import { incrementAdViewOnce } from '../../lib/adViews';
+import { loadTurnstile } from '../../lib/turnstile';
 
 export default function AdDetails() {
     const { id } = useParams<{ id: string }>();
@@ -36,10 +37,9 @@ export default function AdDetails() {
     const widgetIdRef = useRef<string | null>(null);
 
     const renderTurnstile = useCallback(() => {
-        // @ts-ignore
         if (!window.turnstile || !turnstileContainerRef.current) return;
         if (widgetIdRef.current !== null) return;
-        // @ts-ignore
+
         widgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
             sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
             callback: (token: string) => setTurnstileToken(token),
@@ -48,30 +48,27 @@ export default function AdDetails() {
     }, []);
 
     useEffect(() => {
+        let cancelled = false;
+
         if (showReportModal) {
-            // @ts-ignore
-            if (window.turnstile) {
-                setTimeout(renderTurnstile, 100);
-            } else {
-                const interval = setInterval(() => {
-                    // @ts-ignore
-                    if (window.turnstile) {
-                        clearInterval(interval);
-                        setTimeout(renderTurnstile, 100);
-                    }
-                }, 100);
-                return () => clearInterval(interval);
-            }
+            loadTurnstile()
+                .then(() => {
+                    if (!cancelled) setTimeout(renderTurnstile, 100);
+                })
+                .catch(() => {
+                    if (!cancelled) toast.error('Não foi possível carregar a verificação de segurança.');
+                });
         } else {
-            // Cleanup widget when modal closes
-            // @ts-ignore
             if (window.turnstile && widgetIdRef.current !== null) {
-                // @ts-ignore
                 window.turnstile.remove(widgetIdRef.current);
                 widgetIdRef.current = null;
             }
             setTurnstileToken(null);
         }
+
+        return () => {
+            cancelled = true;
+        };
     }, [showReportModal, renderTurnstile]);
 
     const [profile, setProfile] = useState<Profile | null>(null); // NEW
@@ -185,8 +182,9 @@ export default function AdDetails() {
             setReporterName('');
             setReporterEmail('');
             setTurnstileToken(null);
-            // @ts-ignore
-            if (window.turnstile) window.turnstile.reset();
+            if (window.turnstile && widgetIdRef.current !== null) {
+                window.turnstile.reset(widgetIdRef.current);
+            }
         } catch (error) {
             console.error('Error reporting ad:', error);
             // Fallback for demo if table doesn't exist yet

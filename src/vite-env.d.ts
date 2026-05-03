@@ -19,3 +19,19 @@ interface ImportMetaEnv {
 interface ImportMeta {
     readonly env: ImportMetaEnv
 }
+
+interface TurnstileRenderOptions {
+    sitekey: string
+    callback?: (token: string) => void
+    'error-callback'?: () => void
+}
+
+interface Turnstile {
+    render: (container: HTMLElement, options: TurnstileRenderOptions) => string
+    remove: (widgetId: string) => void
+    reset: (widgetId?: string) => void
+}
+
+interface Window {
+    turnstile?: Turnstile
+}

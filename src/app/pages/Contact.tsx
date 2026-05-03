@@ -6,6 +6,7 @@ import SEO from '../../components/SEO';
 import { Mail, Send, Loader2, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
+import { loadTurnstile } from '../../lib/turnstile';
 
 export default function Contact() {
     const { user } = useAuth();
@@ -21,11 +22,9 @@ export default function Contact() {
     const widgetIdRef = useRef<string | null>(null);
 
     const renderTurnstile = useCallback(() => {
-        // @ts-ignore
         if (!window.turnstile || !turnstileContainerRef.current) return;
-        // Already rendered
         if (widgetIdRef.current !== null) return;
-        // @ts-ignore
+
         widgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
             sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
             callback: (token: string) => setTurnstileToken(token),
@@ -34,25 +33,19 @@ export default function Contact() {
     }, []);
 
     useEffect(() => {
-        // Try immediately, or wait for api.js to load
-        // @ts-ignore
-        if (window.turnstile) {
-            renderTurnstile();
-        } else {
-            const interval = setInterval(() => {
-                // @ts-ignore
-                if (window.turnstile) {
-                    clearInterval(interval);
-                    renderTurnstile();
-                }
-            }, 100);
-            return () => clearInterval(interval);
-        }
+        let cancelled = false;
+
+        loadTurnstile()
+            .then(() => {
+                if (!cancelled) renderTurnstile();
+            })
+            .catch(() => {
+                if (!cancelled) toast.error('Não foi possível carregar a verificação de segurança.');
+            });
+
         return () => {
-            // Cleanup widget on unmount
-            // @ts-ignore
+            cancelled = true;
             if (window.turnstile && widgetIdRef.current !== null) {
-                // @ts-ignore
                 window.turnstile.remove(widgetIdRef.current);
                 widgetIdRef.current = null;
             }
@@ -96,9 +89,7 @@ export default function Contact() {
             setSubject('');
             setMessage('');
             setTurnstileToken(null);
-            // @ts-ignore
             if (window.turnstile && widgetIdRef.current !== null) {
-                // @ts-ignore
                 window.turnstile.reset(widgetIdRef.current);
             }
 
