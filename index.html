@@ -4,7 +4,6 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://static.cloudflareinsights.com https://pagead2.googlesyndication.com https://adservice.google.com https://tpc.googlesyndication.com https://ep2.adtrafficquality.google https://cdn.vercel-insights.com https://vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: https://pagead2.googlesyndication.com; connect-src 'self' https: wss:; frame-src 'self' https: https://challenges.cloudflare.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://vercel.live https://ep2.adtrafficquality.google https://www.google.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; manifest-src 'self';">
   <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin="" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
@@ -14,7 +13,6 @@
     externos sem manter allowlist frágil de domínios que mudam com o tempo.
   -->
 
-  <script src="/turnstile-patch.js"></script>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
   <title>Dezzapego</title>
   <!-- canonical e og:url: domínio injetado no build via VITE_SITE_URL -->
