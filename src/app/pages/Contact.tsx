@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Header } from '../components/Header';
 
@@ -17,17 +17,11 @@ export default function Contact() {
     const [subject, setSubject] = useState('');
     const [message, setMessage] = useState('');
     const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-    const turnstileRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        // @ts-ignore
-        if (window.turnstile && turnstileRef.current) {
-            // @ts-ignore
-            window.turnstile.render(turnstileRef.current, {
-                sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
-                callback: (token: string) => setTurnstileToken(token),
-            });
-        }
+        const handler = (e: Event) => setTurnstileToken((e as CustomEvent).detail);
+        window.addEventListener('turnstile-contact', handler);
+        return () => window.removeEventListener('turnstile-contact', handler);
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -186,7 +180,11 @@ export default function Contact() {
                                 </div>
 
                                 <div className="mb-6 flex justify-center">
-                                    <div ref={turnstileRef} className="cf-turnstile"></div>
+                                    <div
+                                        className="cf-turnstile cf-turnstile-contact"
+                                        data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
+                                        data-callback="onTurnstileContactSuccess"
+                                    />
                                 </div>
 
                                 <button

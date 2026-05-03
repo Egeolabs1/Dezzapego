@@ -32,23 +32,15 @@ export default function AdDetails() {
     const [reporterEmail, setReporterEmail] = useState('');
     const [isSubmittingReport, setIsSubmittingReport] = useState(false);
     const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-    const turnstileRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (showReportModal) {
-            // Give it a small timeout to ensure the modal is rendered
-            const timer = setTimeout(() => {
-                // @ts-ignore
-                if (window.turnstile && turnstileRef.current) {
-                    // @ts-ignore
-                    window.turnstile.render(turnstileRef.current, {
-                        sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
-                        callback: (token: string) => setTurnstileToken(token),
-                    });
-                }
-            }, 100);
-            return () => clearTimeout(timer);
-        } else {
+        const handler = (e: Event) => setTurnstileToken((e as CustomEvent).detail);
+        window.addEventListener('turnstile-report', handler);
+        return () => window.removeEventListener('turnstile-report', handler);
+    }, []);
+
+    useEffect(() => {
+        if (!showReportModal) {
             setTurnstileToken(null);
         }
     }, [showReportModal]);
@@ -609,7 +601,12 @@ export default function AdDetails() {
                             </div>
 
                             <div className="flex justify-center py-2">
-                                <div ref={turnstileRef} className="cf-turnstile"></div>
+                                <div
+                                    key={showReportModal ? 'open' : 'closed'}
+                                    className="cf-turnstile"
+                                    data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
+                                    data-callback="onTurnstileReportSuccess"
+                                />
                             </div>
 
                             <div className="flex gap-3 pt-2">
