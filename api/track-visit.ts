@@ -1,20 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 type TrackVisitBody = {
   path?: string;
   sessionId?: string;
   referrer?: string;
 };
-
-function jsonResponse(body: unknown, init?: ResponseInit) {
-  return new Response(JSON.stringify(body), {
-    ...init,
-    headers: {
-      'content-type': 'application/json; charset=utf-8',
-      ...(init?.headers || {}),
-    },
-  });
-}
 
 function getSupabaseForAnalytics() {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -27,27 +18,26 @@ function getSupabaseForAnalytics() {
   });
 }
 
-export default async function handler(req: Request) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
-    return jsonResponse({ error: 'Método não permitido.' }, { status: 405 });
+    return res.status(405).json({ error: 'Método não permitido.' });
   }
 
   try {
-    const body = (await req.json()) as TrackVisitBody;
-    const path = body.path?.trim().slice(0, 500);
-    const sessionId = body.sessionId?.trim().slice(0, 120);
+    const body = req.body as TrackVisitBody;
+    const path = body?.path?.trim().slice(0, 500);
+    const sessionId = body?.sessionId?.trim().slice(0, 120);
 
     if (!path || !sessionId) {
-      return jsonResponse({ error: 'path e sessionId são obrigatórios.' }, { status: 400 });
+      return res.status(400).json({ error: 'path e sessionId são obrigatórios.' });
     }
 
     let supabase;
     try {
       supabase = getSupabaseForAnalytics();
     } catch (error) {
-      // Analytics não pode quebrar a experiência do usuário.
       console.warn('track-visit skipped (missing env):', error);
-      return jsonResponse({ ok: true, skipped: 'missing_env' });
+      return res.status(200).json({ ok: true, skipped: 'missing_env' });
     }
 
     const tenSecondsAgo = new Date(Date.now() - 10_000).toISOString();
@@ -60,7 +50,7 @@ export default async function handler(req: Request) {
       .maybeSingle();
 
     if (duplicateVisit) {
-      return jsonResponse({ ok: true, deduped: true });
+      return res.status(200).json({ ok: true, deduped: true });
     }
 
     const { error } = await supabase
@@ -68,16 +58,15 @@ export default async function handler(req: Request) {
       .insert({
         path,
         session_id: sessionId,
-        referrer: body.referrer?.trim().slice(0, 500) || req.headers.get('referer'),
-        user_agent: req.headers.get('user-agent'),
+        referrer: body.referrer?.trim().slice(0, 500) || (req.headers['referer'] as string),
+        user_agent: req.headers['user-agent'] as string,
       });
 
     if (error) throw error;
 
-    return jsonResponse({ ok: true });
+    return res.status(200).json({ ok: true });
   } catch (error) {
     console.error('track-visit error:', error);
-    // Não retornar 500 aqui para evitar ruído no console do cliente.
-    return jsonResponse({ ok: true, skipped: 'internal_error' });
+    return res.status(200).json({ ok: true, skipped: 'internal_error' });
   }
 }
