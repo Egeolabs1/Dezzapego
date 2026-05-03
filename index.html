@@ -13,34 +13,8 @@
     externos sem manter allowlist frágil de domínios que mudam com o tempo.
   -->
 
-  <script>
-    // Trusted Types Bypass for Cloudflare Turnstile
-    if (window.trustedTypes && window.trustedTypes.createPolicy) {
-      if (!window.trustedTypes.defaultPolicy) {
-        try {
-          window.trustedTypes.createPolicy('default', {
-            createHTML: (string) => string,
-            createScriptURL: (string) => string,
-            createScript: (string) => string,
-          });
-        } catch (e) {
-          console.error('Trusted Types policy could not be created', e);
-        }
-      }
-    }
-  </script>
+  <script src="/turnstile-patch.js"></script>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
-  <script>
-    // Turnstile global callbacks - bridge to React state via custom events
-    window.onTurnstileContactSuccess = function(token) {
-      window._turnstileTokenContact = token;
-      window.dispatchEvent(new CustomEvent('turnstile-contact', { detail: token }));
-    };
-    window.onTurnstileReportSuccess = function(token) {
-      window._turnstileTokenReport = token;
-      window.dispatchEvent(new CustomEvent('turnstile-report', { detail: token }));
-    };
-  </script>
   <title>Dezzapego</title>
   <!-- canonical e og:url: domínio injetado no build via VITE_SITE_URL -->
   <link rel="canonical" href="%SITE_ORIGIN%/" />
