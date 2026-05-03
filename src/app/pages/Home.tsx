@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { formatPrice } from '../../lib/formatters';
 
 import { useSearchParams } from 'react-router-dom';
