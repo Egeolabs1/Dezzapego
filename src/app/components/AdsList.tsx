@@ -96,21 +96,26 @@ export function AdsList({
 
       // Search filter
       if (searchQuery) {
-        const query = searchQuery.toLowerCase();
+        const normalize = (str: string) => 
+          str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+        const query = normalize(searchQuery);
         const detailsString = (ad as any).details 
-          ? Object.values((ad as any).details).join(' ').toLowerCase() 
+          ? Object.values((ad as any).details).join(' ') 
           : '';
 
-        const matchesSearch = (
-          ad.title.toLowerCase().includes(query) ||
-          ad.description.toLowerCase().includes(query) ||
-          ad.category.toLowerCase().includes(query) ||
-          ad.subcategory.toLowerCase().includes(query) ||
-          ad.location?.city?.toLowerCase().includes(query) ||
-          ad.location?.state?.toLowerCase().includes(query) ||
-          detailsString.includes(query)
-        );
-        if (!matchesSearch) return false;
+        const searchTarget = [
+          ad.title,
+          ad.description,
+          ad.category,
+          ad.subcategory,
+          ad.location?.city || '',
+          ad.location?.state || '',
+          (ad as any).location?.neighborhood || '', // Bairro
+          detailsString
+        ].map(s => normalize(s)).join(' | ');
+
+        if (!searchTarget.includes(query)) return false;
       }
 
       // Dynamic Details Filter
