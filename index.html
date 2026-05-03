@@ -13,7 +13,23 @@
     externos sem manter allowlist frágil de domínios que mudam com o tempo.
   -->
 
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <script>
+    // Trusted Types Bypass for Cloudflare Turnstile
+    if (window.trustedTypes && window.trustedTypes.createPolicy) {
+      if (!window.trustedTypes.defaultPolicy) {
+        try {
+          window.trustedTypes.createPolicy('default', {
+            createHTML: (string) => string,
+            createScriptURL: (string) => string,
+            createScript: (string) => string,
+          });
+        } catch (e) {
+          console.error('Trusted Types policy could not be created', e);
+        }
+      }
+    }
+  </script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
   <script>
     // Turnstile global callbacks - bridge to React state via custom events
     window.onTurnstileContactSuccess = function(token) {
