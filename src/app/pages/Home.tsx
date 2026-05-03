@@ -32,7 +32,6 @@ export default function Home() {
     const selectedTransactionType = (searchParams.get('type') as 'venda' | 'aluguel' | '') || '';
     const selectedState = searchParams.get('state') || '';
     const selectedCity = searchParams.get('city') || '';
-    const searchQuery = searchParams.get('q') || '';
     const advertiserType = (searchParams.get('advertiserType') as 'ambos' | 'particular' | 'profissional') || 'ambos';
     const sortBy = (searchParams.get('sortBy') as 'relevancia' | 'recentes' | 'menor-preco' | 'maior-preco') || 'relevancia';
 
