@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { formatPrice } from '../../lib/formatters';
 
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Hero } from '../components/Hero';
 import { Categories } from '../components/Categories';
@@ -21,14 +21,23 @@ import {
     buildListingStructuredData,
     getListingSeoForHome,
 } from '../../lib/categorySeo';
+import {
+    getCategoryPath,
+    resolveCategoryFromSlug,
+    resolveSubcategoryFromSlug,
+} from '../../lib/categoryRoutes';
 
 export default function Home() {
     const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const { categorySlug, subcategorySlug } = useParams();
     const { searchQuery, setSearchQuery } = useFilter();
+    const categoryFromRoute = resolveCategoryFromSlug(categorySlug);
+    const subcategoryFromRoute = resolveSubcategoryFromSlug(categoryFromRoute, subcategorySlug);
 
     // Derived state from URL
-    const selectedCategory = searchParams.get('category') || '';
-    const selectedSubcategory = searchParams.get('subcategory') || '';
+    const selectedCategory = categoryFromRoute || searchParams.get('category') || '';
+    const selectedSubcategory = subcategoryFromRoute || searchParams.get('subcategory') || '';
     const selectedTransactionType = (searchParams.get('type') as 'venda' | 'aluguel' | '') || '';
     const selectedState = searchParams.get('state') || '';
     const selectedCity = searchParams.get('city') || '';
@@ -104,22 +113,24 @@ export default function Home() {
         });
     };
 
-    const handleCategorySelect = (category: string) => {
-        // When changing category, reset dependent filters
-        setSearchParams(prev => {
-            const newParams = new URLSearchParams(prev);
-            if (category) newParams.set('category', category);
-            else newParams.delete('category');
+    const navigateToListing = (category: string, subcategory?: string, resetType = false) => {
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('category');
+        newParams.delete('subcategory');
+        if (resetType) newParams.delete('type');
 
-            newParams.delete('subcategory');
-            newParams.delete('type');
-            return newParams;
-        });
+        const qs = newParams.toString();
+        const path = category ? getCategoryPath(category, subcategory) : '/';
+        navigate(`${path}${qs ? `?${qs}` : ''}`);
+    };
+
+    const handleCategorySelect = (category: string) => {
+        navigateToListing(category, undefined, true);
         setDetailsFilters({});
     };
 
     const handleSubcategorySelect = (subcategory: string) => {
-        updateSearchParams({ subcategory });
+        navigateToListing(selectedCategory, subcategory);
     };
 
     const handleTransactionTypeSelect = (type: string) => {
@@ -209,6 +220,12 @@ export default function Home() {
                     format="auto"
                     minHeightClass="min-h-[120px]"
                     className="hidden md:block"
+                />
+                <AdSenseSlot
+                    slot={import.meta.env.VITE_ADSENSE_HOME_MOBILE_SLOT}
+                    format="auto"
+                    minHeightClass="min-h-[100px]"
+                    className="md:hidden"
                 />
             </div>
             <div className="max-w-[1600px] mx-auto px-2 md:px-4 py-4 md:py-8">

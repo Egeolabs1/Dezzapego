@@ -7,6 +7,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Ad } from '../../types';
 import { formatPrice } from '../../lib/formatters';
 import { toast } from 'sonner';
+import SEO from '../../components/SEO';
 import {
     createFeaturedPayment,
     FeaturedPayment,
@@ -172,6 +173,7 @@ export default function MyAds() {
     if (!user) {
         return (
             <div className="min-h-screen bg-gray-50">
+                <SEO title="Meus anúncios" description="Gerencie seus anúncios no Dezzapego." noIndex />
                 <Header hideLocationFilter />
                 <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
                     <p className="text-gray-600 mb-4 text-center">Você precisa estar logado para ver seus anúncios.</p>
@@ -185,6 +187,7 @@ export default function MyAds() {
 
     return (
         <div className="min-h-screen bg-gray-50">
+            <SEO title="Meus anúncios" description="Gerencie seus anúncios no Dezzapego." noIndex />
             <Header hideLocationFilter />
 
             <main className="container mx-auto px-4 py-8 max-w-7xl">

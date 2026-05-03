@@ -14,6 +14,10 @@ interface ImportMetaEnv {
     readonly VITE_ORG_SAME_AS?: string
     /** Meta tag google-site-verification (Search Console) */
     readonly VITE_GOOGLE_SITE_VERIFICATION?: string
+    readonly VITE_ADSENSE_CLIENT?: string
+    readonly VITE_ADSENSE_HOME_TOP_SLOT?: string
+    readonly VITE_ADSENSE_HOME_MOBILE_SLOT?: string
+    readonly VITE_ADSENSE_AD_DETAIL_TOP_SLOT?: string
 }
 
 interface ImportMeta {

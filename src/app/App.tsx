@@ -92,6 +92,8 @@ function AppContent() {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
+        <Route path="/categoria/:categorySlug" element={<Home />} />
+        <Route path="/categoria/:categorySlug/:subcategorySlug" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/redefinir-senha" element={<ResetPassword />} />
         <Route path="/register" element={<Register />} />

@@ -3,6 +3,7 @@ import { categoriesData } from '../data/categories';
 import { ChevronRight, Map, Home } from 'lucide-react';
 import { Header } from '../components/Header';
 import SEO from '../../components/SEO';
+import { getCategoryPath } from '../../lib/categoryRoutes';
 
 export default function SiteMap() {
     return (
@@ -53,7 +54,7 @@ export default function SiteMap() {
                                     {category.subcategories.map((subcategory) => (
                                         <li key={subcategory.id}>
                                             <Link
-                                                to={`/?category=${encodeURIComponent(category.id)}&subcategory=${encodeURIComponent(subcategory.id)}`}
+                                                to={getCategoryPath(category.id, subcategory.id)}
                                                 className="text-gray-600 hover:text-amber-600 text-sm flex items-center gap-2 hover:translate-x-1 transition-all"
                                             >
                                                 <ChevronRight className="w-3 h-3 text-gray-300" />

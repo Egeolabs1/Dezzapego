@@ -7,6 +7,7 @@ import { Loader2, ArrowLeft, MapPin, Image as ImageIcon, Tag, FileText, DollarSi
 import { toast } from 'sonner';
 import { CATEGORY_SPECS, getCategoryFields } from '../data/categorySpecs';
 import { AdSeoHints } from '../../components/AdSeoHints';
+import SEO from '../../components/SEO';
 import { AdCategoryFields } from '../components/AdCategoryFields';
 import { AdFormStepper, type StepDef } from '../components/AdFormStepper';
 import { AdFormReview } from '../components/AdFormReview';
@@ -415,6 +416,7 @@ export default function NewAd() {
 
     return (
         <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+            <SEO title="Novo anúncio" description="Publique um anúncio no Dezzapego." noIndex />
             <div className="max-w-4xl mx-auto">
                 <button
                     type="button"

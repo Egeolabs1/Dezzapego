@@ -6,6 +6,7 @@ import { ImageUpload } from '../components/ImageUpload';
 import { Loader2, User, Save, Package, Shield, ExternalLink, ShieldCheck, AlertCircle, Download, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
+import SEO from '../../components/SEO';
 
 export default function UserDashboard() {
     const { user, profile, refreshProfile } = useAuth(); // ADDED profile, refreshProfile
@@ -326,6 +327,7 @@ export default function UserDashboard() {
 
     return (
         <div className="bg-gray-50 min-h-screen">
+            <SEO title="Minha conta" description="Gerencie sua conta no Dezzapego." noIndex />
             <Header hideLocationFilter />
 
             <div className="container mx-auto px-4 py-8 max-w-7xl">

@@ -7,6 +7,7 @@ import { Loader2, ArrowLeft, Save, MapPin, Image as ImageIcon, Tag, FileText } f
 import { toast } from 'sonner';
 import { CATEGORY_SPECS } from '../data/categorySpecs';
 import { AdSeoHints } from '../../components/AdSeoHints';
+import SEO from '../../components/SEO';
 import { AdCategoryFields } from '../components/AdCategoryFields';
 import { AdFormStepper, type StepDef } from '../components/AdFormStepper';
 import { AdFormReview } from '../components/AdFormReview';
@@ -368,6 +369,7 @@ export default function EditAd() {
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-4xl">
+            <SEO title="Editar anúncio" description="Edite seu anúncio no Dezzapego." noIndex />
             <button
                 type="button"
                 onClick={() => navigate('/meus-anuncios')}

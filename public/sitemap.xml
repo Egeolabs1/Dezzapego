@@ -36,373 +36,378 @@
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Im%C3%B3veis</loc>
+    <loc>https://dezzapego.com/categoria/imoveis</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Im%C3%B3veis&amp;subcategory=Venda%20-%20casas%20e%20apartamentos</loc>
+    <loc>https://dezzapego.com/categoria/imoveis/venda-casas-e-apartamentos</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Im%C3%B3veis&amp;subcategory=Aluguel%20-%20casas%20e%20apartamentos</loc>
+    <loc>https://dezzapego.com/categoria/imoveis/aluguel-casas-e-apartamentos</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Im%C3%B3veis&amp;subcategory=Temporada</loc>
+    <loc>https://dezzapego.com/categoria/imoveis/temporada</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Im%C3%B3veis&amp;subcategory=Terrenos%2C%20s%C3%ADtios%20e%20fazendas</loc>
+    <loc>https://dezzapego.com/categoria/imoveis/terrenos-sitios-e-fazendas</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Im%C3%B3veis&amp;subcategory=Com%C3%A9rcio%20e%20ind%C3%BAstria</loc>
+    <loc>https://dezzapego.com/categoria/imoveis/comercio-e-industria</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Im%C3%B3veis&amp;subcategory=Lan%C3%A7amento</loc>
+    <loc>https://dezzapego.com/categoria/imoveis/lancamento</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Autos%20e%20Pe%C3%A7as</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://dezzapego.com/?category=Autos%20e%20Pe%C3%A7as&amp;subcategory=Carros%2C%20Vans%20e%20Utilit%C3%A1rios</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>https://dezzapego.com/?category=Autos%20e%20Pe%C3%A7as&amp;subcategory=Motos</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>https://dezzapego.com/?category=Autos%20e%20Pe%C3%A7as&amp;subcategory=Caminh%C3%B5es%20e%20%C3%94nibus</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>https://dezzapego.com/?category=Autos%20e%20Pe%C3%A7as&amp;subcategory=Barcos%20e%20Aeronaves</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>https://dezzapego.com/?category=Autos%20e%20Pe%C3%A7as&amp;subcategory=Pe%C3%A7as%20e%20Acess%C3%B3rios</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>https://dezzapego.com/?category=Para%20a%20sua%20Casa</loc>
+    <loc>https://dezzapego.com/categoria/autos-e-pecas</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Para%20a%20sua%20Casa&amp;subcategory=M%C3%B3veis</loc>
+    <loc>https://dezzapego.com/categoria/autos-e-pecas/carros-vans-e-utilitarios</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Para%20a%20sua%20Casa&amp;subcategory=Eletrodom%C3%A9sticos</loc>
+    <loc>https://dezzapego.com/categoria/autos-e-pecas/motos</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Para%20a%20sua%20Casa&amp;subcategory=Materiais%20de%20Constru%C3%A7%C3%A3o</loc>
+    <loc>https://dezzapego.com/categoria/autos-e-pecas/caminhoes-e-onibus</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Para%20a%20sua%20Casa&amp;subcategory=Jardim%20e%20Agricultura</loc>
+    <loc>https://dezzapego.com/categoria/autos-e-pecas/barcos-e-aeronaves</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Para%20a%20sua%20Casa&amp;subcategory=Utens%C3%ADlios%20Dom%C3%A9sticos</loc>
+    <loc>https://dezzapego.com/categoria/autos-e-pecas/pecas-e-acessorios</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Para%20a%20sua%20Casa&amp;subcategory=Decora%C3%A7%C3%A3o</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>https://dezzapego.com/?category=Para%20a%20sua%20Casa&amp;subcategory=Cama%2C%20Mesa%20e%20Banho</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>https://dezzapego.com/?category=Eletr%C3%B4nicos%20e%20Celulares</loc>
+    <loc>https://dezzapego.com/categoria/para-a-sua-casa</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Eletr%C3%B4nicos%20e%20Celulares&amp;subcategory=Celulares%20e%20Telefonia</loc>
+    <loc>https://dezzapego.com/categoria/para-a-sua-casa/moveis</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Eletr%C3%B4nicos%20e%20Celulares&amp;subcategory=Computadores%20e%20Acess%C3%B3rios</loc>
+    <loc>https://dezzapego.com/categoria/para-a-sua-casa/eletrodomesticos</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Eletr%C3%B4nicos%20e%20Celulares&amp;subcategory=Videogames</loc>
+    <loc>https://dezzapego.com/categoria/para-a-sua-casa/materiais-de-construcao</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Eletr%C3%B4nicos%20e%20Celulares&amp;subcategory=TV%20e%20V%C3%ADdeo</loc>
+    <loc>https://dezzapego.com/categoria/para-a-sua-casa/jardim-e-agricultura</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Eletr%C3%B4nicos%20e%20Celulares&amp;subcategory=%C3%81udio</loc>
+    <loc>https://dezzapego.com/categoria/para-a-sua-casa/utensilios-domesticos</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Eletr%C3%B4nicos%20e%20Celulares&amp;subcategory=C%C3%A2meras%20e%20Drones</loc>
+    <loc>https://dezzapego.com/categoria/para-a-sua-casa/decoracao</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=M%C3%BAsica%20e%20Hobbies</loc>
+    <loc>https://dezzapego.com/categoria/para-a-sua-casa/cama-mesa-e-banho</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>https://dezzapego.com/categoria/eletronicos-e-celulares</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=M%C3%BAsica%20e%20Hobbies&amp;subcategory=Instrumentos%20Musicais</loc>
+    <loc>https://dezzapego.com/categoria/eletronicos-e-celulares/celulares-e-telefonia</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=M%C3%BAsica%20e%20Hobbies&amp;subcategory=Livros%20e%20Revistas</loc>
+    <loc>https://dezzapego.com/categoria/eletronicos-e-celulares/computadores-e-acessorios</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=M%C3%BAsica%20e%20Hobbies&amp;subcategory=Filmes%20e%20M%C3%BAsica</loc>
+    <loc>https://dezzapego.com/categoria/eletronicos-e-celulares/videogames</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=M%C3%BAsica%20e%20Hobbies&amp;subcategory=Cole%C3%A7%C3%B5es</loc>
+    <loc>https://dezzapego.com/categoria/eletronicos-e-celulares/tv-e-video</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=M%C3%BAsica%20e%20Hobbies&amp;subcategory=Artes%20e%20Antiguidades</loc>
+    <loc>https://dezzapego.com/categoria/eletronicos-e-celulares/audio</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=M%C3%BAsica%20e%20Hobbies&amp;subcategory=Brinquedos%20e%20Jogos</loc>
+    <loc>https://dezzapego.com/categoria/eletronicos-e-celulares/cameras-e-drones</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Esportes%20e%20Lazer</loc>
+    <loc>https://dezzapego.com/categoria/musica-e-hobbies</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Esportes%20e%20Lazer&amp;subcategory=Esportes%20e%20Gin%C3%A1stica</loc>
+    <loc>https://dezzapego.com/categoria/musica-e-hobbies/instrumentos-musicais</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Esportes%20e%20Lazer&amp;subcategory=Ciclismo</loc>
+    <loc>https://dezzapego.com/categoria/musica-e-hobbies/livros-e-revistas</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Esportes%20e%20Lazer&amp;subcategory=Camping%20e%20Pesca</loc>
+    <loc>https://dezzapego.com/categoria/musica-e-hobbies/filmes-e-musica</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Esportes%20e%20Lazer&amp;subcategory=Skate%20e%20Patins</loc>
+    <loc>https://dezzapego.com/categoria/musica-e-hobbies/colecoes</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Moda%20e%20Beleza</loc>
+    <loc>https://dezzapego.com/categoria/musica-e-hobbies/artes-e-antiguidades</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>https://dezzapego.com/categoria/musica-e-hobbies/brinquedos-e-jogos</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>https://dezzapego.com/categoria/esportes-e-lazer</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Moda%20e%20Beleza&amp;subcategory=Roupas%20e%20Cal%C3%A7ados</loc>
+    <loc>https://dezzapego.com/categoria/esportes-e-lazer/esportes-e-ginastica</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Moda%20e%20Beleza&amp;subcategory=Bolsas%2C%20Malas%20e%20Mochilas</loc>
+    <loc>https://dezzapego.com/categoria/esportes-e-lazer/ciclismo</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Moda%20e%20Beleza&amp;subcategory=Beleza%20e%20Sa%C3%BAde</loc>
+    <loc>https://dezzapego.com/categoria/esportes-e-lazer/camping-e-pesca</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Moda%20e%20Beleza&amp;subcategory=Acess%C3%B3rios</loc>
+    <loc>https://dezzapego.com/categoria/esportes-e-lazer/skate-e-patins</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Moda%20e%20Beleza&amp;subcategory=Artigos%20Infantis</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>https://dezzapego.com/?category=Agro%20e%20Ind%C3%BAstria</loc>
+    <loc>https://dezzapego.com/categoria/moda-e-beleza</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Agro%20e%20Ind%C3%BAstria&amp;subcategory=Animais%20de%20Fazenda</loc>
+    <loc>https://dezzapego.com/categoria/moda-e-beleza/roupas-e-calcados</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Agro%20e%20Ind%C3%BAstria&amp;subcategory=Maquinaria%20Agr%C3%ADcola</loc>
+    <loc>https://dezzapego.com/categoria/moda-e-beleza/bolsas-malas-e-mochilas</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Agro%20e%20Ind%C3%BAstria&amp;subcategory=Com%C3%A9rcio%20e%20Escrit%C3%B3rio</loc>
+    <loc>https://dezzapego.com/categoria/moda-e-beleza/beleza-e-saude</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Agro%20e%20Ind%C3%BAstria&amp;subcategory=Equipamentos%20Industriais</loc>
+    <loc>https://dezzapego.com/categoria/moda-e-beleza/acessorios</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Servi%C3%A7os</loc>
+    <loc>https://dezzapego.com/categoria/moda-e-beleza/artigos-infantis</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>https://dezzapego.com/categoria/agro-e-industria</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Servi%C3%A7os&amp;subcategory=Assist%C3%AAncia%20T%C3%A9cnica</loc>
+    <loc>https://dezzapego.com/categoria/agro-e-industria/animais-de-fazenda</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Servi%C3%A7os&amp;subcategory=Aulas</loc>
+    <loc>https://dezzapego.com/categoria/agro-e-industria/maquinaria-agricola</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Servi%C3%A7os&amp;subcategory=Consultoria</loc>
+    <loc>https://dezzapego.com/categoria/agro-e-industria/comercio-e-escritorio</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Servi%C3%A7os&amp;subcategory=Design</loc>
+    <loc>https://dezzapego.com/categoria/agro-e-industria/equipamentos-industriais</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Servi%C3%A7os&amp;subcategory=Eventos</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>https://dezzapego.com/?category=Servi%C3%A7os&amp;subcategory=Limpeza</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>https://dezzapego.com/?category=Servi%C3%A7os&amp;subcategory=Reformas</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>https://dezzapego.com/?category=Servi%C3%A7os&amp;subcategory=Sa%C3%BAde</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>https://dezzapego.com/?category=Servi%C3%A7os&amp;subcategory=Turismo</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>https://dezzapego.com/?category=Servi%C3%A7os&amp;subcategory=Transporte</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>https://dezzapego.com/?category=Servi%C3%A7os&amp;subcategory=Outros</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.65</priority>
-  </url>
-  <url>
-    <loc>https://dezzapego.com/?category=Vagas%20de%20Emprego</loc>
+    <loc>https://dezzapego.com/categoria/servicos</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Vagas%20de%20Emprego&amp;subcategory=Administrativo%20e%20Financeiro</loc>
+    <loc>https://dezzapego.com/categoria/servicos/assistencia-tecnica</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Vagas%20de%20Emprego&amp;subcategory=Comercial%20e%20Vendas</loc>
+    <loc>https://dezzapego.com/categoria/servicos/aulas</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Vagas%20de%20Emprego&amp;subcategory=TI%20e%20Tecnologia</loc>
+    <loc>https://dezzapego.com/categoria/servicos/consultoria</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Vagas%20de%20Emprego&amp;subcategory=Sa%C3%BAde%20e%20Medicina</loc>
+    <loc>https://dezzapego.com/categoria/servicos/design</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Vagas%20de%20Emprego&amp;subcategory=Educa%C3%A7%C3%A3o</loc>
+    <loc>https://dezzapego.com/categoria/servicos/eventos</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Vagas%20de%20Emprego&amp;subcategory=Engenharia%20e%20Arquitetura</loc>
+    <loc>https://dezzapego.com/categoria/servicos/limpeza</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Vagas%20de%20Emprego&amp;subcategory=Marketing%20e%20Comunica%C3%A7%C3%A3o</loc>
+    <loc>https://dezzapego.com/categoria/servicos/reformas</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Vagas%20de%20Emprego&amp;subcategory=Servi%C3%A7os%20Gerais</loc>
+    <loc>https://dezzapego.com/categoria/servicos/saude</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Vagas%20de%20Emprego&amp;subcategory=Transporte%20e%20Log%C3%ADstica</loc>
+    <loc>https://dezzapego.com/categoria/servicos/turismo</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
   </url>
   <url>
-    <loc>https://dezzapego.com/?category=Vagas%20de%20Emprego&amp;subcategory=Outros</loc>
+    <loc>https://dezzapego.com/categoria/servicos/transporte</loc>
     <changefreq>daily</changefreq>
     <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>https://dezzapego.com/categoria/servicos/outros</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>https://dezzapego.com/categoria/vagas-de-emprego</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://dezzapego.com/categoria/vagas-de-emprego/administrativo-e-financeiro</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>https://dezzapego.com/categoria/vagas-de-emprego/comercial-e-vendas</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>https://dezzapego.com/categoria/vagas-de-emprego/ti-e-tecnologia</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>https://dezzapego.com/categoria/vagas-de-emprego/saude-e-medicina</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>https://dezzapego.com/categoria/vagas-de-emprego/educacao</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>https://dezzapego.com/categoria/vagas-de-emprego/engenharia-e-arquitetura</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>https://dezzapego.com/categoria/vagas-de-emprego/marketing-e-comunicacao</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>https://dezzapego.com/categoria/vagas-de-emprego/servicos-gerais</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>https://dezzapego.com/categoria/vagas-de-emprego/transporte-e-logistica</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>https://dezzapego.com/categoria/vagas-de-emprego/outros</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.65</priority>
+  </url>
+  <url>
+    <loc>https://dezzapego.com/anuncio/40f39135-f2a5-4906-9f67-f11e08c462b3</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>
 </urlset>

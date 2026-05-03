@@ -1,6 +1,7 @@
 import { CATEGORIES } from '../app/data/categories';
 import type { Ad } from '../types';
 import { getSiteOrigin, SITE_NAME, toAbsoluteUrl } from './seo';
+import { getCategoryPath } from './categoryRoutes';
 
 export type CategorySeoBlock = {
     listingTitle: string;
@@ -92,7 +93,7 @@ function fallbackCategory(cat: string): CategorySeoBlock {
     };
 }
 
-/** URL canônica da listagem (SPA: pathname não reflete query; sempre use isto para Home). */
+/** URL canônica da listagem. Categorias usam rotas limpas; filtros finos continuam como query. */
 export function buildListingCanonicalUrl(parts: {
     category?: string;
     subcategory?: string;
@@ -101,12 +102,13 @@ export function buildListingCanonicalUrl(parts: {
 }): string {
     const origin = getSiteOrigin();
     const p = new URLSearchParams();
-    if (parts.category?.trim()) p.set('category', parts.category.trim());
-    if (parts.subcategory?.trim()) p.set('subcategory', parts.subcategory.trim());
     if (parts.type?.trim()) p.set('type', parts.type.trim());
     if (parts.q?.trim()) p.set('q', parts.q.trim());
     const qs = p.toString();
-    return qs ? `${origin}/?${qs}` : `${origin}/`;
+    const path = parts.category?.trim()
+        ? getCategoryPath(parts.category.trim(), parts.subcategory?.trim() || undefined)
+        : '/';
+    return `${origin}${path}${qs ? `?${qs}` : ''}`;
 }
 
 function buildDescriptionWithSub(sub: string, base: CategorySeoBlock): string {
@@ -246,6 +248,7 @@ export function buildListingStructuredData(params: {
     subcategory?: string;
 }): Record<string, unknown> {
     const { category, subcategory } = params;
+    const origin = getSiteOrigin();
     const block = CATEGORY_SEO[category] ?? fallbackCategory(category);
     const catUrl = buildListingCanonicalUrl({ category });
     const listUrl = buildListingCanonicalUrl({
@@ -366,11 +369,9 @@ export function getKeywordsForAd(ad: Pick<Ad, 'category' | 'subcategory'>): stri
 export function getAllCategoryListingPaths(): string[] {
     const paths: string[] = [];
     for (const category of Object.keys(CATEGORIES)) {
-        paths.push(`/?category=${encodeURIComponent(category)}`);
+        paths.push(getCategoryPath(category));
         for (const sub of CATEGORIES[category]) {
-            paths.push(
-                `/?category=${encodeURIComponent(category)}&subcategory=${encodeURIComponent(sub)}`
-            );
+            paths.push(getCategoryPath(category, sub));
         }
     }
     return paths;

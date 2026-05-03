@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { AlertTriangle } from 'lucide-react';
+import SEO from '../../components/SEO';
 
 const STORAGE_KEY = 'dezzapego_suspended_notice';
 
@@ -27,6 +28,7 @@ export default function AccountSuspended() {
 
     return (
         <div className="min-h-screen bg-gray-50">
+            <SEO title="Conta suspensa" description="Aviso de conta suspensa no Dezzapego." noIndex />
             <Header hideLocationFilter />
             <div className="container mx-auto max-w-lg px-4 py-16">
                 <div className="rounded-2xl border border-amber-200 bg-white p-8 shadow-sm">

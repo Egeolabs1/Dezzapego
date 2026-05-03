@@ -138,6 +138,22 @@ function escapeXml(s) {
         .replace(/'/g, '&apos;');
 }
 
+function slugifyCategoryPart(value) {
+    return String(value)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/&/g, ' e ')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
+function categoryPath(category, subcategory) {
+    const categorySlug = slugifyCategoryPart(category);
+    if (!subcategory) return `/categoria/${categorySlug}`;
+    return `/categoria/${categorySlug}/${slugifyCategoryPart(subcategory)}`;
+}
+
 async function fetchAllAdIds() {
     const supabaseUrl = process.env.VITE_SUPABASE_URL;
     const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
@@ -192,13 +208,13 @@ async function main() {
 
     for (const cat of Object.keys(CATEGORIES)) {
         entries.push({
-            loc: `${siteUrl}/?category=${encodeURIComponent(cat)}`,
+            loc: `${siteUrl}${categoryPath(cat)}`,
             changefreq: 'daily',
             priority: '0.7',
         });
         for (const sub of CATEGORIES[cat]) {
             entries.push({
-                loc: `${siteUrl}/?category=${encodeURIComponent(cat)}&subcategory=${encodeURIComponent(sub)}`,
+                loc: `${siteUrl}${categoryPath(cat, sub)}`,
                 changefreq: 'daily',
                 priority: '0.65',
             });

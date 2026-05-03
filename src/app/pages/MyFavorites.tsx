@@ -4,6 +4,7 @@ import { useFavorites } from '../hooks/useFavorites';
 import { Link } from 'react-router-dom';
 import { Loader2, Heart, MapPin, Clock } from 'lucide-react';
 import { formatPrice, formatDate } from '../../lib/formatters';
+import SEO from '../../components/SEO';
 
 export default function MyFavorites() {
     const { ads, loading: adsLoading } = useAds();
@@ -16,6 +17,7 @@ export default function MyFavorites() {
 
     return (
         <div className="min-h-screen bg-gray-50">
+            <SEO title="Meus favoritos" description="Veja seus anúncios favoritos no Dezzapego." noIndex />
             <Header
                 hideLocationFilter={true} // Optional: hide location if not relevant here
             />

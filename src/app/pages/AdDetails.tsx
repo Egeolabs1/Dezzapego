@@ -15,6 +15,8 @@ import { toAbsoluteUrl } from '../../lib/seo';
 import { buildAdDetailStructuredGraph, getKeywordsForAd } from '../../lib/categorySeo';
 import { incrementAdViewOnce } from '../../lib/adViews';
 import { loadTurnstile } from '../../lib/turnstile';
+import { getCategoryPath } from '../../lib/categoryRoutes';
+import { AdSenseSlot } from '../components/AdSenseSlot';
 
 export default function AdDetails() {
     const { id } = useParams<{ id: string }>();
@@ -256,11 +258,15 @@ export default function AdDetails() {
                     <div className="flex items-center gap-2 text-sm text-gray-500 overflow-x-auto whitespace-nowrap">
                         <Link to="/" className="hover:text-blue-600 transition-colors">Home</Link>
                         <ChevronRight className="w-4 h-4 flex-shrink-0" />
-                        <span className="hover:text-blue-600 cursor-pointer">{ad.category}</span>
+                        <Link to={getCategoryPath(ad.category)} className="hover:text-blue-600 transition-colors">
+                            {ad.category}
+                        </Link>
                         {ad.subcategory && (
                             <>
                                 <ChevronRight className="w-4 h-4 flex-shrink-0" />
-                                <span className="hover:text-blue-600 cursor-pointer">{ad.subcategory}</span>
+                                <Link to={getCategoryPath(ad.category, ad.subcategory)} className="hover:text-blue-600 transition-colors">
+                                    {ad.subcategory}
+                                </Link>
                             </>
                         )}
                         <ChevronRight className="w-4 h-4 flex-shrink-0" />
@@ -295,6 +301,12 @@ export default function AdDetails() {
                                 </div>
                             </div>
                         </div>
+
+                        <AdSenseSlot
+                            slot={import.meta.env.VITE_ADSENSE_AD_DETAIL_TOP_SLOT}
+                            format="auto"
+                            minHeightClass="min-h-[120px]"
+                        />
 
                         {/* Image Gallery */}
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
