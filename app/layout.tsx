@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { PUBLIC_ENV } from '@/lib/publicEnv';
 import { getDefaultShareImagePath, getSiteOrigin, SITE_NAME, toAbsoluteUrl } from '@/lib/seo';
-import '@/styles/index.css';
+import '../src/styles/index.css';
 
 const origin = getSiteOrigin();
 const defaultTitle = 'Classificados e anúncios grátis no Brasil';
@@ -84,10 +84,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-
-      <head />
       <body>{children}</body>
     </html>
+
 
   );
 }
