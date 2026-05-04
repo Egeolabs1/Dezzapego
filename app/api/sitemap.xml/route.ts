@@ -1,7 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { getAllCategoryListingPaths } from '@/lib/categorySeo';
+import { SEO_GUIDES, SEO_LOCATIONS } from '@/lib/seoContent';
+import { CATEGORIES } from '@/app/data/categories';
+import { slugifyCategoryPart } from '@/lib/categoryRoutes';
 
-const STATIC_PATHS = ['/', '/planos', '/contato', '/termos', '/privacidade', '/dicas-seguranca', '/mapa-do-site'];
+const STATIC_PATHS = ['/', '/sobre', '/planos', '/contato', '/termos', '/privacidade', '/dicas-seguranca', '/mapa-do-site'];
 
 function escapeXml(value: string) {
   return value
@@ -13,51 +16,63 @@ function escapeXml(value: string) {
 }
 
 function normalizeSiteUrl() {
-  const raw = process.env.VITE_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://dezzapego.com');
+  const raw =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.VITE_SITE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://dezzapego.com');
   return raw.replace(/\/+$/, '');
 }
 
 type AdSitemapRow = {
   id: string;
-  created_at?: string | null;
-  updated_at?: string | null;
+  lastmod?: string | null;
 };
 
 async function fetchAdsForSitemap(): Promise<AdSitemapRow[]> {
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+  const supabaseUrl =
+    process.env.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL;
+  const supabaseKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_ANON_KEY;
   if (!supabaseUrl || !supabaseKey) return [];
 
   const supabase = createClient(supabaseUrl, supabaseKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const rows: AdSitemapRow[] = [];
-  const pageSize = 1000;
-  let from = 0;
+  return fetchAdsPage('id, status', true).catch(() => fetchAdsPage('id', false));
 
-  for (;;) {
-    const { data, error } = await supabase
-      .from('ads')
-      .select('id, created_at, updated_at')
-      .range(from, from + pageSize - 1);
-    if (error) {
-      console.error('sitemap ads fetch error:', error);
-      break;
+  async function fetchAdsPage(columns: string, activeOnly: boolean) {
+    const rows: AdSitemapRow[] = [];
+    const pageSize = 1000;
+    let from = 0;
+
+    for (;;) {
+      const { data, error } = await supabase
+        .from('ads')
+        .select(columns)
+        .range(from, from + pageSize - 1)
+        .throwOnError();
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      const items = data as unknown as Array<Record<string, unknown>>;
+      rows.push(
+        ...items
+          .filter((item) => !activeOnly || item.status === 'active')
+          .map((item) => ({
+            id: String(item.id),
+            lastmod: null,
+          })),
+      );
+      if (data.length < pageSize) break;
+      from += pageSize;
     }
-    if (!data || data.length === 0) break;
-    rows.push(
-      ...data.map((item) => ({
-        id: String(item.id),
-        created_at: item.created_at ?? null,
-        updated_at: item.updated_at ?? null,
-      })),
-    );
-    if (data.length < pageSize) break;
-    from += pageSize;
-  }
 
-  return rows;
+    return rows;
+  }
 }
 
 type SitemapEntry = {
@@ -89,11 +104,23 @@ export async function GET() {
     const loc = `${siteUrl}${path}`;
     entries.set(loc, { loc, lastmod: nowIso });
   }
+  for (const guide of SEO_GUIDES) {
+    const loc = `${siteUrl}/guias/${guide.slug}`;
+    entries.set(loc, { loc, lastmod: nowIso });
+  }
+  for (const location of SEO_LOCATIONS) {
+    const loc = `${siteUrl}/cidade/${location.stateSlug}/${location.citySlug}`;
+    entries.set(loc, { loc, lastmod: nowIso });
+    for (const category of Object.keys(CATEGORIES)) {
+      const categoryLoc = `${loc}/${slugifyCategoryPart(category)}`;
+      entries.set(categoryLoc, { loc: categoryLoc, lastmod: nowIso });
+    }
+  }
 
   const ads = await fetchAdsForSitemap();
   for (const ad of ads) {
     const loc = `${siteUrl}/anuncio/${ad.id}`;
-    entries.set(loc, { loc, lastmod: ad.updated_at || ad.created_at || nowIso });
+    entries.set(loc, { loc, lastmod: ad.lastmod || nowIso });
   }
 
   const xml = buildXml(Array.from(entries.values()));

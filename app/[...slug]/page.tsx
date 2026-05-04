@@ -256,7 +256,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export function generateStaticParams() {
   const paths: string[][] = [
-    [],
     ['sobre'],
     ['planos'],
     ['contato'],

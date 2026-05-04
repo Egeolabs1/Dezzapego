@@ -9,6 +9,7 @@ dist/
 out/
 .vscode/
 coverage/
+*.tsbuildinfo
 *.log
 .codex-*.log
 npm-debug.log*

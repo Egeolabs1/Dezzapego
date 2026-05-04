@@ -53,8 +53,6 @@ export function AdsList({
     radius: radius
   });
 
-  console.log('[AdsList] Ads fetched:', ads.length, 'Loading:', loading);
-
   const filteredAds = useMemo(() => {
     // Helper to safely get value from Ad (checking root or details)
     const getAdValue = (ad: Ad, key: string) => {
