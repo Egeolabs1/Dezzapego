@@ -29,10 +29,13 @@ export function useAds(filters?: AdsFilters) {
     useEffect(() => {
         async function fetchAds() {
             try {
+                console.log('[useAds] Starting fetchAds...');
                 setLoading(true);
 
                 // Check if we have credentials
                 const supabaseUrl = PUBLIC_ENV.SUPABASE_URL;
+                console.log('[useAds] Supabase URL:', supabaseUrl ? '(found)' : '(missing)');
+
                 if (!supabaseUrl || supabaseUrl === 'YOUR_SUPABASE_URL' || !supabaseUrl) {
                     console.error('[useAds] Supabase URL is missing. Check your environment variables.');
                     setAds(mockAds);
@@ -44,6 +47,7 @@ export function useAds(filters?: AdsFilters) {
 
                 // 1. Radius Search (RPC)
                 if (filters?.lat && filters?.lng && filters?.radius) {
+                    console.log('[useAds] Performing radius search:', filters);
                     const { data: nearbyProps, error: rpcError } = await supabase
                         .rpc('get_nearby_ads', {
                             user_lat: filters.lat,
@@ -67,24 +71,34 @@ export function useAds(filters?: AdsFilters) {
                     }
                 } else {
                     // 2. Standard Search
+                    console.log('[useAds] Performing standard search...');
                     const { data: adData, error: adsError } = await supabase
                         .from('ads')
                         .select('*');
 
-                    if (adsError) throw adsError;
+                    if (adsError) {
+                        console.error('[useAds] Supabase select error:', adsError);
+                        throw adsError;
+                    }
                     data = adData;
+                    console.log('[useAds] Ads data received:', data?.length || 0);
                 }
 
                 if (data && data.length > 0) {
                     // Extract User IDs
                     const userIds = Array.from(new Set(data.map(ad => ad.user_id).filter(Boolean)));
+                    console.log('[useAds] Fetching profiles for users:', userIds.length);
 
                     // Fetch Profiles
                     let profilesMap: Record<string, PublicProfile> = {};
                     if (userIds.length > 0) {
-                        const { data: profiles } = await supabase.rpc('get_public_profiles', {
+                        const { data: profiles, error: profileError } = await supabase.rpc('get_public_profiles', {
                             p_ids: userIds,
                         });
+
+                        if (profileError) {
+                            console.warn('[useAds] Profiles RPC error (ignoring):', profileError);
+                        }
 
                         if (profiles) {
                             (profiles as PublicProfile[]).forEach((p) => {
@@ -121,10 +135,11 @@ export function useAds(filters?: AdsFilters) {
                 }
 
             } catch (err: any) {
-                console.error('Error fetching ads:', err);
+                console.error('[useAds] Error in fetchAds:', err);
                 setError(err.message);
                 setAds([]); // Error fallback to empty list
             } finally {
+                console.log('[useAds] fetchAds finished.');
                 setLoading(false);
             }
         }
