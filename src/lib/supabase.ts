@@ -4,10 +4,6 @@ import { PUBLIC_ENV } from './publicEnv';
 const supabaseUrl = PUBLIC_ENV.SUPABASE_URL;
 const supabaseAnonKey = PUBLIC_ENV.SUPABASE_ANON_KEY;
 
-if (typeof window !== 'undefined') {
-    console.log('[Supabase] Initializing with URL:', supabaseUrl ? '(found)' : '(missing)');
-}
-
 if (!supabaseUrl || !supabaseAnonKey) {
     console.warn('Supabase credentials not found in environment variables. Connect to Supabase to enable real-time features.');
 }
