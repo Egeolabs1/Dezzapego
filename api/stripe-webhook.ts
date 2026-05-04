@@ -20,7 +20,7 @@ export default async function handler(req: Request) {
       return jsonResponse({ error: 'Assinatura Stripe ausente.' }, { status: 400 });
     }
 
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-01-28.clover' });
+    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-04-22.dahlia' });
     const event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
     const supabase = getSupabaseAdmin();
 

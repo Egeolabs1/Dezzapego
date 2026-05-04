@@ -14,7 +14,7 @@ export default async function handler(req: Request) {
 
     const { supabase, user, plan, payment, ad } = await prepareFeaturedPayment(req, 'stripe');
     const siteUrl = getSiteUrl();
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-01-28.clover' });
+    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-04-22.dahlia' });
     const description = `${plan.name} - ${ad.title || 'Anúncio Dezzapego'}`;
 
     const session = await stripe.checkout.sessions.create({
