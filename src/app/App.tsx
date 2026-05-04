@@ -1,4 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+'use client';
+
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Router } from 'react-router-dom';
 import { lazy, Suspense, type ReactNode } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { FilterProvider } from './contexts/FilterContext';
@@ -60,6 +62,28 @@ function RouteFallback() {
   );
 }
 
+function UniversalRouter({ children }: { children: ReactNode }) {
+  if (typeof window !== 'undefined') {
+    return <BrowserRouter>{children}</BrowserRouter>;
+  }
+
+  const navigator = {
+    createHref: (to: { pathname?: string; search?: string; hash?: string } | string) =>
+      typeof to === 'string' ? to : `${to.pathname || '/'}${to.search || ''}${to.hash || ''}`,
+    push: () => undefined,
+    replace: () => undefined,
+    go: () => undefined,
+    back: () => undefined,
+    forward: () => undefined,
+  };
+
+  return (
+    <Router location="/" navigator={navigator}>
+      {children}
+    </Router>
+  );
+}
+
 export function AppContent() {
   const { pathname } = useLocation();
   const isAdminRoute = pathname.startsWith('/admin');
@@ -80,9 +104,8 @@ export function AppContent() {
   if (!maintenanceLoading && !authLoading && isMaintenanceMode && !user) {
     // Allow access to login page so admins can actually log in!
     // We do this by checking the pathname
-    const path = window.location.pathname;
     const publicRoutes = ['/login', '/admin', '/contato', '/termos', '/privacidade', '/dicas-seguranca', '/conta-suspensa'];
-    const isPublicRoute = publicRoutes.some(route => path.startsWith(route));
+    const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
 
     if (!isPublicRoute) {
       return (
@@ -184,9 +207,9 @@ export function AppRoutes() {
 export default function App() {
   return (
     <AppProviders>
-      <BrowserRouter>
+      <UniversalRouter>
         <AppRoutes />
-      </BrowserRouter>
+      </UniversalRouter>
     </AppProviders>
   );
 }

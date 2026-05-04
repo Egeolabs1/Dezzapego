@@ -7,6 +7,7 @@ import { Mail, Send, Loader2, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { loadTurnstile } from '../../lib/turnstile';
+import { PUBLIC_ENV } from '../../lib/publicEnv';
 
 export default function Contact() {
     const { user } = useAuth();
@@ -26,7 +27,7 @@ export default function Contact() {
         if (widgetIdRef.current !== null) return;
 
         widgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
-            sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
+            sitekey: PUBLIC_ENV.TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
             callback: (token: string) => setTurnstileToken(token),
             'error-callback': () => setTurnstileToken(null),
         });

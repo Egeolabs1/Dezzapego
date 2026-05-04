@@ -18,6 +18,7 @@ import { loadTurnstile } from '../../lib/turnstile';
 import { getCategoryPath } from '../../lib/categoryRoutes';
 import { AdSenseSlot } from '../components/AdSenseSlot';
 import { getRelatedAds, getSellerTrustBadges } from '../../lib/marketplaceQuality';
+import { PUBLIC_ENV } from '../../lib/publicEnv';
 
 export default function AdDetails() {
     const { id } = useParams<{ id: string }>();
@@ -44,7 +45,7 @@ export default function AdDetails() {
         if (widgetIdRef.current !== null) return;
 
         widgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
-            sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
+            sitekey: PUBLIC_ENV.TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
             callback: (token: string) => setTurnstileToken(token),
             'error-callback': () => setTurnstileToken(null),
         });
@@ -326,7 +327,7 @@ export default function AdDetails() {
                         </div>
 
                         <AdSenseSlot
-                            slot={import.meta.env.VITE_ADSENSE_AD_DETAIL_TOP_SLOT}
+                            slot={PUBLIC_ENV.ADSENSE_AD_DETAIL_TOP_SLOT}
                             format="auto"
                             minHeightClass="min-h-[120px]"
                         />

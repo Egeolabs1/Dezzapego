@@ -1,4 +1,4 @@
-# Gerado por npm run generate:sitemap — domínio em VITE_SITE_URL
+# Gerado por npm run generate:sitemap — domínio em NEXT_PUBLIC_SITE_URL
 User-agent: *
 Allow: /
 

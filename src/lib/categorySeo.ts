@@ -2,6 +2,7 @@ import { CATEGORIES } from '../app/data/categories';
 import type { Ad } from '../types';
 import { getSiteOrigin, SITE_NAME, toAbsoluteUrl } from './seo';
 import { getCategoryPath } from './categoryRoutes';
+import { PUBLIC_ENV } from './publicEnv';
 
 export type CategorySeoBlock = {
     listingTitle: string;
@@ -198,8 +199,8 @@ export function getDefaultHomeSeoConstants() {
 
 function buildOrganizationGraphNode(): Record<string, unknown> {
     const origin = getSiteOrigin();
-    const logoUrl = toAbsoluteUrl(import.meta.env.VITE_ORG_LOGO_URL || '/icon.svg');
-    const sameAs = (import.meta.env.VITE_ORG_SAME_AS || '')
+    const logoUrl = toAbsoluteUrl(PUBLIC_ENV.ORG_LOGO_URL || '/icon.svg');
+    const sameAs = (PUBLIC_ENV.ORG_SAME_AS || '')
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);

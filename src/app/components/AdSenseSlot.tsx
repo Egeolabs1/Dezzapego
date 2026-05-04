@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { PUBLIC_ENV, isPublicDevMode } from '../../lib/publicEnv';
 
 declare global {
     interface Window {
@@ -16,12 +17,12 @@ type AdSenseSlotProps = {
 };
 
 function getAdSenseClient(): string | null {
-    const client = import.meta.env.VITE_ADSENSE_CLIENT as string | undefined;
+    const client = PUBLIC_ENV.ADSENSE_CLIENT;
     return client?.trim() || null;
 }
 
 function isAdSenseTestMode(): boolean {
-    return import.meta.env.DEV || import.meta.env.VITE_ADSENSE_TEST_MODE === 'true';
+    return isPublicDevMode() || PUBLIC_ENV.ADSENSE_TEST_MODE === 'true';
 }
 
 export function AdSenseSlot({

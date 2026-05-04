@@ -6,6 +6,7 @@ import { Header } from '../components/Header';
 import { Hero } from '../components/Hero';
 import { useFilter } from '../contexts/FilterContext';
 import { AdSenseSlot } from '../components/AdSenseSlot';
+import { PUBLIC_ENV } from '../../lib/publicEnv';
 import type { Ad } from '../../types';
 import { useFavorites } from '../hooks/useFavorites';
 
@@ -257,13 +258,13 @@ export default function Home() {
             </Suspense>
             <div className="max-w-[1600px] mx-auto px-2 md:px-4 pt-4">
                 <AdSenseSlot
-                    slot={import.meta.env.VITE_ADSENSE_HOME_TOP_SLOT}
+                    slot={PUBLIC_ENV.ADSENSE_HOME_TOP_SLOT}
                     format="auto"
                     minHeightClass="min-h-[120px]"
                     className="hidden md:block"
                 />
                 <AdSenseSlot
-                    slot={import.meta.env.VITE_ADSENSE_HOME_MOBILE_SLOT}
+                    slot={PUBLIC_ENV.ADSENSE_HOME_MOBILE_SLOT}
                     format="auto"
                     minHeightClass="min-h-[100px]"
                     className="md:hidden"

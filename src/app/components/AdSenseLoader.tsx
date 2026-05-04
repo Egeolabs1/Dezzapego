@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { getConsent, hasAdsPersonalizationConsent } from '../../lib/privacyConsent';
+import { PUBLIC_ENV } from '../../lib/publicEnv';
 
 declare global {
     interface Window {
@@ -12,7 +13,7 @@ declare global {
 const ADSENSE_SCRIPT_ID = 'dezzapego-adsense-loader';
 
 function getAdSenseClient(): string | null {
-    const client = import.meta.env.VITE_ADSENSE_CLIENT as string | undefined;
+    const client = PUBLIC_ENV.ADSENSE_CLIENT;
     return client?.trim() || null;
 }
 

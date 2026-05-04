@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * Com `VITE_SITE_URL` no `.env`, gera:
+ * Com `NEXT_PUBLIC_SITE_URL` no `.env`, gera:
  * - `public/sitemap.xml` (+ `dist/` na mesma pasta após build)
  * - `public/robots.txt` (+ `dist/`) apontando o Sitemap para esse domínio
  *
  * Também inclui páginas estáticas, listagens por categoria/subcategoria e `/anuncio/:id`.
  * Mantenha `CATEGORIES` alinhado a `src/app/data/categories.ts`.
  *
- * Env: `VITE_SITE_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+ * Env: `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -193,8 +193,8 @@ function errorMessage(error) {
 }
 
 async function fetchAllAdsForSitemap() {
-    const supabaseUrl = process.env.VITE_SUPABASE_URL;
-    const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
     if (!supabaseUrl || supabaseUrl === 'YOUR_SUPABASE_URL' || !supabaseKey) {
         console.warn('[sitemap] Variáveis Supabase ausentes — pulando URLs de anúncios.');
         return [];
@@ -273,7 +273,7 @@ ${body}
 }
 
 async function main() {
-    const siteUrl = (process.env.VITE_SITE_URL || 'https://dezzapego.com').replace(/\/$/, '');
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.VITE_SITE_URL || 'https://dezzapego.com').replace(/\/$/, '');
     const entries = [];
 
     for (const s of STATIC_PATHS) {
@@ -352,7 +352,7 @@ async function main() {
 
 function writeRobotsTxt(siteUrl) {
     const lines = [
-        '# Gerado por npm run generate:sitemap — domínio em VITE_SITE_URL',
+        '# Gerado por npm run generate:sitemap — domínio em NEXT_PUBLIC_SITE_URL',
         'User-agent: *',
         'Allow: /',
         '',

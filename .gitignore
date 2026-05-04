@@ -5,6 +5,8 @@ node_modules
 .vercel
 .DS_Store
 dist/
+.next/
+out/
 .vscode/
 coverage/
 *.log

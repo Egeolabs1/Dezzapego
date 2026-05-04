@@ -1,5 +1,6 @@
 import { Helmet } from 'react-helmet-async';
 import { getSiteOrigin, toAbsoluteUrl, SITE_NAME, getDefaultShareImagePath } from '../lib/seo';
+import { PUBLIC_ENV } from '../lib/publicEnv';
 
 interface SEOProps {
     title: string;
@@ -64,8 +65,8 @@ export default function SEO({
         type === 'article' ||
         type === 'product' ||
         (absoluteImage && !absoluteImage.endsWith('.svg'));
-    const ogImageWidth = import.meta.env.VITE_OG_IMAGE_WIDTH || (absoluteImage.endsWith('/og-default.png') ? '1200' : '');
-    const ogImageHeight = import.meta.env.VITE_OG_IMAGE_HEIGHT || (absoluteImage.endsWith('/og-default.png') ? '630' : '');
+    const ogImageWidth = PUBLIC_ENV.OG_IMAGE_WIDTH || (absoluteImage.endsWith('/og-default.png') ? '1200' : '');
+    const ogImageHeight = PUBLIC_ENV.OG_IMAGE_HEIGHT || (absoluteImage.endsWith('/og-default.png') ? '630' : '');
 
     const robotsContent = noIndex
         ? 'noindex, nofollow'
@@ -91,10 +92,10 @@ export default function SEO({
             <link rel="alternate" hrefLang="pt-BR" href={canonical} />
             <link rel="alternate" hrefLang="x-default" href={canonical} />
 
-            {import.meta.env.VITE_GOOGLE_SITE_VERIFICATION ? (
+            {PUBLIC_ENV.GOOGLE_SITE_VERIFICATION ? (
                 <meta
                     name="google-site-verification"
-                    content={import.meta.env.VITE_GOOGLE_SITE_VERIFICATION}
+                    content={PUBLIC_ENV.GOOGLE_SITE_VERIFICATION}
                 />
             ) : null}
 
