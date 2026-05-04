@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 type TrackVisitBody = {
   path?: string;
@@ -21,7 +20,19 @@ function getSupabaseForAnalytics() {
   });
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+type JsonResponse = {
+  status: (code: number) => { json: (body: unknown) => void };
+  json: (body: unknown) => void;
+};
+
+type ApiRequest = {
+  method?: string;
+  body?: unknown;
+  headers?: Record<string, string | string[] | undefined>;
+  socket?: { remoteAddress?: string };
+};
+
+export default async function handler(req: ApiRequest, res: JsonResponse) {
   console.log('[track-visit] Starting request...');
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido.' });

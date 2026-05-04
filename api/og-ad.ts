@@ -29,7 +29,6 @@ function toAbsolute(siteUrl: string, maybeUrl: string) {
 }
 
 function buildHtml(args: {
-  siteUrl: string;
   canonicalUrl: string;
   description: string;
   imageUrl: string;
@@ -117,7 +116,6 @@ export default async function handler(req: Request) {
   }
 
   const html = buildHtml({
-    siteUrl,
     canonicalUrl,
     description,
     imageUrl,
