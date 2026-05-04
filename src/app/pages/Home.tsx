@@ -25,10 +25,11 @@ import {
 } from '../../lib/categoryRoutes';
 import { decodeDetailsFilters, encodeDetailsFilters } from '../../lib/marketplaceQuality';
 
-const Categories = lazy(() => import('../components/Categories').then((module) => ({ default: module.Categories })));
-const Filters = lazy(() => import('../components/Filters').then((module) => ({ default: module.Filters })));
-const AdsList = lazy(() => import('../components/AdsList').then((module) => ({ default: module.AdsList })));
-const AdDetails = lazy(() => import('../components/AdDetails').then((module) => ({ default: module.AdDetails })));
+import { Categories } from '../components/Categories';
+import { Filters } from '../components/Filters';
+import { AdsList } from '../components/AdsList';
+import { AdDetails } from '../components/AdDetails';
+
 
 function SectionFallback({ className = '' }: { className?: string }) {
     return <div className={`animate-pulse rounded-xl bg-gray-100 ${className}`} />;
@@ -246,16 +247,15 @@ export default function Home() {
                 onLocationChange={handleHeaderLocationChange}
             />
             <Hero />
-            <Suspense fallback={<SectionFallback className="mx-auto mt-6 h-36 max-w-[1600px]" />}>
-                <Categories
-                    selectedCategory={selectedCategory}
-                    onCategorySelect={handleCategorySelect}
-                    selectedSubcategory={selectedSubcategory}
-                    onSubcategorySelect={handleSubcategorySelect}
-                    selectedTransactionType={selectedTransactionType}
-                    onTransactionTypeSelect={handleTransactionTypeSelect}
-                />
-            </Suspense>
+            <Categories
+                selectedCategory={selectedCategory}
+                onCategorySelect={handleCategorySelect}
+                selectedSubcategory={selectedSubcategory}
+                onSubcategorySelect={handleSubcategorySelect}
+                selectedTransactionType={selectedTransactionType}
+                onTransactionTypeSelect={handleTransactionTypeSelect}
+            />
+
             <div className="max-w-[1600px] mx-auto px-2 md:px-4 pt-4">
                 <AdSenseSlot
                     slot={PUBLIC_ENV.ADSENSE_HOME_TOP_SLOT}
@@ -273,31 +273,29 @@ export default function Home() {
             <div className="max-w-[1600px] mx-auto px-2 md:px-4 py-4 md:py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
                     <aside className="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-24 self-start">
-                        <Suspense fallback={<SectionFallback className="h-96" />}>
-                            <Filters
-                                selectedCategory={selectedCategory}
-                                selectedSubcategory={selectedSubcategory}
-                                selectedState={selectedState}
-                                onStateChange={(state) => updateSearchParams({ state, city: '' })} // Reset city when state changes
-                                selectedCity={selectedCity}
-                                onCityChange={(city) => updateSearchParams({ city })}
-                                advertiserType={advertiserType}
-                                onAdvertiserTypeChange={(type) => updateSearchParams({ advertiserType: type })}
-                                sortBy={sortBy}
-                                onSortByChange={(nextSortBy) => updateSearchParams({ sortBy: nextSortBy })}
-                                priceRange={priceRange}
-                                onPriceRangeChange={handlePriceRangeChange}
-                                detailsFilters={detailsFilters}
-                                onDetailsFilterChange={setDetailsFilters}
-                                radius={radius}
-                                onRadiusChange={handleRadiusChange}
-                                userLocation={userLocation}
-                                onUserLocationChange={setUserLocation}
-                            />
-                        </Suspense>
+                        <Filters
+                            selectedCategory={selectedCategory}
+                            selectedSubcategory={selectedSubcategory}
+                            selectedState={selectedState}
+                            onStateChange={(state) => updateSearchParams({ state, city: '' })} // Reset city when state changes
+                            selectedCity={selectedCity}
+                            onCityChange={(city) => updateSearchParams({ city })}
+                            advertiserType={advertiserType}
+                            onAdvertiserTypeChange={(type) => updateSearchParams({ advertiserType: type })}
+                            sortBy={sortBy}
+                            onSortByChange={(nextSortBy) => updateSearchParams({ sortBy: nextSortBy })}
+                            priceRange={priceRange}
+                            onPriceRangeChange={handlePriceRangeChange}
+                            detailsFilters={detailsFilters}
+                            onDetailsFilterChange={setDetailsFilters}
+                            radius={radius}
+                            onRadiusChange={handleRadiusChange}
+                            userLocation={userLocation}
+                            onUserLocationChange={setUserLocation}
+                        />
+
                     </aside>
                     <main className="lg:col-span-8 xl:col-span-9">
-                        <Suspense fallback={<SectionFallback className="h-[32rem]" />}>
                             <AdsList
                                 selectedCategory={selectedCategory}
                                 selectedSubcategory={selectedSubcategory}
@@ -315,7 +313,7 @@ export default function Home() {
                                 radius={radius}
                                 userLocation={userLocation}
                             />
-                        </Suspense>
+
                     </main>
                 </div>
             </div>
