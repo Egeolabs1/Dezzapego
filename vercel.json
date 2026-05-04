@@ -1,4 +1,6 @@
 {
+    "framework": "nextjs",
+    "outputDirectory": ".next",
     "headers": [
         {
             "source": "/(.*)",
@@ -29,10 +31,6 @@
                 }
             ],
             "destination": "/api/og-ad?id=:id"
-        },
-        {
-            "source": "/((?!.*\\..*).*)",
-            "destination": "/index.html"
         }
     ]
 }
