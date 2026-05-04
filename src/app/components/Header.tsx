@@ -1,4 +1,4 @@
-import { Search, Heart, User, CirclePlus, Menu, LogOut, ChevronDown } from 'lucide-react';
+import { Search, Heart, User, CirclePlus, Menu, LogOut, ChevronDown, ShieldCheck } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { LocationSelector } from './LocationSelector';
 import { Logo, LogoIcon } from './Logo';
@@ -29,14 +29,16 @@ export function Header({
   const handleLocationChange = onLocationChange ?? setLocation;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const isAdmin = profile?.role === 'admin';
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
     setUserMenuOpen(false);
+    setMobileMenuOpen(false);
   };
 
   const handleSearchSubmit = (e?: React.FormEvent) => {
@@ -164,13 +166,14 @@ export function Header({
 
                     {/* Admin Link - Only for Admins */}
                     {/* Uses optional chaining or defaults as profile structure updates */}
-                    {(user.email === 'admin@dezzapego.com' || user.email === 'ngfilho@gmail.com' || (user as any)?.role === 'admin' || (user as any)?.user_metadata?.role === 'admin' || (useAuth().profile?.role === 'admin')) && (
+                    {isAdmin && (
                       <Link
                         to="/admin"
                         onClick={() => setUserMenuOpen(false)}
                         className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium"
                       >
-                        <span>⚡ Painel Admin</span>
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Painel Admin</span>
                       </Link>
                     )}
                     <Link
@@ -221,18 +224,50 @@ export function Header({
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 py-4 space-y-2">
-            <button className="flex items-center gap-2 px-4 py-2 w-full text-left text-gray-700 hover:bg-gray-50 rounded-lg">
+            <Link
+              to="/favoritos"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-4 py-2 w-full text-left text-gray-700 hover:bg-gray-50 rounded-lg"
+            >
               <Heart className="w-5 h-5" />
               <span>Favoritos</span>
-            </button>
+            </Link>
             {user ? (
-              <button
-                onClick={handleSignOut}
-                className="flex items-center gap-2 px-4 py-2 w-full text-left text-red-600 hover:bg-gray-50 rounded-lg"
-              >
-                <LogOut className="w-5 h-5" />
-                <span>Sair ({user.email})</span>
-              </button>
+              <>
+                <Link
+                  to="/dashboard"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2 w-full text-left text-gray-700 hover:bg-gray-50 rounded-lg"
+                >
+                  <User className="w-5 h-5" />
+                  <span>Minha Conta</span>
+                </Link>
+                <Link
+                  to="/meus-anuncios"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2 w-full text-left text-gray-700 hover:bg-gray-50 rounded-lg"
+                >
+                  <Heart className="w-5 h-5" />
+                  <span>Meus Anúncios</span>
+                </Link>
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2 w-full text-left text-red-600 hover:bg-red-50 rounded-lg"
+                  >
+                    <ShieldCheck className="w-5 h-5" />
+                    <span>Painel Admin</span>
+                  </Link>
+                )}
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center gap-2 px-4 py-2 w-full text-left text-red-600 hover:bg-gray-50 rounded-lg"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span>Sair ({user.email})</span>
+                </button>
+              </>
             ) : (
               <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
                 <button className="flex items-center gap-2 px-4 py-2 w-full text-left text-gray-700 hover:bg-gray-50 rounded-lg">

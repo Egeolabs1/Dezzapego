@@ -162,19 +162,25 @@ async function fetchAllAdIds() {
         return [];
     }
 
-    const client = createClient(supabaseUrl, supabaseKey);
-    const ids = [];
-    const pageSize = 1000;
-    let from = 0;
-    for (;;) {
-        const { data, error } = await client.from('ads').select('id').range(from, from + pageSize - 1);
-        if (error) throw error;
-        if (!data?.length) break;
-        ids.push(...data.map((r) => r.id));
-        if (data.length < pageSize) break;
-        from += pageSize;
+    try {
+        const client = createClient(supabaseUrl, supabaseKey);
+        const ids = [];
+        const pageSize = 1000;
+        let from = 0;
+        for (;;) {
+            const { data, error } = await client.from('ads').select('id').range(from, from + pageSize - 1);
+            if (error) throw error;
+            if (!data?.length) break;
+            ids.push(...data.map((r) => r.id));
+            if (data.length < pageSize) break;
+            from += pageSize;
+        }
+        return ids;
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn(`[sitemap] Não foi possível buscar anúncios agora (${message}) — gerando sitemap sem URLs de anúncios.`);
+        return [];
     }
-    return ids;
 }
 
 function buildXml(entries) {

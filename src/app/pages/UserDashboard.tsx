@@ -7,6 +7,7 @@ import { Loader2, User, Save, Package, Shield, ExternalLink, ShieldCheck, AlertC
 import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
 import SEO from '../../components/SEO';
+import { digitsOnly, formatCpfCnpj, formatPhone, isValidCpfOrCnpj } from '../../lib/marketplaceQuality';
 
 export default function UserDashboard() {
     const { user, profile, refreshProfile } = useAuth(); // ADDED profile, refreshProfile
@@ -58,13 +59,13 @@ export default function UserDashboard() {
         if (!shouldHydrate) return;
 
         setName(profile?.full_name || user.user_metadata?.full_name || '');
-        setPhone(profile?.phone || user.user_metadata?.phone || '');
+        setPhone(formatPhone(profile?.phone || user.user_metadata?.phone || ''));
         setBio(profile?.bio || user.user_metadata?.bio || '');
         setState(profile?.state || user.user_metadata?.state || '');
         setCity(profile?.city || user.user_metadata?.city || '');
         setWebsite(profile?.website || user.user_metadata?.website || '');
         setInstagram(profile?.instagram || user.user_metadata?.instagram || '');
-        setCpfCnpj(profile?.cpf_cnpj || user.user_metadata?.cpf_cnpj || '');
+        setCpfCnpj(formatCpfCnpj(profile?.cpf_cnpj || user.user_metadata?.cpf_cnpj || ''));
 
         if (profile?.avatar_url) {
             setAvatar([profile.avatar_url]);
@@ -112,12 +113,12 @@ export default function UserDashboard() {
             toast.error('O campo Nome Completo é obrigatório.');
             return;
         }
-        if (!phone.trim()) {
-            toast.error('O campo Telefone é obrigatório.');
+        if (digitsOnly(phone).length < 10) {
+            toast.error('Informe um telefone com DDD.');
             return;
         }
-        if (!cpfCnpj.trim()) {
-            toast.error('O campo CPF/CNPJ é obrigatório.');
+        if (!isValidCpfOrCnpj(cpfCnpj)) {
+            toast.error('Informe um CPF ou CNPJ válido.');
             return;
         }
 
@@ -127,13 +128,13 @@ export default function UserDashboard() {
             const updates = {
                 full_name: name,
                 avatar_url: avatar[0] || null,
-                phone: phone.replace(/\D/g, ''),
+                phone: digitsOnly(phone),
                 bio,
                 state,
                 city,
                 website,
                 instagram,
-                cpf_cnpj: cpfCnpj.replace(/\D/g, ''),
+                cpf_cnpj: digitsOnly(cpfCnpj),
                 updated_at: new Date().toISOString(),
             };
 
@@ -186,16 +187,9 @@ export default function UserDashboard() {
                 selfie: verifySelfieUrls.map((u) => u.trim()).filter(Boolean),
             };
 
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    verification_status: 'pending',
-                    verified: false,
-                    verification_docs,
-                    verification_rejection_reason: null,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', user.id);
+            const { error } = await supabase.rpc('request_my_verification', {
+                p_docs: verification_docs,
+            });
 
             if (error) throw error;
 
@@ -521,7 +515,7 @@ export default function UserDashboard() {
                                                 id="phone"
                                                 type="text"
                                                 value={phone}
-                                                onChange={(e) => setPhone(e.target.value)}
+                                                onChange={(e) => setPhone(formatPhone(e.target.value))}
                                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                 placeholder="(11) 99999-9999"
                                             />
@@ -536,7 +530,7 @@ export default function UserDashboard() {
                                                 id="cpfCnpj"
                                                 type="text"
                                                 value={cpfCnpj}
-                                                onChange={(e) => setCpfCnpj(e.target.value)}
+                                                onChange={(e) => setCpfCnpj(formatCpfCnpj(e.target.value))}
                                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                 placeholder="000.000.000-00"
                                             />

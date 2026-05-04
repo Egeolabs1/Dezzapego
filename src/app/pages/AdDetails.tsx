@@ -17,6 +17,7 @@ import { incrementAdViewOnce } from '../../lib/adViews';
 import { loadTurnstile } from '../../lib/turnstile';
 import { getCategoryPath } from '../../lib/categoryRoutes';
 import { AdSenseSlot } from '../components/AdSenseSlot';
+import { getRelatedAds, getSellerTrustBadges } from '../../lib/marketplaceQuality';
 
 export default function AdDetails() {
     const { id } = useParams<{ id: string }>();
@@ -73,7 +74,8 @@ export default function AdDetails() {
         };
     }, [showReportModal, renderTurnstile]);
 
-    const [profile, setProfile] = useState<Profile | null>(null); // NEW
+    const [profile, setProfile] = useState<Partial<Profile> | null>(null);
+    const [relatedAds, setRelatedAds] = useState<Ad[]>([]);
 
     useEffect(() => {
         async function fetchAd() {
@@ -87,7 +89,9 @@ export default function AdDetails() {
                     .single();
 
                 if (adError) throw adError;
-                setAd(adData);
+                const { phone: _phone, ...sellerSnapshot } = adData.seller || {};
+                const publicAdData = { ...adData, seller: sellerSnapshot };
+                setAd(publicAdData);
 
                 // Conta visualização real (1x por sessão/aba) e atualiza UI
                 const nextViews = await incrementAdViewOnce(adData.id);
@@ -97,16 +101,24 @@ export default function AdDetails() {
 
                 // 2. Fetch Profile (Live Data)
                 if (adData && adData.user_id) {
-                    const { data: profileData } = await supabase
-                        .from('profiles')
-                        .select('*')
-                        .eq('id', adData.user_id)
-                        .single();
+                    const { data: publicProfiles } = await supabase.rpc('get_public_profiles', {
+                        p_ids: [adData.user_id],
+                    });
+                    const profileData = publicProfiles?.[0];
 
                     if (profileData) {
                         setProfile(profileData);
                     }
                 }
+
+                const { data: relatedData } = await supabase
+                    .from('ads')
+                    .select('*')
+                    .eq('category', adData.category)
+                    .neq('id', adData.id)
+                    .limit(8);
+
+                setRelatedAds(getRelatedAds(publicAdData, (relatedData || []) as Ad[]));
 
             } catch (error) {
                 console.error('Error fetching ad:', error);
@@ -127,11 +139,21 @@ export default function AdDetails() {
             return;
         }
 
-        const message = `Olá, vim pelo Dezzapego! Tenho interesse no seu anúncio "${ad.title}". Ainda está disponível?`;
-        const encodedMessage = encodeURIComponent(message);
-        const phone = ad.seller.phone.replace(/\D/g, '');
+        supabase.rpc('get_ad_contact_phone', { p_ad_id: ad.id }).then(({ data, error }) => {
+            if (error) {
+                toast.error('Não foi possível abrir o contato do vendedor.');
+                return;
+            }
+            const phone = String(data || '').replace(/\D/g, '');
+            if (phone.length < 10) {
+                toast.error('O vendedor ainda não cadastrou um telefone válido.');
+                return;
+            }
 
-        window.open(`https://wa.me/55${phone}?text=${encodedMessage}`, '_blank');
+            const message = `Olá, vim pelo Dezzapego! Tenho interesse no seu anúncio "${ad.title}". Ainda está disponível?`;
+            const encodedMessage = encodeURIComponent(message);
+            window.open(`https://wa.me/55${phone}?text=${encodedMessage}`, '_blank');
+        });
     };
 
     const handleShare = async () => {
@@ -236,6 +258,7 @@ export default function AdDetails() {
     const adPageUrl = toAbsoluteUrl(id ? `/anuncio/${id}` : '/');
     const sellerDisplayName = profile?.full_name || ad.seller.name;
     const structuredGraph = buildAdDetailStructuredGraph(ad, adPageUrl, sellerDisplayName);
+    const sellerBadges = getSellerTrustBadges(profile, ad.seller);
 
     return (
         <div className="bg-gray-50 min-h-screen pb-12">
@@ -535,6 +558,18 @@ export default function AdDetails() {
                                         No Dezzapego desde {new Date(profile?.created_at || ad.seller?.memberSince || new Date().toISOString()).getFullYear()}
                                     </span>
                                 </div>
+                                {sellerBadges.length > 0 && (
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {sellerBadges.map((badge) => (
+                                            <span
+                                                key={badge}
+                                                className="rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700"
+                                            >
+                                                {badge}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Safety Tips */}
@@ -564,6 +599,34 @@ export default function AdDetails() {
                         </div>
                     </div>
                 </div>
+                {relatedAds.length > 0 && (
+                    <section className="mt-10">
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">Anúncios relacionados</h2>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {relatedAds.map((item) => (
+                                <Link
+                                    key={item.id}
+                                    to={`/anuncio/${item.id}`}
+                                    className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                                >
+                                    <div className="aspect-[4/3] bg-gray-100">
+                                        <img
+                                            src={item.images?.[0]}
+                                            alt={item.title}
+                                            className="w-full h-full object-contain bg-white"
+                                            loading="lazy"
+                                        />
+                                    </div>
+                                    <div className="p-3">
+                                        <p className="text-sm font-semibold text-gray-900 line-clamp-2">{item.title}</p>
+                                        <p className="text-sm font-bold text-blue-600 mt-1">{formatPrice(item.price)}</p>
+                                        <p className="text-xs text-gray-500 mt-1">{item.location?.city}, {item.location?.state}</p>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </section>
+                )}
             </div>
 
             {/* Report Modal */}

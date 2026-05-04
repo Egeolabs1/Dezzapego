@@ -4,7 +4,8 @@ Este guia explica como configurar as políticas de segurança no bucket de image
 
 ## Objetivo
 - ✅ Qualquer pessoa pode **ver** imagens (público)
-- ✅ Apenas usuários autenticados podem fazer **upload**
+- ✅ Apenas usuários autenticados podem fazer **upload na própria pasta**
+- ✅ Donos podem **substituir** imagens dentro da própria pasta
 - ✅ Apenas **donos** e **admins** podem **deletar** imagens
 
 ---
@@ -46,14 +47,29 @@ Isso permite que todos vejam as imagens.
 - **Target roles**: `authenticated`
 - **Policy definition**:
 ```sql
-(bucket_id = 'ads'::text)
+(bucket_id = 'ads'::text AND (storage.foldername(name))[1] = (auth.uid())::text)
 ```
 
-Isso permite que qualquer usuário logado faça upload.
+Isso permite que o usuário logado faça upload apenas em `ads/{user_id}/...`.
 
 ---
 
-### 4. Criar Política de DELETE (Apenas Donos)
+### 4. Criar Política de UPDATE (Substituição pelo Dono)
+**Clique em "New Policy" → "For full customization"**
+
+- **Policy name**: `Owners can update their images`
+- **Allowed operation**: `UPDATE`
+- **Target roles**: `authenticated`
+- **Policy definition**:
+```sql
+(bucket_id = 'ads'::text AND (storage.foldername(name))[1] = (auth.uid())::text)
+```
+
+Essa política é necessária para substituição de arquivos/upsert com segurança.
+
+---
+
+### 5. Criar Política de DELETE (Apenas Donos)
 **Clique em "New Policy" → "For full customization"**
 
 - **Policy name**: `Owners can delete their images`
@@ -61,14 +77,14 @@ Isso permite que qualquer usuário logado faça upload.
 - **Target roles**: `authenticated`
 - **Policy definition**:
 ```sql
-((storage.foldername(name))[1] = (auth.uid())::text)
+(bucket_id = 'ads'::text AND (storage.foldername(name))[1] = (auth.uid())::text)
 ```
 
 Isso verifica se o nome da pasta (user_id) é igual ao usuário logado.
 
 ---
 
-### 5. Criar Política de DELETE (Admin)
+### 6. Criar Política de DELETE (Admin)
 **Clique em "New Policy" → "For full customization"**
 
 - **Policy name**: `Admins can delete any image`
@@ -76,10 +92,10 @@ Isso verifica se o nome da pasta (user_id) é igual ao usuário logado.
 - **Target roles**: `authenticated`
 - **Policy definition**:
 ```sql
-EXISTS (
+bucket_id = 'ads'::text AND EXISTS (
   SELECT 1 FROM public.profiles
   WHERE profiles.id = auth.uid()
-  AND profiles.role = 'admin'
+  AND (profiles.is_admin = true OR profiles.role = 'admin')
 )
 ```
 
@@ -106,9 +122,10 @@ Assim, o código `(storage.foldername(name))[1]` pega o `user_id` da pasta e com
 
 ## Verificação
 
-Depois de criar as 4 políticas, você deve ver:
+Depois de criar as 5 políticas, você deve ver:
 - ✅ 1 política de SELECT (público)
-- ✅ 1 política de INSERT (autenticados)
+- ✅ 1 política de INSERT (dono)
+- ✅ 1 política de UPDATE (dono)
 - ✅ 2 políticas de DELETE (owner + admin)
 
 Se todas estiverem corretas, sua segurança está perfeita! 🔒

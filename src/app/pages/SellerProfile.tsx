@@ -13,7 +13,7 @@ export default function SellerProfile() {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [ads, setAds] = useState<Ad[]>([]);
-    const [profile, setProfile] = useState<Profile | null>(null);
+    const [profile, setProfile] = useState<Partial<Profile> | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -29,11 +29,10 @@ export default function SellerProfile() {
             setLoading(true);
 
             // 1. Fetch Profile
-            const { data: profileData, error: profileError } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', id)
-                .single();
+            const { data: publicProfiles, error: profileError } = await supabase.rpc('get_public_profiles', {
+                p_ids: [id],
+            });
+            const profileData = publicProfiles?.[0];
 
             if (profileError) {
                 console.error('Error fetching profile:', profileError);
@@ -139,10 +138,21 @@ export default function SellerProfile() {
                                 )}
                             </div>
                             <div className="w-full md:w-auto">
-                                {user ? (
-                                    <button className="w-full md:w-auto flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-bold transition-all transform hover:scale-105 shadow-md hover:shadow-lg">
+                                {user && ads[0] ? (
+                                    <Link
+                                        to={`/anuncio/${ads[0].id}`}
+                                        className="w-full md:w-auto flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-bold transition-all transform hover:scale-105 shadow-md hover:shadow-lg"
+                                    >
                                         <MessageCircle className="w-5 h-5" />
-                                        Conversar no WhatsApp
+                                        Abrir anúncio para contato
+                                    </Link>
+                                ) : user ? (
+                                    <button
+                                        disabled
+                                        className="w-full md:w-auto flex items-center justify-center gap-2 bg-gray-200 text-gray-500 px-6 py-3 rounded-xl font-bold cursor-not-allowed"
+                                    >
+                                        <MessageCircle className="w-5 h-5" />
+                                        Sem anúncio ativo
                                     </button>
                                 ) : (
                                     <button

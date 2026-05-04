@@ -4,6 +4,16 @@ import type { Ad } from '../../types';
 
 const mockAds: Ad[] = [];
 
+type PublicProfile = {
+    id: string;
+    full_name: string | null;
+    avatar_url: string | null;
+    verified: boolean | null;
+    created_at: string | null;
+    account_type?: 'personal' | 'professional' | null;
+    business_name?: string | null;
+};
+
 export type AdsFilters = {
     lat?: number;
     lng?: number;
@@ -71,15 +81,14 @@ export function useAds(filters?: AdsFilters) {
                     const userIds = Array.from(new Set(data.map(ad => ad.user_id).filter(Boolean)));
 
                     // Fetch Profiles
-                    let profilesMap: Record<string, any> = {};
+                    let profilesMap: Record<string, PublicProfile> = {};
                     if (userIds.length > 0) {
-                        const { data: profiles } = await supabase
-                            .from('profiles')
-                            .select('*')
-                            .in('id', userIds);
+                        const { data: profiles } = await supabase.rpc('get_public_profiles', {
+                            p_ids: userIds,
+                        });
 
                         if (profiles) {
-                            profiles.forEach(p => {
+                            (profiles as PublicProfile[]).forEach((p) => {
                                 profilesMap[p.id] = p;
                             });
                         }
@@ -88,14 +97,16 @@ export function useAds(filters?: AdsFilters) {
                     // Map Ads with Live Profile Data
                     const mappedAds: Ad[] = data.map(item => {
                         const profile = profilesMap[item.user_id];
+                        const { phone: _phone, ...sellerSnapshot } = item.seller || {};
 
                         // Merge profile into seller (taking precedence over snapshot)
                         const seller = {
-                            ...item.seller,
+                            ...sellerSnapshot,
                             name: profile?.full_name || item.seller?.name || 'Usuário',
                             avatar_url: profile?.avatar_url || item.seller?.avatar_url,
                             verified: profile?.verified ?? item.seller?.verified,
-                            memberSince: profile?.created_at || item.seller?.memberSince || new Date().toISOString()
+                            memberSince: profile?.created_at || item.seller?.memberSince || new Date().toISOString(),
+                            type: profile?.account_type || item.seller?.type,
                         };
 
                         return {

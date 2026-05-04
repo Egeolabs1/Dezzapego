@@ -7,22 +7,14 @@ import { toast } from 'sonner';
 import SEO from '../../components/SEO';
 import { FieldError } from '../components/FieldError';
 import { recordSignupIpAndFirstAccess } from '../../lib/profileIpLog';
+import { digitsOnly, formatCpfCnpj, formatPhone, isValidCpfOrCnpj } from '../../lib/marketplaceQuality';
 
 type AccountType = 'personal' | 'professional';
 
 const PHONE_DIGITS_MIN = 10;
 
-function digitsOnly(s: string) {
-    return s.replace(/\D/g, '');
-}
-
 function isValidEmail(email: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-}
-
-function isValidCpfOrCnpj(value: string) {
-    const digits = digitsOnly(value);
-    return digits.length === 11 || digits.length === 14;
 }
 
 function passwordChecks(password: string) {
@@ -46,6 +38,7 @@ export default function Register() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [accountType, setAccountType] = useState<AccountType>('personal');
+    const [responsibleName, setResponsibleName] = useState('');
     const [document, setDocument] = useState('');
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -59,7 +52,11 @@ export default function Register() {
         const e: Record<string, string> = {};
         const n = name.trim();
         if (touched || n) {
-            if (n.length < 2) e.name = 'Informe um nome válido (mínimo 2 caracteres).';
+            if (n.length < 2) e.name = accountType === 'professional' ? 'Informe o nome da loja ou negócio.' : 'Informe um nome válido (mínimo 2 caracteres).';
+        }
+        const responsible = responsibleName.trim();
+        if (accountType === 'professional' && (touched || responsible)) {
+            if (responsible.length < 2) e.responsibleName = 'Informe o nome do responsável pela conta.';
         }
         const ph = digitsOnly(phone);
         if (touched || phone) {
@@ -80,14 +77,14 @@ export default function Register() {
         const doc = document.trim();
         if (touched || doc) {
             if (!isValidCpfOrCnpj(doc)) {
-                e.document = 'Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.';
+                e.document = 'Informe um CPF ou CNPJ válido.';
             }
         }
         if (touched && !termsAccepted) {
             e.terms = 'Aceite os termos para continuar.';
         }
         return e;
-    }, [name, phone, email, password, confirmPassword, accountType, document, termsAccepted, touched]);
+    }, [name, responsibleName, phone, email, password, confirmPassword, accountType, document, termsAccepted, touched]);
 
     const pwdStatus = passwordChecks(password);
 
@@ -95,6 +92,7 @@ export default function Register() {
         setTouched(true);
         const e: string[] = [];
         if (name.trim().length < 2) e.push('nome');
+        if (accountType === 'professional' && responsibleName.trim().length < 2) e.push('responsável');
         if (digitsOnly(phone).length < PHONE_DIGITS_MIN) e.push('telefone');
         if (!isValidEmail(email)) e.push('email');
         if (!passwordMeetsPolicy(password)) e.push('senha');
@@ -120,18 +118,21 @@ export default function Register() {
                 cpf_cnpj: digitsOnly(document),
                 account_type: accountType,
             };
+            if (accountType === 'professional') {
+                meta.business_name = name.trim();
+                meta.responsible_name = responsibleName.trim();
+            }
 
             const normalizedPhone = digitsOnly(phone);
             const normalizedDocument = digitsOnly(document);
-            const { data: duplicatedProfile, error: duplicatedProfileError } = await supabase
-                .from('profiles')
-                .select('id')
-                .or(`phone.eq.${normalizedPhone},cpf_cnpj.eq.${normalizedDocument}`)
-                .limit(1);
+            const { data: duplicatedProfile, error: duplicatedProfileError } = await supabase.rpc('profile_identity_exists', {
+                p_phone: normalizedPhone,
+                p_cpf_cnpj: normalizedDocument,
+            });
 
             if (duplicatedProfileError) throw duplicatedProfileError;
-            if (duplicatedProfile && duplicatedProfile.length > 0) {
-                toast.error('Já existe conta cadastrada com este CPF/CNPJ ou telefone.');
+            if (duplicatedProfile) {
+                toast.error('Já existe uma conta usando este CPF/CNPJ ou telefone. Tente entrar ou recupere a senha.');
                 return;
             }
 
@@ -158,11 +159,35 @@ export default function Register() {
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Erro ao realizar cadastro.';
             if (/already registered|already exists|duplicate|23505/i.test(msg)) {
-                toast.error('Já existe conta com este e-mail, CPF/CNPJ ou telefone.');
+                toast.error('Já existe uma conta com estes dados. Tente entrar ou use a recuperação de senha.');
             } else {
                 toast.error(msg);
             }
         } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleSignup = async () => {
+        if (!termsAccepted) {
+            setTouched(true);
+            toast.error('Aceite os termos para continuar com Google.');
+            return;
+        }
+        setLoading(true);
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: `${window.location.origin}/anunciar`,
+                    queryParams: {
+                        prompt: 'select_account',
+                    },
+                },
+            });
+            if (error) throw error;
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Não foi possível iniciar cadastro com Google.');
             setLoading(false);
         }
     };
@@ -218,6 +243,27 @@ export default function Register() {
                         <FieldError message={errors.name} />
                     </div>
 
+                    {accountType === 'professional' && (
+                        <div className="space-y-1">
+                            <label htmlFor="responsibleName" className="block text-sm font-medium text-gray-700">
+                                Nome do responsável
+                            </label>
+                            <input
+                                id="responsibleName"
+                                type="text"
+                                autoComplete="name"
+                                placeholder="Nome de quem administra a conta"
+                                value={responsibleName}
+                                onChange={(e) => setResponsibleName(e.target.value)}
+                                onBlur={() => setTouched(true)}
+                                className={`flex h-10 w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                    errors.responsibleName ? 'border-red-400' : 'border-gray-300'
+                                }`}
+                            />
+                            <FieldError message={errors.responsibleName} />
+                        </div>
+                    )}
+
                     <div className="space-y-1">
                         <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
                             Telefone / WhatsApp
@@ -228,7 +274,7 @@ export default function Register() {
                             autoComplete="tel"
                             placeholder="(00) 00000-0000"
                             value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
+                            onChange={(e) => setPhone(formatPhone(e.target.value))}
                             onBlur={() => setTouched(true)}
                             className={`flex h-10 w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                                 errors.phone ? 'border-red-400' : 'border-gray-300'
@@ -247,7 +293,7 @@ export default function Register() {
                             inputMode="numeric"
                             placeholder="Somente números"
                             value={document}
-                            onChange={(e) => setDocument(e.target.value)}
+                            onChange={(e) => setDocument(formatCpfCnpj(e.target.value))}
                             onBlur={() => setTouched(true)}
                             className={`flex h-10 w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                                 errors.document ? 'border-red-400' : 'border-gray-300'
@@ -377,6 +423,25 @@ export default function Register() {
                     >
                         {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                         {accountType === 'professional' ? 'Criar conta profissional' : 'Criar conta'}
+                    </button>
+
+                    <div className="relative py-1">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-200" />
+                        </div>
+                        <div className="relative flex justify-center text-xs">
+                            <span className="bg-white px-2 text-gray-500">ou</span>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleGoogleSignup}
+                        disabled={loading}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    >
+                        <span className="font-bold text-blue-600">G</span>
+                        Continuar com Google
                     </button>
                 </form>
 

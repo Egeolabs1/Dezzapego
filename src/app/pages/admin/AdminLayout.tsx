@@ -37,6 +37,27 @@ export default function AdminLayout() {
     const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const alerts = useAdminPanelAlerts(Boolean(user), navigate);
+    const navItems: NavItem[] = useMemo(
+        () => [
+            { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
+            { icon: ShoppingBag, label: 'Anúncios', path: '/admin/anuncios' },
+            { icon: CreditCard, label: 'Pagamentos', path: '/admin/pagamentos' },
+            { icon: MessageSquare, label: 'Mensagens', path: '/admin/mensagens', badge: alerts.unreadMessages },
+            {
+                icon: BadgeCheck,
+                label: 'Verificação de contas',
+                path: '/admin/verificacao',
+                badge: alerts.pendingVerifications,
+            },
+            { icon: Users, label: 'Usuários', path: '/admin/usuarios' },
+            { icon: Flag, label: 'Denúncias', path: '/admin/denuncias' },
+            { icon: Bell, label: 'Notificações', path: '/admin/notificacoes' },
+            { icon: ImageIcon, label: 'Banners', path: '/admin/banners' },
+            { icon: Shield, label: 'Logs', path: '/admin/logs' },
+            { icon: Settings, label: 'Configurações', path: '/admin/configuracoes' },
+        ],
+        [alerts.unreadMessages, alerts.pendingVerifications],
+    );
 
     // Strict auth check for Admin
     useEffect(() => {
@@ -68,28 +89,6 @@ export default function AdminLayout() {
     }
 
     if (!user) return null;
-
-    const navItems: NavItem[] = useMemo(
-        () => [
-            { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
-            { icon: ShoppingBag, label: 'Anúncios', path: '/admin/anuncios' },
-            { icon: CreditCard, label: 'Pagamentos', path: '/admin/pagamentos' },
-            { icon: MessageSquare, label: 'Mensagens', path: '/admin/mensagens', badge: alerts.unreadMessages },
-            {
-                icon: BadgeCheck,
-                label: 'Verificação de contas',
-                path: '/admin/verificacao',
-                badge: alerts.pendingVerifications,
-            },
-            { icon: Users, label: 'Usuários', path: '/admin/usuarios' },
-            { icon: Flag, label: 'Denúncias', path: '/admin/denuncias' },
-            { icon: Bell, label: 'Notificações', path: '/admin/notificacoes' },
-            { icon: ImageIcon, label: 'Banners', path: '/admin/banners' },
-            { icon: Shield, label: 'Logs', path: '/admin/logs' },
-            { icon: Settings, label: 'Configurações', path: '/admin/configuracoes' },
-        ],
-        [alerts.unreadMessages, alerts.pendingVerifications],
-    );
 
     const handleSignOut = async () => {
         await signOut();

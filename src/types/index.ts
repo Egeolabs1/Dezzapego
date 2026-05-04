@@ -1,7 +1,7 @@
 export type Seller = {
     name: string;
     avatar_url?: string | null; // NEW
-    phone: string;
+    phone?: string;
     memberSince: string;
     type?: 'personal' | 'professional';
     rating?: number;
@@ -50,6 +50,9 @@ export type Profile = {
     website: string | null;
     instagram: string | null;
     cpf_cnpj: string | null;
+    account_type?: 'personal' | 'professional' | null;
+    business_name?: string | null;
+    responsible_name?: string | null;
     rating: number;
     verified: boolean;
     verification_status: 'none' | 'pending' | 'verified' | 'rejected';

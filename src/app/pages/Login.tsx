@@ -56,6 +56,25 @@ export default function Login() {
         }
     };
 
+    const handleGoogleLogin = async () => {
+        setLoading(true);
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: `${window.location.origin}/`,
+                    queryParams: {
+                        prompt: 'select_account',
+                    },
+                },
+            });
+            if (error) throw error;
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'Erro ao entrar com Google.');
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] bg-gray-50 px-4">
             <SEO title="Entrar" description="Acesse sua conta no Dezzapego" noIndex />
@@ -118,6 +137,25 @@ export default function Login() {
                     >
                         {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                         Entrar
+                    </button>
+
+                    <div className="relative py-1">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-200" />
+                        </div>
+                        <div className="relative flex justify-center text-xs">
+                            <span className="bg-white px-2 text-gray-500">ou</span>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleGoogleLogin}
+                        disabled={loading}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                    >
+                        <span className="font-bold text-blue-600">G</span>
+                        Entrar com Google
                     </button>
                 </form>
 

@@ -19,7 +19,7 @@ export function useAdminPanelAlerts(enabled: boolean, navigate: NavigateFunction
         if (!enabled) return;
 
         let cancelled = false;
-        let intervalId: ReturnType<typeof setInterval>;
+        let intervalId: number;
 
         async function tick() {
             const { data: isAdmin, error: rpcErr } = await supabase.rpc('is_admin');

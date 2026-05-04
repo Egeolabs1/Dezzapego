@@ -387,7 +387,6 @@ export function Filters({
                       }
                     },
                     (error) => {
-                      console.error(error);
                       toast.error('Erro ao obter localização: ' + error.message);
                     }
                   );
@@ -570,7 +569,7 @@ export function Filters({
               <Filter className="w-4 h-4" />
               Aplicar Filtro
             </button>
-            {(priceRange[0] > 0 || priceRange[1] < 100000) && (
+            {(priceRange[0] > 0 || priceRange[1] < 10000000) && (
               <p className="text-xs text-center text-gray-500 font-medium bg-gray-50 py-1 rounded-lg">
                 Filtro atual: {formatPrice(priceRange[0])} - {formatPrice(priceRange[1])}
               </p>

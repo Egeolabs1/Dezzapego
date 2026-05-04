@@ -31,19 +31,18 @@ export default function MyAds() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const userId = user?.id;
         async function fetchMyAds() {
-            if (!user) {
+            if (!userId) {
                 setLoading(false);
                 return;
             }
 
             try {
-                // Since 'seller' is a JSONB column, we need to query it using the arrow operator
-                // Note: This assumes the 'seller' object has an 'id' field matching user.id
                 const { data, error } = await supabase
                     .from('ads')
                     .select('*')
-                    .contains('seller', { id: user.id })
+                    .eq('user_id', userId)
                     .order('publishedAt', { ascending: false });
 
                 if (error) throw error;
@@ -57,10 +56,11 @@ export default function MyAds() {
         }
 
         fetchMyAds();
-    }, [user]);
+    }, [user?.id]);
 
     useEffect(() => {
-        if (!user) return;
+        const userId = user?.id;
+        if (!userId) return;
 
         async function fetchFeaturedData() {
             const [{ data: plansData }, { data: paymentsData }] = await Promise.all([
@@ -72,7 +72,7 @@ export default function MyAds() {
                 supabase
                     .from('featured_payments')
                     .select('*, featured_plans(name, duration_days)')
-                    .eq('user_id', user.id)
+                    .eq('user_id', userId)
                     .order('created_at', { ascending: false }),
             ]);
 

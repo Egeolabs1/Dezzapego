@@ -1,14 +1,10 @@
-import { useMemo, useState, useEffect } from 'react';
+import { lazy, Suspense, useMemo, useState, useEffect } from 'react';
 import { formatPrice } from '../../lib/formatters';
 
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Hero } from '../components/Hero';
-import { Categories } from '../components/Categories';
-import { Filters } from '../components/Filters';
-import { AdsList } from '../components/AdsList';
 import { useFilter } from '../contexts/FilterContext';
-import { AdDetails } from '../components/AdDetails';
 import { AdSenseSlot } from '../components/AdSenseSlot';
 import type { Ad } from '../../types';
 import { useFavorites } from '../hooks/useFavorites';
@@ -26,6 +22,16 @@ import {
     resolveCategoryFromSlug,
     resolveSubcategoryFromSlug,
 } from '../../lib/categoryRoutes';
+import { decodeDetailsFilters, encodeDetailsFilters } from '../../lib/marketplaceQuality';
+
+const Categories = lazy(() => import('../components/Categories').then((module) => ({ default: module.Categories })));
+const Filters = lazy(() => import('../components/Filters').then((module) => ({ default: module.Filters })));
+const AdsList = lazy(() => import('../components/AdsList').then((module) => ({ default: module.AdsList })));
+const AdDetails = lazy(() => import('../components/AdDetails').then((module) => ({ default: module.AdDetails })));
+
+function SectionFallback({ className = '' }: { className?: string }) {
+    return <div className={`animate-pulse rounded-xl bg-gray-100 ${className}`} />;
+}
 
 export default function Home() {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -50,10 +56,7 @@ export default function Home() {
 
     const radius = searchParams.get('radius') ? Number(searchParams.get('radius')) : 0;
 
-    // Filters that are not yet persisted or complex objects can remain verified simple state for now 
-    // or be expanded later. 'detailsFilters' and 'userLocation' are candidates for future improvement 
-    // but might be too complex for simple URL params without encoding.
-    const [detailsFilters, setDetailsFilters] = useState<Record<string, any>>({});
+    const [detailsFilters, setDetailsFilters] = useState<Record<string, any>>(() => decodeDetailsFilters(searchParams.get('details')));
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
     // Sync context with URL on mount
@@ -73,6 +76,16 @@ export default function Home() {
         }, 500);
         return () => clearTimeout(timer);
     }, [searchQuery]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            const next = encodeDetailsFilters(detailsFilters);
+            if (next !== (searchParams.get('details') || '')) {
+                updateSearchParams({ details: next });
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [detailsFilters, searchParams]);
 
     const [selectedAd, setSelectedAd] = useState<Ad | null>(null);
     const { favorites, toggleFavorite } = useFavorites();
@@ -179,12 +192,14 @@ export default function Home() {
                     selectedCity={selectedCity}
                     onLocationChange={handleHeaderLocationChange}
                 />
-                <AdDetails
-                    ad={selectedAd}
-                    onBack={() => setSelectedAd(null)}
-                    isFavorite={favorites.has(selectedAd.id)}
-                    onToggleFavorite={() => toggleFavorite(selectedAd.id)}
-                />
+                <Suspense fallback={<SectionFallback className="mx-auto mt-8 h-[60vh] max-w-5xl" />}>
+                    <AdDetails
+                        ad={selectedAd}
+                        onBack={() => setSelectedAd(null)}
+                        isFavorite={favorites.has(selectedAd.id)}
+                        onToggleFavorite={() => toggleFavorite(selectedAd.id)}
+                    />
+                </Suspense>
             </div>
         );
     }
@@ -206,14 +221,16 @@ export default function Home() {
                 onLocationChange={handleHeaderLocationChange}
             />
             <Hero />
-            <Categories
-                selectedCategory={selectedCategory}
-                onCategorySelect={handleCategorySelect}
-                selectedSubcategory={selectedSubcategory}
-                onSubcategorySelect={handleSubcategorySelect}
-                selectedTransactionType={selectedTransactionType}
-                onTransactionTypeSelect={handleTransactionTypeSelect}
-            />
+            <Suspense fallback={<SectionFallback className="mx-auto mt-6 h-36 max-w-[1600px]" />}>
+                <Categories
+                    selectedCategory={selectedCategory}
+                    onCategorySelect={handleCategorySelect}
+                    selectedSubcategory={selectedSubcategory}
+                    onSubcategorySelect={handleSubcategorySelect}
+                    selectedTransactionType={selectedTransactionType}
+                    onTransactionTypeSelect={handleTransactionTypeSelect}
+                />
+            </Suspense>
             <div className="max-w-[1600px] mx-auto px-2 md:px-4 pt-4">
                 <AdSenseSlot
                     slot={import.meta.env.VITE_ADSENSE_HOME_TOP_SLOT}
@@ -231,45 +248,49 @@ export default function Home() {
             <div className="max-w-[1600px] mx-auto px-2 md:px-4 py-4 md:py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
                     <aside className="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-24 self-start">
-                        <Filters
-                            selectedCategory={selectedCategory}
-                            selectedSubcategory={selectedSubcategory}
-                            selectedState={selectedState}
-                            onStateChange={(state) => updateSearchParams({ state, city: '' })} // Reset city when state changes
-                            selectedCity={selectedCity}
-                            onCityChange={(city) => updateSearchParams({ city })}
-                            advertiserType={advertiserType}
-                            onAdvertiserTypeChange={(type) => updateSearchParams({ advertiserType: type })}
-                            sortBy={sortBy}
-                            onSortByChange={(nextSortBy) => updateSearchParams({ sortBy: nextSortBy })}
-                            priceRange={priceRange}
-                            onPriceRangeChange={handlePriceRangeChange}
-                            detailsFilters={detailsFilters}
-                            onDetailsFilterChange={setDetailsFilters}
-                            radius={radius}
-                            onRadiusChange={handleRadiusChange}
-                            userLocation={userLocation}
-                            onUserLocationChange={setUserLocation}
-                        />
+                        <Suspense fallback={<SectionFallback className="h-96" />}>
+                            <Filters
+                                selectedCategory={selectedCategory}
+                                selectedSubcategory={selectedSubcategory}
+                                selectedState={selectedState}
+                                onStateChange={(state) => updateSearchParams({ state, city: '' })} // Reset city when state changes
+                                selectedCity={selectedCity}
+                                onCityChange={(city) => updateSearchParams({ city })}
+                                advertiserType={advertiserType}
+                                onAdvertiserTypeChange={(type) => updateSearchParams({ advertiserType: type })}
+                                sortBy={sortBy}
+                                onSortByChange={(nextSortBy) => updateSearchParams({ sortBy: nextSortBy })}
+                                priceRange={priceRange}
+                                onPriceRangeChange={handlePriceRangeChange}
+                                detailsFilters={detailsFilters}
+                                onDetailsFilterChange={setDetailsFilters}
+                                radius={radius}
+                                onRadiusChange={handleRadiusChange}
+                                userLocation={userLocation}
+                                onUserLocationChange={setUserLocation}
+                            />
+                        </Suspense>
                     </aside>
                     <main className="lg:col-span-8 xl:col-span-9">
-                        <AdsList
-                            selectedCategory={selectedCategory}
-                            selectedSubcategory={selectedSubcategory}
-                            selectedTransactionType={selectedTransactionType}
-                            selectedState={selectedState}
-                            selectedCity={selectedCity}
-                            advertiserType={advertiserType}
-                            sortBy={sortBy}
-                            priceRange={priceRange}
-                            searchQuery={searchQuery}
-                            onAdClick={setSelectedAd}
-                            favorites={favorites}
-                            onToggleFavorite={toggleFavorite}
-                            detailsFilters={detailsFilters}
-                            radius={radius}
-                            userLocation={userLocation}
-                        />
+                        <Suspense fallback={<SectionFallback className="h-[32rem]" />}>
+                            <AdsList
+                                selectedCategory={selectedCategory}
+                                selectedSubcategory={selectedSubcategory}
+                                selectedTransactionType={selectedTransactionType}
+                                selectedState={selectedState}
+                                selectedCity={selectedCity}
+                                advertiserType={advertiserType}
+                                sortBy={sortBy}
+                                priceRange={priceRange}
+                                searchQuery={searchQuery}
+                                onAdClick={setSelectedAd}
+                                favorites={favorites}
+                                onToggleFavorite={toggleFavorite}
+                                detailsFilters={detailsFilters}
+                                radius={radius}
+                                userLocation={userLocation}
+                            />
+                        </Suspense>
                     </main>
                 </div>
             </div>

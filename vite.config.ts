@@ -2,7 +2,6 @@ import { defineConfig, loadEnv } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { VitePWA } from 'vite-plugin-pwa'
 
 function siteOriginFromEnv(mode: string) {
   const env = loadEnv(mode, process.cwd(), '')
@@ -25,48 +24,26 @@ export default defineConfig(({ mode }) => ({
     htmlInjectSiteOrigin(mode),
     react(),
     tailwindcss(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'apple-touch-icon.png', 'masked-icon.svg'],
-      manifest: {
-        name: 'Dezzapego — Classificados e anúncios',
-        short_name: 'Dezzapego',
-        description:
-          'Classificados online: imóveis, carros, eletrônicos e mais. Publique grátis ou encontre ofertas no Brasil.',
-        theme_color: '#2563eb',
-        background_color: '#ffffff',
-        lang: 'pt-BR',
-        display: 'standalone',
-        orientation: 'portrait',
-        icons: [
-          {
-            src: 'icon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
-          },
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable'
-          }
-        ],
-        screenshots: [
-          // User can add screenshots here later
-        ]
-      }
-    })
   ],
   resolve: {
     alias: {
       // Alias @ to the src directory
       '@': path.resolve(__dirname, './src'),
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined
+          if (id.includes('react') || id.includes('scheduler')) return 'vendor-react'
+          if (id.includes('@supabase')) return 'vendor-supabase'
+          if (id.includes('lucide-react')) return 'vendor-icons'
+          if (id.includes('recharts')) return 'vendor-charts'
+          if (id.includes('@radix-ui')) return 'vendor-radix'
+          return undefined
+        },
+      },
     },
   },
 }))

@@ -1,10 +1,12 @@
-import { Heart, LayoutGrid, List as ListIcon, Loader2 } from 'lucide-react';
+import { BookmarkPlus, Heart, LayoutGrid, List as ListIcon, Loader2, Trash2 } from 'lucide-react';
 import type { Ad } from '../../types';
 import { useMemo, useState } from 'react';
 import { formatPrice, formatDate } from '../../lib/formatters';
 import { useAds } from '../hooks/useAds';
 import { Link } from 'react-router-dom';
 import { getCategoryFields } from '../data/categorySpecs';
+import { toast } from 'sonner';
+import { readSavedSearches, removeSavedSearch, saveSearch, withDetailsFiltersInUrl, type SavedSearch } from '../../lib/marketplaceQuality';
 
 type AdsListProps = {
   selectedCategory: string;
@@ -42,6 +44,8 @@ export function AdsList({
   userLocation
 }: AdsListProps) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(() => readSavedSearches());
+  const [showSavedSearches, setShowSavedSearches] = useState(false);
 
   const { ads, loading } = useAds({
     lat: userLocation?.lat,
@@ -208,6 +212,33 @@ export function AdsList({
     return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
   });
 
+  const saveCurrentSearch = () => {
+    const next = saveSearch({
+      url: withDetailsFiltersInUrl(window.location.pathname, window.location.search, detailsFilters),
+      filters: {
+        selectedCategory,
+        selectedSubcategory,
+        selectedTransactionType,
+        selectedState,
+        selectedCity,
+        advertiserType,
+        sortBy,
+        priceRange,
+        searchQuery,
+        detailsFilters,
+        radius,
+      },
+    });
+    setSavedSearches(next);
+    setShowSavedSearches(true);
+    toast.success('Busca salva neste dispositivo.');
+  };
+
+  const deleteSavedSearch = (id: string) => {
+    setSavedSearches(removeSavedSearch(id));
+    toast.success('Busca removida.');
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
@@ -241,6 +272,56 @@ export function AdsList({
             >
               <ListIcon className="w-5 h-5" />
             </button>
+          </div>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={saveCurrentSearch}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              title="Salvar busca"
+            >
+              <BookmarkPlus className="w-4 h-4" />
+              <span className="hidden sm:inline">Salvar busca</span>
+            </button>
+
+            {savedSearches.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowSavedSearches((value) => !value)}
+                className="ml-2 inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-gray-200 bg-white px-2 text-xs font-bold text-blue-600 hover:bg-blue-50"
+                title="Buscas salvas"
+              >
+                {savedSearches.length}
+              </button>
+            )}
+
+            {showSavedSearches && savedSearches.length > 0 && (
+              <div className="absolute right-0 top-12 z-20 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-gray-200 bg-white p-2 shadow-xl">
+                <div className="px-2 py-2 text-xs font-semibold uppercase text-gray-500">Buscas salvas</div>
+                <div className="max-h-72 overflow-auto">
+                  {savedSearches.map((item) => (
+                    <div key={item.id} className="flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-gray-50">
+                      <Link
+                        to={item.url}
+                        className="min-w-0 flex-1"
+                        onClick={() => setShowSavedSearches(false)}
+                      >
+                        <span className="block truncate text-sm font-medium text-gray-800">{item.label}</span>
+                        <span className="block text-xs text-gray-500">{formatDate(item.createdAt)}</span>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => deleteSavedSearch(item.id)}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-red-50 hover:text-red-600"
+                        aria-label="Remover busca salva"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
         </div>

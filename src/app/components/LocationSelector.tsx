@@ -1,5 +1,6 @@
 import { MapPin, Navigation, X } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 type LocationSelectorProps = {
   selectedState: string;
@@ -39,7 +40,7 @@ const brazilianStates = [
 ];
 
 // Mapeamento simples de coordenadas para cidades (mock para demonstração)
-const coordinatesToCity = (lat: number, lng: number): { city: string; state: string } => {
+const coordinatesToCity = (lat: number, lng: number): { city: string; state: string } | null => {
   // São Paulo
   if (lat > -24 && lat < -23 && lng > -47 && lng < -46) {
     return { city: 'São Paulo', state: 'SP' };
@@ -64,8 +65,7 @@ const coordinatesToCity = (lat: number, lng: number): { city: string; state: str
   if (lat > -26 && lat < -25 && lng > -50 && lng < -49) {
     return { city: 'Curitiba', state: 'PR' };
   }
-  // Fallback
-  return { city: 'São Paulo', state: 'SP' };
+  return null;
 };
 
 export function LocationSelector({ selectedState, selectedCity, onLocationChange }: LocationSelectorProps) {
@@ -74,7 +74,7 @@ export function LocationSelector({ selectedState, selectedCity, onLocationChange
 
   const handleGeolocation = () => {
     if (!navigator.geolocation) {
-      alert('Geolocalização não é suportada pelo seu navegador');
+      toast.info('Geolocalização não é suportada pelo seu navegador.');
       return;
     }
 
@@ -84,7 +84,13 @@ export function LocationSelector({ selectedState, selectedCity, onLocationChange
       (position) => {
         const { latitude, longitude } = position.coords;
         const location = coordinatesToCity(latitude, longitude);
+        if (!location) {
+          toast.info('Não conseguimos identificar sua cidade automaticamente. Selecione o estado manualmente.');
+          setIsDetecting(false);
+          return;
+        }
         onLocationChange(location.state, location.city);
+        toast.success('Localização aplicada.');
         setIsDetecting(false);
         setIsOpen(false);
       },
@@ -105,8 +111,7 @@ export function LocationSelector({ selectedState, selectedCity, onLocationChange
             errorMessage = 'Erro desconhecido ao obter localização.';
         }
         
-        alert(errorMessage + ' Por favor, selecione manualmente.');
-        console.error('Erro de geolocalização:', error);
+        toast.error(`${errorMessage} Selecione manualmente.`);
         setIsDetecting(false);
       },
       {

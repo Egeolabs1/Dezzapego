@@ -115,10 +115,27 @@ alter table public.profiles
   add column if not exists reserved_username text,
   add column if not exists website text,
   add column if not exists instagram text,
-  add column if not exists cpf_cnpj text;
+  add column if not exists cpf_cnpj text,
+  add column if not exists account_type text default 'personal',
+  add column if not exists business_name text,
+  add column if not exists responsible_name text;
 
 alter table public.profiles
   add column if not exists verification_rejection_reason text;
+
+do $profile_account_type_check$
+begin
+  alter table public.profiles drop constraint if exists profiles_account_type_check;
+  alter table public.profiles add constraint profiles_account_type_check
+    check (account_type in ('personal', 'professional'));
+end $profile_account_type_check$;
+
+do $profile_verification_status_check$
+begin
+  alter table public.profiles drop constraint if exists profiles_verification_status_check;
+  alter table public.profiles add constraint profiles_verification_status_check
+    check (verification_status in ('none', 'pending', 'verified', 'rejected'));
+end $profile_verification_status_check$;
 
 create unique index if not exists profiles_email_unique_idx
   on public.profiles (lower(trim(email)))
@@ -134,6 +151,12 @@ create unique index if not exists profiles_cpf_cnpj_digits_unique_idx
 
 comment on column public.profiles.verification_rejection_reason is
   'Motivo exibido ao usuário quando a verificação de identidade é recusada.';
+comment on column public.profiles.account_type is
+  'Tipo de conta escolhido no cadastro: personal ou professional.';
+comment on column public.profiles.business_name is
+  'Nome comercial usado por conta profissional/loja.';
+comment on column public.profiles.responsible_name is
+  'Pessoa responsável pela conta profissional/loja.';
 
 alter table public.profiles
   add column if not exists is_suspended boolean default false,
@@ -158,10 +181,12 @@ comment on column public.profiles.last_access_at is
 
 alter table public.profiles enable row level security;
 
+drop policy if exists "Public profiles are viewable by everyone." on public.profiles;
+
 select public.create_policy_if_missing(
-  'public', 'profiles', 'Public profiles are viewable by everyone.',
-  $pol$create policy "Public profiles are viewable by everyone."
-    on public.profiles for select using (true)$pol$
+  'public', 'profiles', 'Users can view own profile.',
+  $pol$create policy "Users can view own profile."
+    on public.profiles for select to authenticated using (auth.uid() = id)$pol$
 );
 
 select public.create_policy_if_missing(
@@ -194,7 +219,8 @@ as $$
   );
 $$;
 
-grant execute on function public.is_admin() to authenticated, anon;
+revoke execute on function public.is_admin() from anon;
+grant execute on function public.is_admin() to authenticated;
 
 select public.create_policy_if_missing(
   'public', 'profiles', 'Admins can update any profile',
@@ -202,6 +228,128 @@ select public.create_policy_if_missing(
     on public.profiles for update
     using (public.is_admin())
     with check (public.is_admin())$pol$
+);
+
+select public.create_policy_if_missing(
+  'public', 'profiles', 'Admins can view any profile',
+  $pol$create policy "Admins can view any profile"
+    on public.profiles for select to authenticated
+    using (public.is_admin())$pol$
+);
+
+create or replace function public.get_public_profiles(p_ids uuid[])
+returns table (
+  id uuid,
+  full_name text,
+  avatar_url text,
+  bio text,
+  city text,
+  state text,
+  website text,
+  instagram text,
+  rating numeric,
+  verified boolean,
+  created_at timestamptz,
+  account_type text,
+  business_name text
+)
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select
+    p.id,
+    p.full_name,
+    p.avatar_url,
+    p.bio,
+    p.city,
+    p.state,
+    p.website,
+    p.instagram,
+    p.rating,
+    p.verified,
+    p.created_at,
+    p.account_type,
+    p.business_name
+  from public.profiles p
+  where p.id = any(coalesce(p_ids, array[]::uuid[]))
+    and coalesce(p.is_suspended, false) = false
+  limit 100;
+$$;
+
+create or replace function public.profile_identity_exists(p_phone text, p_cpf_cnpj text)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles p
+    where (
+      nullif(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), '') is not null
+      and regexp_replace(coalesce(p.phone, ''), '\D', '', 'g') = regexp_replace(coalesce(p_phone, ''), '\D', '', 'g')
+    )
+    or (
+      nullif(regexp_replace(coalesce(p_cpf_cnpj, ''), '\D', '', 'g'), '') is not null
+      and regexp_replace(coalesce(p.cpf_cnpj, ''), '\D', '', 'g') = regexp_replace(coalesce(p_cpf_cnpj, ''), '\D', '', 'g')
+    )
+  );
+$$;
+
+revoke execute on function public.get_public_profiles(uuid[]) from public;
+grant execute on function public.get_public_profiles(uuid[]) to anon, authenticated;
+revoke execute on function public.profile_identity_exists(text, text) from public;
+grant execute on function public.profile_identity_exists(text, text) to anon, authenticated;
+
+create or replace function public.protect_profile_sensitive_fields()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if public.is_admin() then
+    return new;
+  end if;
+
+  if current_setting('dezzapego.allow_profile_verification_request', true) = 'on' then
+    if old.role is not distinct from new.role
+      and old.is_admin is not distinct from new.is_admin
+      and old.rating is not distinct from new.rating
+      and old.is_suspended is not distinct from new.is_suspended
+      and old.suspended_reason is not distinct from new.suspended_reason
+      and new.verification_status = 'pending'
+      and new.verified = false
+      and new.verification_docs is not null
+      and new.verification_rejection_reason is null then
+      return new;
+    end if;
+  end if;
+
+  if old.role is distinct from new.role
+    or old.is_admin is distinct from new.is_admin
+    or old.verified is distinct from new.verified
+    or old.verification_status is distinct from new.verification_status
+    or old.verification_docs is distinct from new.verification_docs
+    or old.verification_rejection_reason is distinct from new.verification_rejection_reason
+    or old.rating is distinct from new.rating
+    or old.is_suspended is distinct from new.is_suspended
+    or old.suspended_reason is distinct from new.suspended_reason then
+    raise exception 'not allowed to update protected profile fields';
+  end if;
+
+  return new;
+end;
+$$;
+
+select public.create_trigger_if_missing(
+  'public', 'profiles', 'protect_profile_sensitive_fields',
+  $trg$create trigger protect_profile_sensitive_fields
+    before update on public.profiles
+    for each row execute function public.protect_profile_sensitive_fields()$trg$
 );
 
 
@@ -216,14 +364,30 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, full_name, avatar_url, email, phone, cpf_cnpj)
+  insert into public.profiles (
+    id,
+    full_name,
+    avatar_url,
+    email,
+    phone,
+    cpf_cnpj,
+    account_type,
+    business_name,
+    responsible_name
+  )
   values (
     new.id,
     new.raw_user_meta_data->>'full_name',
     new.raw_user_meta_data->>'avatar_url',
     new.email,
     nullif(regexp_replace(coalesce(new.raw_user_meta_data->>'phone', ''), '\D', '', 'g'), ''),
-    nullif(regexp_replace(coalesce(new.raw_user_meta_data->>'cpf_cnpj', ''), '\D', '', 'g'), '')
+    nullif(regexp_replace(coalesce(new.raw_user_meta_data->>'cpf_cnpj', ''), '\D', '', 'g'), ''),
+    case
+      when new.raw_user_meta_data->>'account_type' = 'professional' then 'professional'
+      else 'personal'
+    end,
+    nullif(trim(coalesce(new.raw_user_meta_data->>'business_name', '')), ''),
+    nullif(trim(coalesce(new.raw_user_meta_data->>'responsible_name', '')), '')
   );
   return new;
 end;
@@ -291,6 +455,66 @@ grant execute on function public.record_my_access(text) to authenticated;
 
 
 -- ---------------------------------------------------------------------------
+-- 3c. Solicitação segura de verificação pelo titular
+-- ---------------------------------------------------------------------------
+
+create or replace function public.request_my_verification(p_docs jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'not authenticated';
+  end if;
+
+  if jsonb_typeof(p_docs) is distinct from 'object'
+    or jsonb_typeof(p_docs->'doc') is distinct from 'array'
+    or jsonb_typeof(p_docs->'selfie') is distinct from 'array'
+    or jsonb_array_length(p_docs->'doc') < 1
+    or jsonb_array_length(p_docs->'doc') > 2
+    or jsonb_array_length(p_docs->'selfie') <> 1 then
+    raise exception 'invalid verification documents';
+  end if;
+
+  perform set_config('dezzapego.allow_profile_verification_request', 'on', true);
+
+  update public.profiles
+  set
+    verification_status = 'pending',
+    verified = false,
+    verification_docs = jsonb_build_object(
+      'doc', p_docs->'doc',
+      'selfie', p_docs->'selfie'
+    ),
+    verification_rejection_reason = null,
+    updated_at = now()
+  where id = auth.uid();
+
+  if not found then
+    raise exception 'profile not found';
+  end if;
+end;
+$$;
+
+revoke execute on function public.request_my_verification(jsonb) from anon;
+grant execute on function public.request_my_verification(jsonb) to authenticated;
+
+
+-- ---------------------------------------------------------------------------
+-- 3d. Administradores iniciais
+-- ---------------------------------------------------------------------------
+
+update public.profiles
+set
+  is_admin = true,
+  role = 'admin',
+  updated_at = now()
+where email in ('ngfilho@gmail.com', 'egeohub101@gmail.com');
+
+
+-- ---------------------------------------------------------------------------
 -- 4. Ads — colunas usadas pela aplicação
 -- ---------------------------------------------------------------------------
 
@@ -305,6 +529,13 @@ alter table public.ads
 alter table public.ads
   add column if not exists status text default 'active';
 
+do $ads_status_check$
+begin
+  alter table public.ads drop constraint if exists ads_status_check;
+  alter table public.ads add constraint ads_status_check
+    check (status in ('active', 'paused', 'sold', 'expired', 'deleted'));
+end $ads_status_check$;
+
 alter table public.ads
   add column if not exists featured boolean default false;
 
@@ -315,6 +546,33 @@ alter table public.ads add column if not exists featured_expires_at timestamptz;
 
 create index if not exists idx_ads_featured_expires_at on public.ads(featured_expires_at);
 create index if not exists ads_lat_lng_idx on public.ads (lat, lng);
+
+do $remove_seller_phone_snapshot$
+declare
+  v_seller_udt text;
+begin
+  select udt_name into v_seller_udt
+  from information_schema.columns
+  where table_schema = 'public'
+    and table_name = 'ads'
+    and column_name = 'seller';
+
+  if v_seller_udt = 'jsonb' then
+    execute $sql$
+      update public.ads
+      set seller = seller - 'phone'
+      where jsonb_typeof(seller) = 'object'
+        and seller ? 'phone'
+    $sql$;
+  elsif v_seller_udt = 'json' then
+    execute $sql$
+      update public.ads
+      set seller = (to_jsonb(seller) - 'phone')::json
+      where jsonb_typeof(to_jsonb(seller)) = 'object'
+        and to_jsonb(seller) ? 'phone'
+    $sql$;
+  end if;
+end $remove_seller_phone_snapshot$;
 
 
 -- ---------------------------------------------------------------------------
@@ -351,6 +609,27 @@ as $$
       )
     ) < radius_km;
 $$;
+
+create or replace function public.get_ad_contact_phone(p_ad_id uuid)
+returns text
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select p.phone
+  from public.ads a
+  join public.profiles p on p.id = a.user_id
+  where a.id = p_ad_id
+    and auth.uid() is not null
+    and coalesce(a.status, 'active') = 'active'
+    and coalesce(p.is_suspended, false) = false
+    and nullif(regexp_replace(coalesce(p.phone, ''), '\D', '', 'g'), '') is not null
+  limit 1;
+$$;
+
+revoke execute on function public.get_ad_contact_phone(uuid) from public;
+grant execute on function public.get_ad_contact_phone(uuid) to authenticated;
 
 
 -- ---------------------------------------------------------------------------
@@ -397,6 +676,13 @@ create table if not exists public.reports (
   status text default 'pending',
   created_at timestamptz default now()
 );
+
+do $reports_status_check$
+begin
+  alter table public.reports drop constraint if exists reports_status_check;
+  alter table public.reports add constraint reports_status_check
+    check (status in ('pending', 'reviewed', 'resolved', 'dismissed'));
+end $reports_status_check$;
 
 alter table public.reports enable row level security;
 
@@ -478,10 +764,14 @@ select public.create_policy_if_missing(
 );
 
 select public.create_policy_if_missing(
-  'public', 'system_settings', 'Enable insert/update for authenticated users only',
-  $pol$create policy "Enable insert/update for authenticated users only"
-    on public.system_settings for all to authenticated using (true) with check (true)$pol$
+  'public', 'system_settings', 'Admins can manage system settings',
+  $pol$create policy "Admins can manage system settings"
+    on public.system_settings for all to authenticated
+    using (public.is_admin())
+    with check (public.is_admin())$pol$
 );
+
+drop policy if exists "Enable insert/update for authenticated users only" on public.system_settings;
 
 insert into public.system_settings (key, value)
 values ('maintenance_mode', 'false'::jsonb)
@@ -691,11 +981,22 @@ comment on table public.site_visits is 'Analytics interna de página (gravação
 
 alter table public.ads enable row level security;
 
-select public.create_policy_if_missing(
-  'public', 'ads', 'Ads are viewable by everyone',
-  $pol$create policy "Ads are viewable by everyone"
-    on public.ads for select using (true)$pol$
-);
+drop policy if exists "Ads are viewable by everyone" on public.ads;
+drop policy if exists "Active ads are viewable by everyone" on public.ads;
+drop policy if exists "Users can view their own ads" on public.ads;
+drop policy if exists "Admins can view any ad" on public.ads;
+
+create policy "Active ads are viewable by everyone"
+  on public.ads for select
+  using (coalesce(status, 'active') = 'active');
+
+create policy "Users can view their own ads"
+  on public.ads for select to authenticated
+  using (auth.uid() = user_id);
+
+create policy "Admins can view any ad"
+  on public.ads for select to authenticated
+  using (public.is_admin());
 
 -- Migração LGPD suspensão: políticas de escrita do próprio usuário em ads
 -- (create_policy_if_missing não atualiza políticas existentes — DROP + CREATE idempotente)
@@ -817,10 +1118,12 @@ begin
     else
       raise notice 'Política audit_logs Admins can read audit logs já existe — pulando.';
     end if;
-    if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'audit_logs' and policyname = 'Enable insert for authenticated users audit') then
-      create policy "Enable insert for authenticated users audit" on public.audit_logs for insert to authenticated with check (true);
+    drop policy if exists "Enable insert for authenticated users audit" on public.audit_logs;
+    if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'audit_logs' and policyname = 'Admins can insert audit logs') then
+      create policy "Admins can insert audit logs" on public.audit_logs for insert to authenticated
+        with check (public.is_admin());
     else
-      raise notice 'Política audit_logs Enable insert ... audit já existe — pulando.';
+      raise notice 'Política audit_logs Admins can insert audit logs já existe — pulando.';
     end if;
   end if;
 
@@ -844,8 +1147,10 @@ begin
     if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'notifications' and policyname = 'Users can update own notifications') then
       create policy "Users can update own notifications" on public.notifications for update to authenticated using (auth.uid() = user_id);
     else raise notice 'Política notifications update já existe — pulando.'; end if;
-    if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'notifications' and policyname = 'Enable insert for authenticated users notifications') then
-      create policy "Enable insert for authenticated users notifications" on public.notifications for insert to authenticated with check (true);
+    drop policy if exists "Enable insert for authenticated users notifications" on public.notifications;
+    if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'notifications' and policyname = 'Admins can insert notifications') then
+      create policy "Admins can insert notifications" on public.notifications for insert to authenticated
+        with check (public.is_admin());
     else raise notice 'Política notifications insert já existe — pulando.'; end if;
   end if;
 end $admin_rls$;
@@ -877,10 +1182,15 @@ end $fix_search$;
 -- on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------
--- B) Promover usuário a admin — substituir pelo e-mail correto e descomente
+-- B) Promover usuário a admin manualmente
 -- ---------------------------------------------------------------------------
+-- Os admins iniciais já são aplicados na seção 3d:
+--   ngfilho@gmail.com
+--   egeohub101@gmail.com
+--
+-- Para promover outro usuário:
 -- update public.profiles set is_admin = true, role = 'admin'
--- where id = (select id from auth.users where email = 'seu@email.com' limit 1);
+-- where email = 'outro@email.com';
 
 -- ---------------------------------------------------------------------------
 -- C) Verificação (somente SELECT — diagnosticar políticas / RLS)

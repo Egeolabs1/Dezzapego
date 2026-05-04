@@ -3,37 +3,39 @@ import { lazy, Suspense } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { FilterProvider } from './contexts/FilterContext';
 import Home from './pages/Home';
-import Login from './pages/Login';
-import ResetPassword from './pages/ResetPassword';
-import Register from './pages/Register';
 import { Toaster } from 'sonner';
-import NewAd from './pages/NewAd';
-import MyAds from './pages/MyAds';
-import AdDetails from './pages/AdDetails';
-import MyFavorites from './pages/MyFavorites'; // NEW
-import SellerProfile from './pages/SellerProfile';
-import EditAd from './pages/EditAd';
-import UserDashboard from './pages/UserDashboard';
 import { MobileNav } from './components/MobileNav';
 import { InstallPWA } from './components/InstallPWA';
 import { Footer } from './components/Footer';
 import { CookieConsentBanner } from './components/CookieConsentBanner';
 import { AdSenseLoader } from './components/AdSenseLoader';
-import AccountSuspended from './pages/AccountSuspended';
-import TermsOfUse from './pages/TermsOfUse';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import SafetyTips from './pages/SafetyTips';
-import Contact from './pages/Contact';
-import SiteMap from './pages/SiteMap';
-import Plans from './pages/Plans'; // NEW
 import { useMaintenance, MaintenanceProvider } from './contexts/MaintenanceContext';
-import Maintenance from './pages/Maintenance';
 import { useAuth } from './contexts/AuthContext';
 import { useSiteVisitTracking } from './hooks/useSiteVisitTracking';
 import { useProfileIpOnNavigation } from '../lib/profileIpLog';
+import { HelmetProvider } from 'react-helmet-async';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Ad type moved to src/types/index.ts
 
+const Login = lazy(() => import('./pages/Login'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Register = lazy(() => import('./pages/Register'));
+const NewAd = lazy(() => import('./pages/NewAd'));
+const MyAds = lazy(() => import('./pages/MyAds'));
+const AdDetails = lazy(() => import('./pages/AdDetails'));
+const MyFavorites = lazy(() => import('./pages/MyFavorites'));
+const SellerProfile = lazy(() => import('./pages/SellerProfile'));
+const EditAd = lazy(() => import('./pages/EditAd'));
+const UserDashboard = lazy(() => import('./pages/UserDashboard'));
+const AccountSuspended = lazy(() => import('./pages/AccountSuspended'));
+const TermsOfUse = lazy(() => import('./pages/TermsOfUse'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const SafetyTips = lazy(() => import('./pages/SafetyTips'));
+const Contact = lazy(() => import('./pages/Contact'));
+const SiteMap = lazy(() => import('./pages/SiteMap'));
+const Plans = lazy(() => import('./pages/Plans'));
+const Maintenance = lazy(() => import('./pages/Maintenance'));
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminAds = lazy(() => import('./pages/admin/AdminAds'));
@@ -74,7 +76,7 @@ function AppContent() {
 
   if (maintenanceLoading || authLoading) return null; // Or a global loader
 
-  if (isMaintenanceMode && !user) {
+    if (isMaintenanceMode && !user) {
     // Allow access to login page so admins can actually log in!
     // We do this by checking the pathname
     const path = window.location.pathname;
@@ -82,7 +84,11 @@ function AppContent() {
     const isPublicRoute = publicRoutes.some(route => path.startsWith(route));
 
     if (!isPublicRoute) {
-      return <Maintenance />;
+      return (
+        <Suspense fallback={<RouteFallback />}>
+          <Maintenance />
+        </Suspense>
+      );
     }
   }
 
@@ -103,7 +109,7 @@ function AppContent() {
         <Route path="/anunciante/:userId" element={<SellerProfile />} />
         <Route path="/editar/:id" element={<EditAd />} />
         <Route path="/dashboard" element={<UserDashboard />} />
-        <Route path="/favoritos" element={<MyFavorites />} /> // NEW Route
+        <Route path="/favoritos" element={<MyFavorites />} />
 
         <Route path="/termos" element={<TermsOfUse />} />
         <Route path="/privacidade" element={<PrivacyPolicy />} />
@@ -139,9 +145,6 @@ function AppContent() {
     </div>
   );
 }
-
-import { HelmetProvider } from 'react-helmet-async';
-import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function App() {
   return (

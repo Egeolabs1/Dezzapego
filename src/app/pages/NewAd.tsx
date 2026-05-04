@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,6 +23,14 @@ import {
     validateLocation,
     type AdLocationForm,
 } from '../../lib/adFormHelpers';
+import {
+    digitsOnly,
+    findSuspiciousSignals,
+    formatCpfCnpj,
+    formatPhone,
+    getAdQualityTips,
+    isValidCpfOrCnpj,
+} from '../../lib/marketplaceQuality';
 
 const CATEGORIES = Object.keys(CATEGORY_SPECS);
 
@@ -64,6 +72,8 @@ const AD_STEPS: StepDef[] = [
     { id: 'review', label: 'Revisão' },
 ];
 
+const DRAFT_STORAGE_KEY = 'dezzapego_new_ad_draft_v1';
+
 export default function NewAd() {
     const { user, profile, refreshProfile } = useAuth();
     const navigate = useNavigate();
@@ -72,6 +82,7 @@ export default function NewAd() {
     const [showPublishRequirements, setShowPublishRequirements] = useState(false);
     const [requiredPhone, setRequiredPhone] = useState('');
     const [requiredDocument, setRequiredDocument] = useState('');
+    const [draftRestored, setDraftRestored] = useState(false);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -97,40 +108,61 @@ export default function NewAd() {
         }
     }, [user, navigate]);
 
-    const onlyDigits = (value: string) => value.replace(/\D/g, '');
-    const formatPhoneMask = (value: string) => {
-        const d = onlyDigits(value).slice(0, 11);
-        if (d.length <= 2) return d;
-        if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
-        if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
-        return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
-    };
-    const formatDocumentMask = (value: string) => {
-        const d = onlyDigits(value).slice(0, 14);
-        if (d.length <= 11) {
-            if (d.length <= 3) return d;
-            if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
-            if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
-            return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
-        }
-        if (d.length <= 2) return d;
-        if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
-        if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
-        if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
-        return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
-    };
-    const hasPhoneForPublish = (value: string) => onlyDigits(value).length >= 10;
-    const hasDocumentForPublish = (value: string) => {
-        const len = onlyDigits(value).length;
-        return len === 11 || len === 14;
-    };
+    const hasPhoneForPublish = (value: string) => digitsOnly(value).length >= 10;
+    const hasDocumentForPublish = (value: string) => isValidCpfOrCnpj(value);
     const profileHasRequiredData = () =>
         hasPhoneForPublish(profile?.phone || '') && hasDocumentForPublish(profile?.cpf_cnpj || '');
 
     useEffect(() => {
-        setRequiredPhone(formatPhoneMask(profile?.phone || user?.user_metadata?.phone || ''));
-        setRequiredDocument(formatDocumentMask(profile?.cpf_cnpj || user?.user_metadata?.cpf_cnpj || ''));
+        setRequiredPhone(formatPhone(profile?.phone || user?.user_metadata?.phone || ''));
+        setRequiredDocument(formatCpfCnpj(profile?.cpf_cnpj || user?.user_metadata?.cpf_cnpj || ''));
     }, [profile?.phone, profile?.cpf_cnpj, user?.user_metadata?.phone, user?.user_metadata?.cpf_cnpj]);
+
+    useEffect(() => {
+        if (!user || draftRestored) return;
+        try {
+            const raw = localStorage.getItem(`${DRAFT_STORAGE_KEY}:${user.id}`);
+            if (raw) {
+                const parsed = JSON.parse(raw) as typeof formData;
+                setFormData((prev) => ({ ...prev, ...parsed, images: parsed.images || [] }));
+                toast.info('Rascunho recuperado.');
+            }
+        } catch {
+            localStorage.removeItem(`${DRAFT_STORAGE_KEY}:${user.id}`);
+        } finally {
+            setDraftRestored(true);
+        }
+    }, [draftRestored, formData, user]);
+
+    useEffect(() => {
+        if (!user || !draftRestored) return;
+        const hasDraftContent =
+            formData.title ||
+            formData.description ||
+            formData.category ||
+            formData.subcategory ||
+            formData.price ||
+            formData.images.length > 0 ||
+            Object.keys(formData.details).length > 0;
+        if (!hasDraftContent) return;
+        localStorage.setItem(`${DRAFT_STORAGE_KEY}:${user.id}`, JSON.stringify(formData));
+    }, [draftRestored, formData, user]);
+
+    const qualityTips = useMemo(
+        () =>
+            getAdQualityTips({
+                title: formData.title,
+                description: formData.description,
+                images: formData.images,
+                location: formData.location,
+            }),
+        [formData],
+    );
+
+    const suspiciousSignals = useMemo(
+        () => findSuspiciousSignals({ title: formData.title, description: formData.description, price: formData.price }),
+        [formData.title, formData.description, formData.price],
+    );
 
     const publishAd = async () => {
         if (!user) {
@@ -165,6 +197,16 @@ export default function NewAd() {
             toast.error(`Preencha: ${missing.join(', ')}`);
             setStep(2);
             return;
+        }
+
+        if (suspiciousSignals.length > 0) {
+            const proceed = window.confirm(
+                `Seu anúncio tem pontos que podem reduzir a confiança:\n\n${suspiciousSignals.join('\n')}\n\nDeseja publicar mesmo assim?`,
+            );
+            if (!proceed) {
+                setStep(1);
+                return;
+            }
         }
 
         setLoading(true);
@@ -204,6 +246,7 @@ export default function NewAd() {
                 throw new Error('Anúncio não foi salvo. Verifique suas permissões.');
             }
 
+            localStorage.removeItem(`${DRAFT_STORAGE_KEY}:${user.id}`);
             toast.success('Anúncio criado com sucesso!');
             navigate('/');
         } catch (error: unknown) {
@@ -222,8 +265,8 @@ export default function NewAd() {
             return;
         }
         if (!profileHasRequiredData()) {
-            setRequiredPhone(formatPhoneMask(profile?.phone || user.user_metadata?.phone || ''));
-            setRequiredDocument(formatDocumentMask(profile?.cpf_cnpj || user.user_metadata?.cpf_cnpj || ''));
+            setRequiredPhone(formatPhone(profile?.phone || user.user_metadata?.phone || ''));
+            setRequiredDocument(formatCpfCnpj(profile?.cpf_cnpj || user.user_metadata?.cpf_cnpj || ''));
             setShowPublishRequirements(true);
             return;
         }
@@ -245,8 +288,8 @@ export default function NewAd() {
         try {
             const { error } = await supabase.from('profiles').upsert({
                 id: user.id,
-                phone: onlyDigits(requiredPhone),
-                cpf_cnpj: onlyDigits(requiredDocument),
+                phone: digitsOnly(requiredPhone),
+                cpf_cnpj: digitsOnly(requiredDocument),
                 updated_at: new Date().toISOString(),
             });
             if (error) throw error;
@@ -435,6 +478,11 @@ export default function NewAd() {
 
                     <form onSubmit={handleSubmit} className="p-8">
                         <AdFormStepper steps={AD_STEPS} currentIndex={step} onStepClick={(i) => setStep(i)} />
+                        {draftRestored && (
+                            <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                                Rascunho salvo automaticamente neste dispositivo.
+                            </div>
+                        )}
 
                         {step === 0 && (
                             <section className="space-y-6 animate-in fade-in duration-200">
@@ -547,6 +595,16 @@ export default function NewAd() {
                                         />
                                     </div>
                                     <AdSeoHints titleLen={formData.title.length} descriptionLen={formData.description.length} />
+                                    {(qualityTips.length > 0 || suspiciousSignals.length > 0) && (
+                                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                                            <p className="font-semibold mb-2">Melhore antes de publicar</p>
+                                            <ul className="list-disc list-inside space-y-1">
+                                                {[...suspiciousSignals, ...qualityTips.slice(0, 3)].map((tip) => (
+                                                    <li key={tip}>{tip}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
                                 </div>
                             </section>
                         )}
@@ -589,6 +647,9 @@ export default function NewAd() {
                                     <p className="text-sm text-gray-600">
                                         Pelo menos uma foto é obrigatória. A primeira imagem será a capa do anúncio.
                                     </p>
+                                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                                        Use fotos reais, bem iluminadas e de ângulos diferentes. Arraste a melhor foto para a primeira posição.
+                                    </div>
                                     <div className="bg-gray-50 p-6 rounded-xl border-2 border-dashed border-gray-200 hover:border-purple-300 transition-colors">
                                         <ImageUpload
                                             variant="ad"
@@ -796,7 +857,7 @@ export default function NewAd() {
                                     type="tel"
                                     placeholder="(00) 00000-0000"
                                     value={requiredPhone}
-                                    onChange={(e) => setRequiredPhone(formatPhoneMask(e.target.value))}
+                                    onChange={(e) => setRequiredPhone(formatPhone(e.target.value))}
                                     className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all"
                                 />
                             </div>
@@ -807,7 +868,7 @@ export default function NewAd() {
                                     inputMode="numeric"
                                     placeholder="Somente números"
                                     value={requiredDocument}
-                                    onChange={(e) => setRequiredDocument(formatDocumentMask(e.target.value))}
+                                    onChange={(e) => setRequiredDocument(formatCpfCnpj(e.target.value))}
                                     className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all"
                                 />
                             </div>
