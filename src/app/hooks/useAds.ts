@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Ad } from '../../types';
-import { PUBLIC_ENV, isPublicDevMode } from '../../lib/publicEnv';
+import { PUBLIC_ENV } from '../../lib/publicEnv';
 
 const mockAds: Ad[] = [];
 
@@ -33,10 +33,8 @@ export function useAds(filters?: AdsFilters) {
 
                 // Check if we have credentials
                 const supabaseUrl = PUBLIC_ENV.SUPABASE_URL;
-                if (!supabaseUrl || supabaseUrl === 'YOUR_SUPABASE_URL') {
-                    if (isPublicDevMode()) {
-                        console.debug('[useAds] Supabase não configurado; lista vazia.');
-                    }
+                if (!supabaseUrl || supabaseUrl === 'YOUR_SUPABASE_URL' || !supabaseUrl) {
+                    console.error('[useAds] Supabase URL is missing. Check your environment variables.');
                     setAds(mockAds);
                     setLoading(false);
                     return;
