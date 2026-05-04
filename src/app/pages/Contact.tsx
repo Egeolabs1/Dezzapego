@@ -152,7 +152,8 @@ export default function Contact() {
                             <form onSubmit={handleSubmit} className="bg-white p-8 rounded-xl shadow-md border border-gray-100">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                     <div className="space-y-2">
-                                        <label htmlFor="name" className="text-sm font-medium text-gray-700">Seu Nome</label>
+                                        <label htmlFor="name" className="text-sm font-medium text-gray-700">Seu Nome *</label>
+
                                         <input
                                             id="name"
                                             type="text"
@@ -164,7 +165,8 @@ export default function Contact() {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label htmlFor="email" className="text-sm font-medium text-gray-700">Seu Email</label>
+                                        <label htmlFor="email" className="text-sm font-medium text-gray-700">Seu Email *</label>
+
                                         <input
                                             id="email"
                                             type="email"
@@ -178,7 +180,8 @@ export default function Contact() {
                                 </div>
 
                                 <div className="space-y-2 mb-6">
-                                    <label htmlFor="subject" className="text-sm font-medium text-gray-700">Assunto</label>
+                                    <label htmlFor="subject" className="text-sm font-medium text-gray-700">Assunto *</label>
+
                                     <select
                                         id="subject"
                                         value={subject}
@@ -197,7 +200,8 @@ export default function Contact() {
                                 </div>
 
                                 <div className="space-y-2 mb-8">
-                                    <label htmlFor="message" className="text-sm font-medium text-gray-700">Mensagem</label>
+                                    <label htmlFor="message" className="text-sm font-medium text-gray-700">Mensagem *</label>
+
                                     <textarea
                                         id="message"
                                         rows={6}
