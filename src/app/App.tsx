@@ -62,7 +62,7 @@ function RouteFallback() {
   );
 }
 
-function UniversalRouter({ children }: { children: ReactNode }) {
+function UniversalRouter({ children, initialPath = '/' }: { children: ReactNode; initialPath?: string }) {
   if (typeof window !== 'undefined') {
     return <BrowserRouter>{children}</BrowserRouter>;
   }
@@ -78,7 +78,7 @@ function UniversalRouter({ children }: { children: ReactNode }) {
   };
 
   return (
-    <Router location="/" navigator={navigator}>
+    <Router location={initialPath} navigator={navigator}>
       {children}
     </Router>
   );
@@ -204,10 +204,14 @@ export function AppRoutes() {
   );
 }
 
-export default function App() {
+type AppProps = {
+  initialPath?: string;
+};
+
+export default function App({ initialPath }: AppProps) {
   return (
     <AppProviders>
-      <UniversalRouter>
+      <UniversalRouter initialPath={initialPath}>
         <AppRoutes />
       </UniversalRouter>
     </AppProviders>

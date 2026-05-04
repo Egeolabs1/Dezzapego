@@ -270,7 +270,7 @@ export default async function Page({ params }: PageProps) {
   return (
     <>
       <JsonLdForPath path={path} />
-      <App />
+      <App initialPath={path} />
     </>
   );
 }
