@@ -28,7 +28,7 @@ type JsonResponse = {
 type ApiRequest = {
   method?: string;
   body?: unknown;
-  headers?: Record<string, string | string[] | undefined>;
+  headers: Record<string, string | string[] | undefined>;
   socket?: { remoteAddress?: string };
 };
 
@@ -81,14 +81,16 @@ export default async function handler(req: ApiRequest, res: JsonResponse) {
     }
 
     console.log('[track-visit] Inserting new visit...');
+    const referrerHeader = req.headers.referer;
+    const userAgentHeader = req.headers['user-agent'];
     const { error } = await Promise.race([
       supabase
         .from('site_visits')
         .insert({
           path,
           session_id: sessionId,
-          referrer: body.referrer?.trim().slice(0, 500) || (req.headers['referer'] as string),
-          user_agent: req.headers['user-agent'] as string,
+          referrer: body.referrer?.trim().slice(0, 500) || (typeof referrerHeader === 'string' ? referrerHeader : undefined),
+          user_agent: typeof userAgentHeader === 'string' ? userAgentHeader : undefined,
         }),
       timeoutPromise
     ]) as any;
