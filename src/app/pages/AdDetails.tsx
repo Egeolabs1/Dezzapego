@@ -469,7 +469,7 @@ export default function AdDetails() {
                                     <p className="text-sm font-semibold text-gray-700 mb-3">Gerenciar Anúncio</p>
                                     <div className="grid grid-cols-2 gap-3">
                                         <button
-                                            onClick={() => navigate(`/editar-anuncio/${ad.id}`)}
+                                            onClick={() => navigate(`/editar/${ad.id}`)}
                                             className="flex items-center justify-center gap-2 py-2 px-4 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-blue-600 font-medium transition-colors"
                                         >
                                             <Pencil className="w-4 h-4" />

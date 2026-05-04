@@ -119,6 +119,7 @@ export function AppContent() {
         <Route path="/anuncio/:id" element={<AdDetails />} />
         <Route path="/anunciante/:userId" element={<SellerProfile />} />
         <Route path="/editar/:id" element={<EditAd />} />
+        <Route path="/editar-anuncio/:id" element={<EditAd />} />
         <Route path="/dashboard" element={<UserDashboard />} />
         <Route path="/favoritos" element={<MyFavorites />} />
 

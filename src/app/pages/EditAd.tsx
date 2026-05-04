@@ -76,7 +76,7 @@ type FormState = {
 
 export default function EditAd() {
     const { id } = useParams<{ id: string }>();
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -100,15 +100,16 @@ export default function EditAd() {
     });
 
     useEffect(() => {
+        if (authLoading) return;
         if (!user) {
             toast.error('Você precisa estar logado para editar anúncios.');
             navigate('/login');
         }
-    }, [user, navigate]);
+    }, [authLoading, user, navigate]);
 
     useEffect(() => {
         async function fetchAd() {
-            if (!id || !user) return;
+            if (authLoading || !id || !user) return;
             try {
                 const { data, error } = await supabase.from('ads').select('*').eq('id', id).single();
 
@@ -150,7 +151,7 @@ export default function EditAd() {
             }
         }
         fetchAd();
-    }, [id, user, navigate]);
+    }, [authLoading, id, user, navigate]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
