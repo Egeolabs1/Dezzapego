@@ -49,7 +49,9 @@ export default function SEO({
         ? /^https?:\/\//i.test(url)
             ? url
             : toAbsoluteUrl(url)
-        : `${origin}${pathname}${search}`;
+        : canonicalUrl
+            ? toAbsoluteUrl(canonicalUrl)
+            : `${origin}${pathname}${search}`;
     const absoluteImage = toAbsoluteUrl(image);
     /** Canonical sem query por padrão — evita duplicar index em URLs com filtros */
     const canonical =

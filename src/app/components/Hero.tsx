@@ -57,20 +57,20 @@ export function Hero() {
 
   return (
     <div
-      className={`relative text-white transition-all duration-700 ease-in-out hidden md:block ${!hasBanner ? 'bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500' : 'bg-gray-900'} ${currentBanner?.link ? 'cursor-pointer hover:opacity-95' : ''}`}
+      className={`relative text-white transition-all duration-700 ease-in-out ${!hasBanner ? 'bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500' : 'bg-gray-900'} ${currentBanner?.link ? 'cursor-pointer hover:opacity-95' : ''}`}
       style={bgStyle} // Dynamic background image requires inline style
       onClick={handleBannerClick}
     >
-      <div className="container mx-auto px-4 py-12 md:py-16 relative z-10">
+      <div className="container mx-auto px-4 py-8 md:py-16 relative z-10">
         <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl mb-4 font-bold drop-shadow-lg select-none">
+          <h1 className="text-3xl md:text-5xl mb-4 font-bold drop-shadow-lg select-none">
             Desapegue e Ganhe Dinheiro
           </h1>
-          <p className="text-xl text-blue-50 mb-8 drop-shadow-md select-none">
+          <p className="text-base md:text-xl text-blue-50 mb-6 md:mb-8 drop-shadow-md select-none">
             O maior site de desapego do Brasil. Venda o que não usa mais e encontre produtos incríveis com preços especiais.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+          <div className="hidden md:grid grid-cols-3 gap-6 mt-12">
             <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 border border-white/20 shadow-lg transition-transform hover:-translate-y-1">
               <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <TrendingUp className="w-6 h-6" />

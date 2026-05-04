@@ -9,19 +9,27 @@ function siteOriginFromEnv(mode: string) {
   return raw.replace(/\/$/, '')
 }
 
-function htmlInjectSiteOrigin(mode: string) {
+function htmlInjectSiteOriginAndAdSense(mode: string) {
+  const env = loadEnv(mode, process.cwd(), '')
   const origin = siteOriginFromEnv(mode)
+  const adsenseClient = (env.VITE_ADSENSE_CLIENT || '').trim()
+  const adsenseAccountMeta = adsenseClient
+    ? `<meta name="google-adsense-account" content="${adsenseClient}" />`
+    : ''
+
   return {
-    name: 'html-inject-site-origin',
+    name: 'html-inject-runtime-public-config',
     transformIndexHtml(html: string) {
-      return html.replaceAll('%SITE_ORIGIN%', origin)
+      return html
+        .replaceAll('%SITE_ORIGIN%', origin)
+        .replaceAll('%ADSENSE_ACCOUNT_META%', adsenseAccountMeta)
     },
   }
 }
 
 export default defineConfig(({ mode }) => ({
   plugins: [
-    htmlInjectSiteOrigin(mode),
+    htmlInjectSiteOriginAndAdSense(mode),
     react(),
     tailwindcss(),
   ],
@@ -45,5 +53,8 @@ export default defineConfig(({ mode }) => ({
         },
       },
     },
+  },
+  ssr: {
+    noExternal: ['react-helmet-async'],
   },
 }))

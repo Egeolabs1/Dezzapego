@@ -4,6 +4,7 @@ import { ChevronRight, Map, Home } from 'lucide-react';
 import { Header } from '../components/Header';
 import SEO from '../../components/SEO';
 import { getCategoryPath } from '../../lib/categoryRoutes';
+import { SEO_GUIDES, SEO_LOCATIONS } from '../../lib/seoContent';
 
 export default function SiteMap() {
     return (
@@ -41,6 +42,38 @@ export default function SiteMap() {
 
             {/* Sitemap Grid */}
             <div className="container mx-auto px-4 py-8">
+                <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <h2 className="text-lg font-bold text-gray-900 mb-4">Guias úteis</h2>
+                        <ul className="space-y-2">
+                            {SEO_GUIDES.map((guide) => (
+                                <li key={guide.slug}>
+                                    <Link to={`/guias/${guide.slug}`} className="text-gray-600 hover:text-amber-600 text-sm flex items-center gap-2">
+                                        <ChevronRight className="w-3 h-3 text-gray-300" />
+                                        {guide.title}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                    <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <h2 className="text-lg font-bold text-gray-900 mb-4">Buscas por cidade</h2>
+                        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            {SEO_LOCATIONS.map((location) => (
+                                <li key={`${location.stateSlug}-${location.citySlug}`}>
+                                    <Link
+                                        to={`/cidade/${location.stateSlug}/${location.citySlug}`}
+                                        className="text-gray-600 hover:text-amber-600 text-sm flex items-center gap-2"
+                                    >
+                                        <ChevronRight className="w-3 h-3 text-gray-300" />
+                                        {location.city}, {location.state}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {categoriesData.map((category) => {
                         const Icon = category.icon;

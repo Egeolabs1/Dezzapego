@@ -1,4 +1,6 @@
 import { categoriesData } from '../data/categories';
+import { Link } from 'react-router-dom';
+import { getCategoryPath } from '../../lib/categoryRoutes';
 
 type CategoriesProps = {
   selectedCategory: string;
@@ -43,9 +45,13 @@ export function Categories({
               const isSelected = selectedCategory === category.id;
 
               return (
-                <button
+                <Link
                   key={category.id}
-                  onClick={() => onCategorySelect(isSelected ? '' : category.id)}
+                  to={isSelected ? '/' : getCategoryPath(category.id)}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    onCategorySelect(isSelected ? '' : category.id);
+                  }}
                   className={`flex flex-col items-center gap-2 w-[85px] shrink-0 md:w-auto md:shrink transition-all ${isSelected ? 'scale-105' : 'hover:scale-105'}`}
                 >
                   <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center transition-all shadow-sm border-2 ${isSelected
@@ -57,7 +63,7 @@ export function Categories({
                   <span className={`text-[11px] md:text-sm font-medium text-center leading-3 line-clamp-2 h-7 flex items-start justify-center ${isSelected ? 'text-blue-700' : 'text-gray-600'}`}>
                     {category.name}
                   </span>
-                </button>
+                </Link>
               );
             })}
           </div>
@@ -125,9 +131,13 @@ export function Categories({
                 const isSelected = selectedSubcategory === subcategory.id;
 
                 return (
-                  <button
+                  <Link
                     key={subcategory.id}
-                    onClick={() => onSubcategorySelect?.(isSelected ? '' : subcategory.id)}
+                    to={getCategoryPath(selectedCategory, isSelected ? undefined : subcategory.id)}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      onSubcategorySelect?.(isSelected ? '' : subcategory.id);
+                    }}
                     className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all text-sm ${isSelected
                       ? 'border-blue-600 bg-blue-600 text-white shadow-md'
                       : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50'
@@ -137,7 +147,7 @@ export function Categories({
                     <span className={`text-xs ${isSelected ? 'text-blue-100' : 'text-gray-500'}`}>
                       ({subcategory.count})
                     </span>
-                  </button>
+                  </Link>
                 );
               })}
             </div>

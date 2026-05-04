@@ -242,6 +242,105 @@ export function buildWebsiteStructuredData(): Record<string, unknown> {
     };
 }
 
+export function buildWebPageStructuredData(params: {
+    title: string;
+    description: string;
+    path: string;
+}): Record<string, unknown> {
+    const origin = getSiteOrigin();
+    const url = toAbsoluteUrl(params.path);
+    return {
+        '@context': 'https://schema.org',
+        '@graph': [
+            buildOrganizationGraphNode(),
+            buildWebSiteGraphNode(),
+            {
+                '@type': 'WebPage',
+                '@id': `${url}#webpage`,
+                name: params.title,
+                description: params.description,
+                url,
+                inLanguage: 'pt-BR',
+                isPartOf: { '@id': `${origin}/#website` },
+                publisher: { '@id': `${origin}/#organization` },
+            },
+        ],
+    };
+}
+
+export function buildArticleStructuredData(params: {
+    title: string;
+    description: string;
+    path: string;
+}): Record<string, unknown> {
+    const origin = getSiteOrigin();
+    const url = toAbsoluteUrl(params.path);
+    return {
+        '@context': 'https://schema.org',
+        '@graph': [
+            buildOrganizationGraphNode(),
+            buildWebSiteGraphNode(),
+            {
+                '@type': 'Article',
+                '@id': `${url}#article`,
+                headline: params.title,
+                description: params.description,
+                url,
+                inLanguage: 'pt-BR',
+                author: { '@id': `${origin}/#organization` },
+                publisher: { '@id': `${origin}/#organization` },
+                mainEntityOfPage: { '@id': `${url}#webpage` },
+            },
+            {
+                '@type': 'WebPage',
+                '@id': `${url}#webpage`,
+                name: params.title,
+                description: params.description,
+                url,
+                isPartOf: { '@id': `${origin}/#website` },
+            },
+        ],
+    };
+}
+
+export function buildLocationStructuredData(params: {
+    title: string;
+    description: string;
+    path: string;
+    city: string;
+    state: string;
+}): Record<string, unknown> {
+    const origin = getSiteOrigin();
+    const url = toAbsoluteUrl(params.path);
+    return {
+        '@context': 'https://schema.org',
+        '@graph': [
+            buildOrganizationGraphNode(),
+            buildWebSiteGraphNode(),
+            {
+                '@type': 'CollectionPage',
+                '@id': `${url}#collection`,
+                name: params.title,
+                description: params.description,
+                url,
+                inLanguage: 'pt-BR',
+                about: {
+                    '@type': 'Place',
+                    name: `${params.city}, ${params.state}`,
+                    address: {
+                        '@type': 'PostalAddress',
+                        addressLocality: params.city,
+                        addressRegion: params.state,
+                        addressCountry: 'BR',
+                    },
+                },
+                isPartOf: { '@id': `${origin}/#website` },
+                publisher: { '@id': `${origin}/#organization` },
+            },
+        ],
+    };
+}
+
 /** Listagem por categoria: Organization, WebSite, CollectionPage e BreadcrumbList num único @graph */
 export function buildListingStructuredData(params: {
     category: string;
@@ -297,12 +396,13 @@ export function buildListingStructuredData(params: {
 
 /** Product + Organization + BreadcrumbList para página `/anuncio/:id`. */
 export function buildAdDetailStructuredGraph(
-    ad: Pick<Ad, 'id' | 'title' | 'description' | 'price' | 'images' | 'category' | 'subcategory' | 'seller'>,
+    ad: Pick<Ad, 'id' | 'title' | 'description' | 'price' | 'images' | 'category' | 'subcategory' | 'seller' | 'location' | 'publishedAt'>,
     adPageUrl: string,
     sellerDisplayName: string
 ): Record<string, unknown> {
+    const origin = getSiteOrigin();
     const crumbs: { name: string; item: string }[] = [
-        { name: 'Início', item: `${getSiteOrigin()}/` },
+        { name: 'Início', item: `${origin}/` },
         { name: ad.category, item: buildListingCanonicalUrl({ category: ad.category }) },
     ];
     if (ad.subcategory) {
@@ -327,12 +427,30 @@ export function buildAdDetailStructuredGraph(
             priceCurrency: 'BRL',
             price: ad.price,
             availability: 'https://schema.org/InStock',
+            areaServed: {
+                '@type': 'Place',
+                name: `${ad.location.city}, ${ad.location.state}`,
+                address: {
+                    '@type': 'PostalAddress',
+                    addressLocality: ad.location.city,
+                    addressRegion: ad.location.state,
+                    addressCountry: 'BR',
+                },
+            },
             seller: {
                 '@type': 'Person',
                 name: sellerDisplayName,
             },
         },
     };
+
+    const details = (ad as unknown as { details?: Record<string, unknown> }).details;
+    const condition = String(details?.condition || details?.estado || '').toLowerCase();
+    if (condition.includes('novo')) {
+        product.itemCondition = 'https://schema.org/NewCondition';
+    } else if (condition.includes('usado') || condition.includes('seminovo')) {
+        product.itemCondition = 'https://schema.org/UsedCondition';
+    }
 
     const breadcrumb: Record<string, unknown> = {
         '@type': 'BreadcrumbList',
@@ -344,9 +462,21 @@ export function buildAdDetailStructuredGraph(
         })),
     };
 
+    const webPage: Record<string, unknown> = {
+        '@type': 'WebPage',
+        '@id': `${adPageUrl}#webpage`,
+        name: ad.title,
+        description: (ad.description ?? '').slice(0, 5000),
+        url: adPageUrl,
+        inLanguage: 'pt-BR',
+        datePublished: ad.publishedAt,
+        isPartOf: { '@id': `${origin}/#website` },
+        mainEntity: { '@id': `${adPageUrl}#product` },
+    };
+
     return {
         '@context': 'https://schema.org',
-        '@graph': [buildOrganizationGraphNode(), product, breadcrumb],
+        '@graph': [buildOrganizationGraphNode(), buildWebSiteGraphNode(), webPage, product, breadcrumb],
     };
 }
 

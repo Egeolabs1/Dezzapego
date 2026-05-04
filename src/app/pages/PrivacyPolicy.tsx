@@ -158,6 +158,11 @@ export default function PrivacyPolicy() {
                                     </a>
                                     .
                                 </p>
+                                <p className="mt-2">
+                                    Se o site passar a veicular anúncios para usuários no Espaço Econômico Europeu,
+                                    Reino Unido ou Suíça, poderemos usar uma plataforma de gestão de consentimento
+                                    certificada pelo Google para atender aos requisitos locais aplicáveis.
+                                </p>
                             </section>
 
                             <section>

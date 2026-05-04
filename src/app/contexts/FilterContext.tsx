@@ -10,28 +10,46 @@ interface FilterContextType {
 
 const FilterContext = createContext<FilterContextType | undefined>(undefined);
 
+function readLocalStorage(key: string): string {
+    if (typeof window === 'undefined') return '';
+    try {
+        return window.localStorage.getItem(key) || '';
+    } catch {
+        return '';
+    }
+}
+
+function writeLocalStorage(key: string, value: string): void {
+    if (typeof window === 'undefined') return;
+    try {
+        window.localStorage.setItem(key, value);
+    } catch {
+        /* ignore */
+    }
+}
+
 export function FilterProvider({ children }: { children: ReactNode }) {
     // Initialize from localStorage if available
     const [searchQuery, setSearchQuery] = useState(() => {
-        return localStorage.getItem('dezzapego_search') || '';
+        return readLocalStorage('dezzapego_search');
     });
 
     const [selectedState, setSelectedState] = useState(() => {
-        return localStorage.getItem('dezzapego_state') || '';
+        return readLocalStorage('dezzapego_state');
     });
 
     const [selectedCity, setSelectedCity] = useState(() => {
-        return localStorage.getItem('dezzapego_city') || '';
+        return readLocalStorage('dezzapego_city');
     });
 
     // Persist to localStorage whenever they change
     useEffect(() => {
-        localStorage.setItem('dezzapego_search', searchQuery);
+        writeLocalStorage('dezzapego_search', searchQuery);
     }, [searchQuery]);
 
     useEffect(() => {
-        localStorage.setItem('dezzapego_state', selectedState);
-        localStorage.setItem('dezzapego_city', selectedCity);
+        writeLocalStorage('dezzapego_state', selectedState);
+        writeLocalStorage('dezzapego_city', selectedCity);
     }, [selectedState, selectedCity]);
 
     const setLocation = (state: string, city: string) => {

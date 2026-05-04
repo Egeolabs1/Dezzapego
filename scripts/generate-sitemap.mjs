@@ -122,11 +122,34 @@ const CATEGORIES = {
 const STATIC_PATHS = [
     { path: '/', changefreq: 'daily', priority: '1.0' },
     { path: '/planos', changefreq: 'weekly', priority: '0.8' },
+    { path: '/sobre', changefreq: 'monthly', priority: '0.7' },
     { path: '/contato', changefreq: 'monthly', priority: '0.6' },
     { path: '/termos', changefreq: 'yearly', priority: '0.4' },
     { path: '/privacidade', changefreq: 'yearly', priority: '0.4' },
     { path: '/dicas-seguranca', changefreq: 'monthly', priority: '0.5' },
     { path: '/mapa-do-site', changefreq: 'monthly', priority: '0.5' },
+];
+
+const GUIDE_PATHS = [
+    '/guias/como-vender-com-seguranca',
+    '/guias/cuidados-ao-comprar-carro-usado',
+    '/guias/como-anunciar-imovel',
+    '/guias/como-tirar-fotos-para-vender-mais',
+];
+
+const SEO_LOCATIONS = [
+    { stateSlug: 'sp', citySlug: 'sao-paulo' },
+    { stateSlug: 'rj', citySlug: 'rio-de-janeiro' },
+    { stateSlug: 'mg', citySlug: 'belo-horizonte' },
+    { stateSlug: 'pr', citySlug: 'curitiba' },
+    { stateSlug: 'rs', citySlug: 'porto-alegre' },
+    { stateSlug: 'ba', citySlug: 'salvador' },
+    { stateSlug: 'pe', citySlug: 'recife' },
+    { stateSlug: 'ce', citySlug: 'fortaleza' },
+    { stateSlug: 'df', citySlug: 'brasilia' },
+    { stateSlug: 'go', citySlug: 'goiania' },
+    { stateSlug: 'sp', citySlug: 'campinas' },
+    { stateSlug: 'sc', citySlug: 'florianopolis' },
 ];
 
 function escapeXml(s) {
@@ -154,7 +177,22 @@ function categoryPath(category, subcategory) {
     return `/categoria/${categorySlug}/${slugifyCategoryPart(subcategory)}`;
 }
 
-async function fetchAllAdIds() {
+function toIsoDate(value) {
+    if (!value) return '';
+    const time = new Date(value);
+    if (Number.isNaN(time.getTime())) return '';
+    return time.toISOString();
+}
+
+function errorMessage(error) {
+    if (error instanceof Error) return error.message;
+    if (error && typeof error === 'object') {
+        return JSON.stringify(error);
+    }
+    return String(error);
+}
+
+async function fetchAllAdsForSitemap() {
     const supabaseUrl = process.env.VITE_SUPABASE_URL;
     const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
     if (!supabaseUrl || supabaseUrl === 'YOUR_SUPABASE_URL' || !supabaseKey) {
@@ -164,34 +202,68 @@ async function fetchAllAdIds() {
 
     try {
         const client = createClient(supabaseUrl, supabaseKey);
-        const ids = [];
+        return await fetchAdsWithQuery(client, 'id, status', true);
+    } catch (err) {
+        const message = errorMessage(err);
+        console.warn(`[sitemap] Consulta de anúncios ativos com datas falhou (${message}) — tentando fallback com status.`);
+        try {
+            const client = createClient(supabaseUrl, supabaseKey);
+            return await fetchAdsWithQuery(client, 'id, status', true);
+        } catch (statusErr) {
+            const statusMessage = errorMessage(statusErr);
+            console.warn(`[sitemap] Consulta de anúncios ativos falhou (${statusMessage}) — tentando fallback sem status.`);
+            try {
+                const client = createClient(supabaseUrl, supabaseKey);
+                return await fetchAdsWithQuery(client, 'id', false);
+            } catch (fallbackErr) {
+                const fallbackMessage = errorMessage(fallbackErr);
+                console.warn(`[sitemap] Não foi possível buscar anúncios agora (${fallbackMessage}) — gerando sitemap sem URLs de anúncios.`);
+                return [];
+            }
+        }
+    }
+}
+
+async function fetchAdsWithQuery(client, selectColumns, activeOnly) {
+        const ads = [];
         const pageSize = 1000;
         let from = 0;
         for (;;) {
-            const { data, error } = await client.from('ads').select('id').range(from, from + pageSize - 1);
+            let query = client
+                .from('ads')
+                .select(selectColumns)
+                .range(from, from + pageSize - 1);
+            if (activeOnly) query = query.eq('status', 'active');
+            const { data, error } = await query;
             if (error) throw error;
             if (!data?.length) break;
-            ids.push(...data.map((r) => r.id));
+            ads.push(
+                ...data.map((r) => ({
+                    id: r.id,
+                    lastmod: toIsoDate(r.updated_at || r.created_at),
+                })),
+            );
             if (data.length < pageSize) break;
             from += pageSize;
         }
-        return ids;
-    } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        console.warn(`[sitemap] Não foi possível buscar anúncios agora (${message}) — gerando sitemap sem URLs de anúncios.`);
-        return [];
-    }
+        return ads;
 }
 
 function buildXml(entries) {
     const body = entries
-        .map(
-            (e) => `  <url>
-    <loc>${escapeXml(e.loc)}</loc>
-    <changefreq>${escapeXml(e.changefreq)}</changefreq>
-    <priority>${escapeXml(e.priority)}</priority>
-  </url>`
-        )
+        .map((e) => {
+            const lines = [
+                '  <url>',
+                `    <loc>${escapeXml(e.loc)}</loc>`,
+            ];
+            if (e.lastmod) lines.push(`    <lastmod>${escapeXml(e.lastmod)}</lastmod>`);
+            lines.push(
+                `    <changefreq>${escapeXml(e.changefreq)}</changefreq>`,
+                `    <priority>${escapeXml(e.priority)}</priority>`,
+                '  </url>',
+            );
+            return lines.join('\n');
+        })
         .join('\n');
     return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -212,7 +284,16 @@ async function main() {
         });
     }
 
+    for (const guidePath of GUIDE_PATHS) {
+        entries.push({
+            loc: `${siteUrl}${guidePath}`,
+            changefreq: 'monthly',
+            priority: '0.65',
+        });
+    }
+
     for (const cat of Object.keys(CATEGORIES)) {
+        const categorySlug = slugifyCategoryPart(cat);
         entries.push({
             loc: `${siteUrl}${categoryPath(cat)}`,
             changefreq: 'daily',
@@ -225,12 +306,29 @@ async function main() {
                 priority: '0.65',
             });
         }
+
+        for (const location of SEO_LOCATIONS) {
+            entries.push({
+                loc: `${siteUrl}/cidade/${location.stateSlug}/${location.citySlug}/${categorySlug}`,
+                changefreq: 'daily',
+                priority: '0.6',
+            });
+        }
     }
 
-    const adIds = await fetchAllAdIds();
-    for (const id of adIds) {
+    for (const location of SEO_LOCATIONS) {
         entries.push({
-            loc: `${siteUrl}/anuncio/${id}`,
+            loc: `${siteUrl}/cidade/${location.stateSlug}/${location.citySlug}`,
+            changefreq: 'daily',
+            priority: '0.65',
+        });
+    }
+
+    const ads = await fetchAllAdsForSitemap();
+    for (const ad of ads) {
+        entries.push({
+            loc: `${siteUrl}/anuncio/${ad.id}`,
+            lastmod: ad.lastmod,
             changefreq: 'weekly',
             priority: '0.8',
         });

@@ -20,6 +20,10 @@ function getAdSenseClient(): string | null {
     return client?.trim() || null;
 }
 
+function isAdSenseTestMode(): boolean {
+    return import.meta.env.DEV || import.meta.env.VITE_ADSENSE_TEST_MODE === 'true';
+}
+
 export function AdSenseSlot({
     slot,
     format = 'auto',
@@ -55,6 +59,7 @@ export function AdSenseSlot({
                 data-ad-slot={slot}
                 data-ad-format={format}
                 data-full-width-responsive="true"
+                {...(isAdSenseTestMode() ? { 'data-adtest': 'on' } : {})}
                 {...(layout ? { 'data-ad-layout': layout } : {})}
                 {...(layoutKey ? { 'data-ad-layout-key': layoutKey } : {})}
             />

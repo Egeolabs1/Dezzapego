@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { FilterProvider } from './contexts/FilterContext';
 import Home from './pages/Home';
@@ -36,6 +36,9 @@ const Contact = lazy(() => import('./pages/Contact'));
 const SiteMap = lazy(() => import('./pages/SiteMap'));
 const Plans = lazy(() => import('./pages/Plans'));
 const Maintenance = lazy(() => import('./pages/Maintenance'));
+const About = lazy(() => import('./pages/About'));
+const GuidePage = lazy(() => import('./pages/GuidePage'));
+const LocationLanding = lazy(() => import('./pages/LocationLanding'));
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminAds = lazy(() => import('./pages/admin/AdminAds'));
@@ -57,7 +60,7 @@ function RouteFallback() {
   );
 }
 
-function AppContent() {
+export function AppContent() {
   const { pathname } = useLocation();
   const isAdminRoute = pathname.startsWith('/admin');
   const { isMaintenanceMode, loading: maintenanceLoading } = useMaintenance();
@@ -74,9 +77,7 @@ function AppContent() {
   // 3. AND user is NOT logged in (Admins/Sellers can still access)
   //    Note: ideally we check for 'admin' role, but checking 'user' allows any logged in user (like owner) to see site
 
-  if (maintenanceLoading || authLoading) return null; // Or a global loader
-
-    if (isMaintenanceMode && !user) {
+  if (!maintenanceLoading && !authLoading && isMaintenanceMode && !user) {
     // Allow access to login page so admins can actually log in!
     // We do this by checking the pathname
     const path = window.location.pathname;
@@ -118,6 +119,10 @@ function AppContent() {
         <Route path="/contato" element={<Contact />} />
         <Route path="/conta-suspensa" element={<AccountSuspended />} />
         <Route path="/planos" element={<Plans />} />
+        <Route path="/sobre" element={<About />} />
+        <Route path="/guias/:guideSlug" element={<GuidePage />} />
+        <Route path="/cidade/:stateSlug/:citySlug" element={<LocationLanding />} />
+        <Route path="/cidade/:stateSlug/:citySlug/:categorySlug" element={<LocationLanding />} />
 
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLayout />}>
@@ -146,22 +151,43 @@ function AppContent() {
   );
 }
 
-export default function App() {
+type AppProvidersProps = {
+  children: ReactNode;
+  helmetContext?: object;
+};
+
+export function AppProviders({ children, helmetContext }: AppProvidersProps) {
   return (
     <ErrorBoundary>
-      <HelmetProvider>
+      <HelmetProvider context={helmetContext}>
         <AuthProvider>
           <FilterProvider>
             <MaintenanceProvider>
-              <BrowserRouter>
-                <AppContent />
-                <Toaster richColors position="top-right" />
-              </BrowserRouter>
+              {children}
             </MaintenanceProvider>
           </FilterProvider>
         </AuthProvider>
       </HelmetProvider>
     </ErrorBoundary>
+  );
+}
+
+export function AppRoutes() {
+  return (
+    <>
+      <AppContent />
+      <Toaster richColors position="top-right" />
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <AppProviders>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AppProviders>
   );
 }
 

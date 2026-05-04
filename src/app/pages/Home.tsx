@@ -112,6 +112,29 @@ export default function Home() {
         });
     }, [selectedCategory, selectedSubcategory, searchQuery]);
 
+    const listingShouldNoIndex = useMemo(() => {
+        const hasSearch = searchQuery.trim().length > 0;
+        const hasLocationFilter = Boolean(selectedState || selectedCity);
+        const hasPriceFilter = minPrice > 0 || maxPrice < 10000000;
+        const hasAdvancedFilter =
+            Boolean(radius) ||
+            advertiserType !== 'ambos' ||
+            sortBy !== 'relevancia' ||
+            Object.keys(detailsFilters).length > 0;
+
+        return hasSearch || hasLocationFilter || hasPriceFilter || hasAdvancedFilter;
+    }, [
+        advertiserType,
+        detailsFilters,
+        maxPrice,
+        minPrice,
+        radius,
+        searchQuery,
+        selectedCity,
+        selectedState,
+        sortBy,
+    ]);
+
     const updateSearchParams = (updates: Record<string, string | null>) => {
         setSearchParams(prev => {
             const newParams = new URLSearchParams(prev);
@@ -211,6 +234,7 @@ export default function Home() {
                 description={listingSeo.description}
                 keywords={listingSeo.keywords}
                 canonicalUrl={listingSeo.canonicalUrl}
+                noIndex={listingShouldNoIndex}
                 structuredData={listingStructuredData}
                 ogTitle="Dezzapego"
                 ogDescription="Imóveis, carros, eletrônicos e mais. Publique anúncios grátis no Dezzapego."

@@ -1,9 +1,15 @@
 
-  import { createRoot } from "react-dom/client";
+  import { createRoot, hydrateRoot } from "react-dom/client";
   import App from "./app/App.tsx";
   import "./styles/index.css";
 
-  createRoot(document.getElementById("root")!).render(<App />);
+  const rootElement = document.getElementById("root")!;
+
+  if (rootElement.hasChildNodes()) {
+    hydrateRoot(rootElement, <App />);
+  } else {
+    createRoot(rootElement).render(<App />);
+  }
 
   if ("serviceWorker" in navigator && import.meta.env.PROD) {
     window.addEventListener("load", () => {
