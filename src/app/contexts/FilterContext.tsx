@@ -29,28 +29,29 @@ function writeLocalStorage(key: string, value: string): void {
 }
 
 export function FilterProvider({ children }: { children: ReactNode }) {
-    // Initialize from localStorage if available
-    const [searchQuery, setSearchQuery] = useState(() => {
-        return readLocalStorage('dezzapego_search');
-    });
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedState, setSelectedState] = useState('');
+    const [selectedCity, setSelectedCity] = useState('');
+    const [hasLoadedStoredFilters, setHasLoadedStoredFilters] = useState(false);
 
-    const [selectedState, setSelectedState] = useState(() => {
-        return readLocalStorage('dezzapego_state');
-    });
-
-    const [selectedCity, setSelectedCity] = useState(() => {
-        return readLocalStorage('dezzapego_city');
-    });
+    useEffect(() => {
+        setSearchQuery(readLocalStorage('dezzapego_search'));
+        setSelectedState(readLocalStorage('dezzapego_state'));
+        setSelectedCity(readLocalStorage('dezzapego_city'));
+        setHasLoadedStoredFilters(true);
+    }, []);
 
     // Persist to localStorage whenever they change
     useEffect(() => {
+        if (!hasLoadedStoredFilters) return;
         writeLocalStorage('dezzapego_search', searchQuery);
-    }, [searchQuery]);
+    }, [hasLoadedStoredFilters, searchQuery]);
 
     useEffect(() => {
+        if (!hasLoadedStoredFilters) return;
         writeLocalStorage('dezzapego_state', selectedState);
         writeLocalStorage('dezzapego_city', selectedCity);
-    }, [selectedState, selectedCity]);
+    }, [hasLoadedStoredFilters, selectedState, selectedCity]);
 
     const setLocation = (state: string, city: string) => {
         setSelectedState(state);

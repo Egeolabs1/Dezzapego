@@ -1,10 +1,43 @@
 'use client';
 
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Router } from 'react-router-dom';
-import { lazy, Suspense, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { FilterProvider } from './contexts/FilterContext';
 import Home from './pages/Home';
+import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
+import Register from './pages/Register';
+import NewAd from './pages/NewAd';
+import MyAds from './pages/MyAds';
+import AdDetails from './pages/AdDetails';
+import MyFavorites from './pages/MyFavorites';
+import SellerProfile from './pages/SellerProfile';
+import EditAd from './pages/EditAd';
+import UserDashboard from './pages/UserDashboard';
+import AccountSuspended from './pages/AccountSuspended';
+import TermsOfUse from './pages/TermsOfUse';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import SafetyTips from './pages/SafetyTips';
+import Contact from './pages/Contact';
+import SiteMap from './pages/SiteMap';
+import Plans from './pages/Plans';
+import Maintenance from './pages/Maintenance';
+import About from './pages/About';
+import GuidePage from './pages/GuidePage';
+import LocationLanding from './pages/LocationLanding';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminAds from './pages/admin/AdminAds';
+import AdminPayments from './pages/admin/AdminPayments';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminVerification from './pages/admin/AdminVerification';
+import AdminMessages from './pages/admin/AdminMessages';
+import AdminReports from './pages/admin/AdminReports';
+import AdminBanners from './pages/admin/AdminBanners';
+import AdminNotifications from './pages/admin/AdminNotifications';
+import AdminLogs from './pages/admin/AdminLogs';
+import AdminSettings from './pages/admin/AdminSettings';
 import { Toaster } from 'sonner';
 import { MobileNav } from './components/MobileNav';
 import { InstallPWA } from './components/InstallPWA';
@@ -17,50 +50,9 @@ import { useSiteVisitTracking } from './hooks/useSiteVisitTracking';
 import { useProfileIpOnNavigation } from '../lib/profileIpLog';
 import { HelmetProvider } from 'react-helmet-async';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { SEOProvider } from '../components/SEO';
 
 // Ad type moved to src/types/index.ts
-
-const Login = lazy(() => import('./pages/Login'));
-const ResetPassword = lazy(() => import('./pages/ResetPassword'));
-const Register = lazy(() => import('./pages/Register'));
-const NewAd = lazy(() => import('./pages/NewAd'));
-const MyAds = lazy(() => import('./pages/MyAds'));
-const AdDetails = lazy(() => import('./pages/AdDetails'));
-const MyFavorites = lazy(() => import('./pages/MyFavorites'));
-const SellerProfile = lazy(() => import('./pages/SellerProfile'));
-const EditAd = lazy(() => import('./pages/EditAd'));
-const UserDashboard = lazy(() => import('./pages/UserDashboard'));
-const AccountSuspended = lazy(() => import('./pages/AccountSuspended'));
-const TermsOfUse = lazy(() => import('./pages/TermsOfUse'));
-const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
-const SafetyTips = lazy(() => import('./pages/SafetyTips'));
-const Contact = lazy(() => import('./pages/Contact'));
-const SiteMap = lazy(() => import('./pages/SiteMap'));
-const Plans = lazy(() => import('./pages/Plans'));
-const Maintenance = lazy(() => import('./pages/Maintenance'));
-const About = lazy(() => import('./pages/About'));
-const GuidePage = lazy(() => import('./pages/GuidePage'));
-const LocationLanding = lazy(() => import('./pages/LocationLanding'));
-const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
-const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
-const AdminAds = lazy(() => import('./pages/admin/AdminAds'));
-const AdminPayments = lazy(() => import('./pages/admin/AdminPayments'));
-const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
-const AdminVerification = lazy(() => import('./pages/admin/AdminVerification'));
-const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'));
-const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
-const AdminBanners = lazy(() => import('./pages/admin/AdminBanners'));
-const AdminNotifications = lazy(() => import('./pages/admin/AdminNotifications'));
-const AdminLogs = lazy(() => import('./pages/admin/AdminLogs'));
-const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
-
-function RouteFallback() {
-  return (
-    <div className="min-h-[40vh] flex items-center justify-center text-sm text-gray-500">
-      Carregando...
-    </div>
-  );
-}
 
 function UniversalRouter({ children, initialPath = '/' }: { children: ReactNode; initialPath?: string }) {
   if (typeof window !== 'undefined') {
@@ -108,17 +100,12 @@ export function AppContent() {
     const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
 
     if (!isPublicRoute) {
-      return (
-        <Suspense fallback={<RouteFallback />}>
-          <Maintenance />
-        </Suspense>
-      );
+      return <Maintenance />;
     }
   }
 
   return (
     <div className={isAdminRoute ? '' : 'pb-16 md:pb-0'}>
-      <Suspense fallback={<RouteFallback />}>
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
@@ -164,7 +151,6 @@ export function AppContent() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      </Suspense>
       {!isAdminRoute && <Footer />}
       {!isAdminRoute && !isMaintenanceMode && <MobileNav />}
       <InstallPWA />
@@ -177,19 +163,22 @@ export function AppContent() {
 type AppProvidersProps = {
   children: ReactNode;
   helmetContext?: object;
+  enableHelmet?: boolean;
 };
 
-export function AppProviders({ children, helmetContext }: AppProvidersProps) {
+export function AppProviders({ children, helmetContext, enableHelmet = true }: AppProvidersProps) {
   return (
     <ErrorBoundary>
       <HelmetProvider context={helmetContext}>
-        <AuthProvider>
-          <FilterProvider>
-            <MaintenanceProvider>
-              {children}
-            </MaintenanceProvider>
-          </FilterProvider>
-        </AuthProvider>
+        <SEOProvider enabled={enableHelmet}>
+          <AuthProvider>
+            <FilterProvider>
+              <MaintenanceProvider>
+                {children}
+              </MaintenanceProvider>
+            </FilterProvider>
+          </AuthProvider>
+        </SEOProvider>
       </HelmetProvider>
     </ErrorBoundary>
   );
@@ -206,11 +195,12 @@ export function AppRoutes() {
 
 type AppProps = {
   initialPath?: string;
+  enableHelmet?: boolean;
 };
 
-export default function App({ initialPath }: AppProps) {
+export default function App({ initialPath, enableHelmet = true }: AppProps) {
   return (
-    <AppProviders>
+    <AppProviders enableHelmet={enableHelmet}>
       <UniversalRouter initialPath={initialPath}>
         <AppRoutes />
       </UniversalRouter>

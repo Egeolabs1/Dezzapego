@@ -144,6 +144,27 @@ function metadataForPath(path: string): Metadata {
     '/favoritos',
   ];
   const noIndex = noIndexPaths.some((item) => path === item || path.startsWith('/admin'));
+  const noIndexMetadata: Record<string, { title: string; description: string }> = {
+    '/login': {
+      title: 'Entrar',
+      description: 'Acesse sua conta no Dezzapego para anunciar, responder interessados e gerenciar seus anúncios.',
+    },
+    '/register': {
+      title: 'Criar Conta',
+      description: 'Crie sua conta no Dezzapego para comprar, vender e publicar anúncios com segurança.',
+    },
+    '/redefinir-senha': {
+      title: 'Redefinir Senha',
+      description: 'Recupere o acesso à sua conta Dezzapego com segurança.',
+    },
+    '/anunciar': {
+      title: 'Anunciar Grátis',
+      description: 'Publique seu anúncio grátis no Dezzapego.',
+    },
+  };
+  if (noIndexMetadata[path]) {
+    return baseMetadata(path, noIndexMetadata[path].title, noIndexMetadata[path].description, true);
+  }
   return baseMetadata(path, homeSeo.title, homeSeo.description, noIndex);
 }
 
@@ -270,7 +291,7 @@ export default async function Page({ params }: PageProps) {
   return (
     <>
       <JsonLdForPath path={path} />
-      <App initialPath={path} />
+      <App initialPath={path} enableHelmet={false} />
     </>
   );
 }

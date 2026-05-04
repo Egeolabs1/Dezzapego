@@ -13,15 +13,18 @@ import {
  * Preferências em localStorage; reabrir via Footer ou evento OPEN_CONSENT_EVENT.
  */
 export function CookieConsentBanner() {
-    if (typeof window === 'undefined') return null;
-
     const location = useLocation();
-    const [open, setOpen] = useState(!hasConsentRecorded());
+    const [open, setOpen] = useState(false);
     const [settingsMode, setSettingsMode] = useState(false);
-    const [analyticsToggle, setAnalyticsToggle] = useState(getConsent()?.analytics ?? false);
-    const [adsToggle, setAdsToggle] = useState(getConsent()?.adsPersonalization ?? false);
+    const [analyticsToggle, setAnalyticsToggle] = useState(false);
+    const [adsToggle, setAdsToggle] = useState(false);
 
     useEffect(() => {
+        const initialConsent = getConsent();
+        setAnalyticsToggle(initialConsent?.analytics ?? false);
+        setAdsToggle(initialConsent?.adsPersonalization ?? false);
+        setOpen(!hasConsentRecorded());
+
         const onOpen = () => {
             const current = getConsent();
             setSettingsMode(true);

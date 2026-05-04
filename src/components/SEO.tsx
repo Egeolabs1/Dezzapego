@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async';
+import { createContext, type ReactNode, useContext } from 'react';
 import { getSiteOrigin, toAbsoluteUrl, SITE_NAME, getDefaultShareImagePath } from '../lib/seo';
 import { PUBLIC_ENV } from '../lib/publicEnv';
 
@@ -29,6 +30,22 @@ interface SEOProps {
 const DEFAULT_DESCRIPTION =
     'Compre e venda no Dezzapego: classificados de imóveis, carros, eletrônicos e muito mais. Anúncios com segurança e filtros por categoria.';
 
+const SEO_RUNTIME_CONTEXT = createContext(true);
+
+export function SEOProvider({
+    children,
+    enabled = true,
+}: {
+    children: ReactNode;
+    enabled?: boolean;
+}) {
+    return (
+        <SEO_RUNTIME_CONTEXT.Provider value={enabled}>
+            {children}
+        </SEO_RUNTIME_CONTEXT.Provider>
+    );
+}
+
 export default function SEO({
     title,
     description = DEFAULT_DESCRIPTION,
@@ -43,6 +60,9 @@ export default function SEO({
     ogTitle,
     ogDescription,
 }: SEOProps) {
+    const enabled = useContext(SEO_RUNTIME_CONTEXT);
+    if (!enabled) return null;
+
     const origin = getSiteOrigin();
     const pathname = typeof window !== 'undefined' ? window.location.pathname || '/' : '/';
     const search = typeof window !== 'undefined' ? window.location.search : '';
