@@ -1,4 +1,5 @@
-import { lazy, Suspense, useMemo, useState, useEffect } from 'react';
+import { Suspense, useMemo, useState, useEffect } from 'react';
+
 import { formatPrice } from '../../lib/formatters';
 
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
