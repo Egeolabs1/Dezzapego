@@ -24,6 +24,11 @@ export const metadata: Metadata = {
   },
   description: defaultDescription,
   manifest: '/manifest.webmanifest',
+  icons: {
+    icon: '/icon.svg',
+    apple: '/apple-touch-icon.png',
+  },
+
   alternates: {
     canonical: '/',
     languages: {
@@ -78,8 +83,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
+
+      <head />
       <body>{children}</body>
     </html>
+
   );
 }
