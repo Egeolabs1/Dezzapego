@@ -3,7 +3,8 @@ import App from '@/app/App';
 import {
   buildWebPageStructuredData,
 } from '@/lib/categorySeo';
-import { SITE_NAME, toAbsoluteUrl } from '@/lib/seo';
+import { SITE_NAME } from '@/lib/seo';
+
 
 export const metadata: Metadata = {
   title: `Classificados e anúncios grátis no Brasil | ${SITE_NAME}`,
