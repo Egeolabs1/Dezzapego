@@ -9,7 +9,8 @@
     "build": "npm run typecheck && next build && node scripts/generate-sitemap.mjs",
     "start": "next start",
     "generate:sitemap": "node scripts/generate-sitemap.mjs",
-    "check": "npm run build"
+    "smoke": "node scripts/smoke-next.mjs",
+    "check": "npm run build && npm run smoke"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",

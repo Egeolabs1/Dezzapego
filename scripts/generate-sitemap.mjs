@@ -202,10 +202,8 @@ async function fetchAllAdsForSitemap() {
 
     try {
         const client = createClient(supabaseUrl, supabaseKey);
-        return await fetchAdsWithQuery(client, 'id, status', true);
+        return await fetchAdsWithQuery(client, 'id, status, created_at, updated_at', true);
     } catch (err) {
-        const message = errorMessage(err);
-        console.warn(`[sitemap] Consulta de anúncios ativos com datas falhou (${message}) — tentando fallback com status.`);
         try {
             const client = createClient(supabaseUrl, supabaseKey);
             return await fetchAdsWithQuery(client, 'id, status', true);

@@ -543,9 +543,13 @@ alter table public.ads add column if not exists lat float;
 alter table public.ads add column if not exists lng float;
 
 alter table public.ads add column if not exists featured_expires_at timestamptz;
+alter table public.ads add column if not exists created_at timestamptz default now();
+alter table public.ads add column if not exists updated_at timestamptz default now();
 
 create index if not exists idx_ads_featured_expires_at on public.ads(featured_expires_at);
 create index if not exists ads_lat_lng_idx on public.ads (lat, lng);
+create index if not exists idx_ads_created_at on public.ads(created_at desc);
+create index if not exists idx_ads_updated_at on public.ads(updated_at desc);
 
 do $remove_seller_phone_snapshot$
 declare
@@ -862,6 +866,13 @@ select public.create_trigger_if_missing(
 );
 
 select public.create_trigger_if_missing(
+  'public', 'ads', 'trg_ads_updated_at',
+  $trg$create trigger trg_ads_updated_at
+    before update on public.ads
+    for each row execute function public.set_updated_at()$trg$
+);
+
+select public.create_trigger_if_missing(
   'public', 'featured_payments', 'trg_featured_payments_updated_at',
   $trg$create trigger trg_featured_payments_updated_at
     before update on public.featured_payments
@@ -1020,6 +1031,13 @@ create policy "Users can update their own ads"
       (select p.is_suspended from public.profiles p where p.id = auth.uid()),
       false
     )
+  )
+  with check (
+    auth.uid() = user_id
+    and not coalesce(
+      (select p.is_suspended from public.profiles p where p.id = auth.uid()),
+      false
+    )
   );
 
 drop policy if exists "Users can delete their own ads" on public.ads;
@@ -1032,6 +1050,14 @@ create policy "Users can delete their own ads"
       false
     )
   );
+
+select public.create_policy_if_missing(
+  'public', 'ads', 'Admins can update any ad',
+  $pol$create policy "Admins can update any ad"
+    on public.ads for update to authenticated
+    using (public.is_admin())
+    with check (public.is_admin())$pol$
+);
 
 select public.create_policy_if_missing(
   'public', 'ads', 'Admins can delete any ad',

@@ -43,7 +43,9 @@ async function fetchAdsForSitemap(): Promise<AdSitemapRow[]> {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  return fetchAdsPage('id, status', true).catch(() => fetchAdsPage('id', false));
+  return fetchAdsPage('id, status, created_at, updated_at', true).catch(() =>
+    fetchAdsPage('id, status', true).catch(() => fetchAdsPage('id', false)),
+  );
 
   async function fetchAdsPage(columns: string, activeOnly: boolean) {
     const rows: AdSitemapRow[] = [];
@@ -64,7 +66,12 @@ async function fetchAdsForSitemap(): Promise<AdSitemapRow[]> {
           .filter((item) => !activeOnly || item.status === 'active')
           .map((item) => ({
             id: String(item.id),
-            lastmod: null,
+            lastmod:
+              typeof item.updated_at === 'string'
+                ? item.updated_at
+                : typeof item.created_at === 'string'
+                  ? item.created_at
+                  : null,
           })),
       );
       if (data.length < pageSize) break;

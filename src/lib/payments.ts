@@ -37,12 +37,18 @@ export function jsonResponse(body: unknown, init?: ResponseInit) {
 }
 
 export function getSiteUrl() {
-  const raw = process.env.VITE_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+  const raw =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.VITE_SITE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
   return raw.replace(/\/+$/, '');
 }
 
 export function getSupabaseAdmin(): SupabaseClient {
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseUrl =
+    process.env.SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !serviceRoleKey) {

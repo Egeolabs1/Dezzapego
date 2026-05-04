@@ -7,10 +7,7 @@ function getSupabaseForAnalytics() {
     process.env.NEXT_PUBLIC_SUPABASE_URL ||
     process.env.VITE_SUPABASE_URL;
   
-  // No server, usamos service role se disponível, senão anon (que pode falhar se RLS estiver ativo)
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 
-                        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
-                        process.env.VITE_SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error('Missing Supabase credentials');
