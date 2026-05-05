@@ -834,6 +834,8 @@ alter table public.account_plans add column if not exists monthly_featured_ads i
 alter table public.account_plans add column if not exists created_at timestamptz not null default now();
 alter table public.account_plans add column if not exists updated_at timestamptz not null default now();
 
+notify pgrst, 'reload schema';
+
 create table if not exists public.featured_payments (
   id uuid primary key default gen_random_uuid(),
   ad_id uuid not null references public.ads(id) on delete cascade,
@@ -1129,6 +1131,8 @@ comment on table public.featured_plans is 'Planos configuráveis de destaque pag
 comment on table public.account_plans is 'Planos de conta configuráveis, incluindo limites de anúncios, fotos e destaques mensais.';
 comment on table public.featured_payments is 'Pagamentos de destaque (Stripe ou PixGo).';
 comment on table public.site_visits is 'Analytics interna de página (gravação via service role em API).';
+
+notify pgrst, 'reload schema';
 
 
 -- ---------------------------------------------------------------------------

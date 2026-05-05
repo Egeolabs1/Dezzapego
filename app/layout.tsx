@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { PUBLIC_ENV } from '@/lib/publicEnv';
 import { getDefaultShareImagePath, getSiteOrigin, SITE_NAME, toAbsoluteUrl } from '@/lib/seo';
-import Script from 'next/script';
 import '../src/styles/index.css';
 
 
@@ -87,14 +86,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
-        {PUBLIC_ENV.ADSENSE_CLIENT && (
-          <Script
-            async
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${PUBLIC_ENV.ADSENSE_CLIENT}`}
-            crossOrigin="anonymous"
-            strategy="afterInteractive"
-          />
-        )}
       </head>
       <body>{children}</body>
     </html>

@@ -111,6 +111,19 @@ function toAccountPlan(row: Partial<AccountPlan>): AccountPlan {
     };
 }
 
+function getMissingSchemaColumn(error: unknown) {
+    const message = typeof error === 'object' && error && 'message' in error
+        ? String((error as { message?: unknown }).message || '')
+        : '';
+    return message.match(/Could not find the '([^']+)' column/)?.[1] || null;
+}
+
+function omitKey<T extends Record<string, unknown>>(payload: T, key: string) {
+    const next = { ...payload };
+    delete next[key];
+    return next;
+}
+
 export default function AdminPayments() {
     const [featuredPlans, setFeaturedPlans] = useState<FeaturedPlan[]>([]);
     const [accountPlans, setAccountPlans] = useState<AccountPlan[]>([]);
@@ -196,34 +209,43 @@ export default function AdminPayments() {
     async function updateAccountPlan(plan: AccountPlan) {
         setSavingAccountPlanId(plan.id);
         try {
-            const { error } = await supabase
-                .from('account_plans')
-                .upsert({
-                    id: plan.id,
-                    name: plan.name,
-                    description: plan.description,
-                    price_cents: plan.price_cents,
-                    currency: plan.currency,
-                    price_label: plan.price_label,
-                    period_label: plan.period_label,
-                    features: plan.features,
-                    button_text: plan.button_text,
-                    button_link: plan.button_link,
-                    max_active_ads: plan.max_active_ads,
-                    max_photos_per_ad: plan.max_photos_per_ad,
-                    monthly_featured_ads: plan.monthly_featured_ads,
-                    highlighted: plan.highlighted,
-                    icon_name: plan.icon_name,
-                    sort_order: plan.sort_order,
-                    active: plan.active,
-                });
+            let payload: Record<string, unknown> = {
+                id: plan.id,
+                name: plan.name,
+                description: plan.description,
+                price_cents: plan.price_cents,
+                currency: plan.currency,
+                price_label: plan.price_label,
+                period_label: plan.period_label,
+                features: plan.features,
+                button_text: plan.button_text,
+                button_link: plan.button_link,
+                max_active_ads: plan.max_active_ads,
+                max_photos_per_ad: plan.max_photos_per_ad,
+                monthly_featured_ads: plan.monthly_featured_ads,
+                highlighted: plan.highlighted,
+                icon_name: plan.icon_name,
+                sort_order: plan.sort_order,
+                active: plan.active,
+            };
 
-            if (error) throw error;
-            toast.success('Plano de conta atualizado.');
-            fetchPaymentsData();
+            for (let attempt = 0; attempt < 8; attempt += 1) {
+                const { error } = await supabase.from('account_plans').upsert(payload);
+                if (!error) {
+                    toast.success('Plano de conta atualizado.');
+                    fetchPaymentsData();
+                    return;
+                }
+
+                const missingColumn = getMissingSchemaColumn(error);
+                if (!missingColumn || !(missingColumn in payload)) throw error;
+                payload = omitKey(payload, missingColumn);
+            }
+
+            throw new Error('Schema de account_plans incompleto para salvar este plano.');
         } catch (error) {
             console.error('Error updating account plan:', error);
-            toast.error('Erro ao atualizar plano. Verifique se a tabela account_plans existe.');
+            toast.error('Erro ao atualizar plano. Rode o SQL atualizado e aguarde o cache do Supabase recarregar.');
         } finally {
             setSavingAccountPlanId(null);
         }
@@ -587,7 +609,7 @@ export default function AdminPayments() {
                                     className="w-full text-sm font-semibold"
                                 />
                             </div>
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-3">
                                 <label className="flex items-center gap-2 text-xs font-medium text-gray-600">
                                     <input
                                         type="checkbox"
@@ -599,9 +621,10 @@ export default function AdminPayments() {
                                 <button
                                     onClick={() => updateFeaturedPlan(plan)}
                                     disabled={savingPlanId === plan.id}
-                                    className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold hover:bg-gray-50 shadow-sm"
+                                    className="inline-flex items-center gap-2 rounded-lg bg-yellow-500 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-yellow-600 disabled:opacity-60"
                                 >
-                                    {savingPlanId === plan.id ? '...' : 'Salvar'}
+                                    <Save className="h-4 w-4" />
+                                    {savingPlanId === plan.id ? 'Salvando...' : 'Salvar destaque'}
                                 </button>
                             </div>
                         </div>
