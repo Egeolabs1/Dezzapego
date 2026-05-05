@@ -40,6 +40,8 @@ const PLACEMENTS = [
 ];
 
 const CONTROL_CLASS = 'w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100';
+const DESKTOP_BANNER_SPEC = 'Desktop: 1920 x 720 px, proporcao 8:3, ate 3 MB, JPG/PNG/WebP';
+const MOBILE_BANNER_SPEC = 'Mobile: 1080 x 1350 px, proporcao 4:5, ate 3 MB, JPG/PNG/WebP';
 
 function emptyToNull(value: string | null | undefined) {
     const trimmed = value?.trim();
@@ -66,6 +68,13 @@ function isBannerLive(banner: Banner) {
     const startsAfterNow = banner.start_at ? new Date(banner.start_at).getTime() > now : false;
     const endedBeforeNow = banner.end_at ? new Date(banner.end_at).getTime() < now : false;
     return !startsAfterNow && !endedBeforeNow;
+}
+
+function isMissingBucketError(error: unknown) {
+    if (!error || typeof error !== 'object') return false;
+    const storageError = error as { statusCode?: number | string; message?: string };
+    return String(storageError.message || '').toLowerCase().includes('bucket not found')
+        || String(storageError.statusCode || '') === '404';
 }
 
 export default function AdminBanners() {
@@ -120,7 +129,7 @@ export default function AdminBanners() {
             .from(bucketName)
             .upload(fileName, file, uploadOpts);
 
-        if (uploadError && (uploadError as { statusCode?: number }).statusCode === 404) {
+        if (isMissingBucketError(uploadError)) {
             bucketName = 'ads';
             const { error: fallbackError } = await supabase.storage
                 .from(bucketName)
@@ -159,7 +168,7 @@ export default function AdminBanners() {
             toast.success('Banner criado. Complete os detalhes e salve.');
         } catch (error) {
             console.error('Error uploading banner:', error);
-            toast.error('Erro ao criar banner.');
+            toast.error('Erro ao criar banner. Verifique se existe o bucket publico "banners" ou "ads" no Supabase Storage.');
         } finally {
             setUploading(false);
             event.target.value = '';
@@ -179,7 +188,7 @@ export default function AdminBanners() {
             toast.success(field === 'image_url' ? 'Imagem desktop atualizada.' : 'Imagem mobile atualizada.');
         } catch (error) {
             console.error('Error replacing banner image:', error);
-            toast.error('Erro ao atualizar imagem.');
+            toast.error('Erro ao atualizar imagem. Verifique o bucket publico de storage.');
         } finally {
             setSavingId(null);
             event.target.value = '';
@@ -269,6 +278,21 @@ export default function AdminBanners() {
                 </label>
             </div>
 
+            <div className="grid gap-3 md:grid-cols-2">
+                <SpecCard
+                    icon={<Monitor className="h-5 w-5" />}
+                    title="Imagem desktop"
+                    description={DESKTOP_BANNER_SPEC}
+                    note="Use area segura no centro: evite texto importante nas bordas."
+                />
+                <SpecCard
+                    icon={<Smartphone className="h-5 w-5" />}
+                    title="Imagem mobile"
+                    description={MOBILE_BANNER_SPEC}
+                    note="Opcional, mas recomendada para evitar cortes no celular."
+                />
+            </div>
+
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <StatCard label="Total" value={stats.total} />
                 <StatCard label="Ativos" value={stats.active} />
@@ -315,6 +339,10 @@ export default function AdminBanners() {
                                             disabled={savingId === banner.id}
                                         />
                                     </label>
+                                </div>
+                                <div className="px-3 pb-3 text-[11px] leading-5 text-gray-500">
+                                    <p>{DESKTOP_BANNER_SPEC}</p>
+                                    <p>{MOBILE_BANNER_SPEC}</p>
                                 </div>
 
                                 {banner.mobile_image_url && (
@@ -485,6 +513,21 @@ function StatCard({ label, value }: { label: string; value: number }) {
         <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
             <p className="text-sm text-gray-500">{label}</p>
             <p className="mt-1 text-2xl font-semibold text-gray-900">{value}</p>
+        </div>
+    );
+}
+
+function SpecCard({ icon, title, description, note }: { icon: ReactNode; title: string; description: string; note: string }) {
+    return (
+        <div className="rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+            <div className="flex items-start gap-3">
+                <div className="rounded-md bg-white p-2 text-blue-600 shadow-sm">{icon}</div>
+                <div>
+                    <p className="font-semibold text-gray-900">{title}</p>
+                    <p className="mt-1 text-sm text-gray-600">{description}</p>
+                    <p className="mt-1 text-xs text-blue-600">{note}</p>
+                </div>
+            </div>
         </div>
     );
 }
