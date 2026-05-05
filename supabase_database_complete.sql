@@ -805,7 +805,7 @@ alter table public.featured_plans add column if not exists sort_order integer no
 alter table public.featured_plans add column if not exists updated_at timestamptz not null default now();
 
 create table if not exists public.account_plans (
-  id text primary key,
+  id uuid primary key default gen_random_uuid(),
   name text not null,
   description text not null default '',
   price_cents integer not null default 0 check (price_cents >= 0),
@@ -997,7 +997,7 @@ insert into public.account_plans (
 )
 values
   (
-    'free',
+    '00000000-0000-4000-8000-000000000001',
     'Grátis',
     'Para quem está começando a desapegar.',
     0,
@@ -1016,7 +1016,7 @@ values
     0
   ),
   (
-    'pro',
+    '00000000-0000-4000-8000-000000000002',
     'Pro',
     'Para quem vende com frequência.',
     2990,
@@ -1035,7 +1035,7 @@ values
     1
   ),
   (
-    'business',
+    '00000000-0000-4000-8000-000000000003',
     'Empresa',
     'Para lojas e pequenos negócios.',
     8990,

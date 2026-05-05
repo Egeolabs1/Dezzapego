@@ -31,7 +31,7 @@ type AccountPlan = {
 
 const DEFAULT_ACCOUNT_PLANS: AccountPlan[] = [
     {
-        id: 'free',
+        id: '00000000-0000-4000-8000-000000000001',
         name: 'Grátis',
         description: 'Para quem está começando a desapegar.',
         price_cents: 0,
@@ -50,7 +50,7 @@ const DEFAULT_ACCOUNT_PLANS: AccountPlan[] = [
         active: true
     },
     {
-        id: 'pro',
+        id: '00000000-0000-4000-8000-000000000002',
         name: 'Pro',
         description: 'Para quem vende com frequência.',
         price_cents: 2990,
@@ -69,7 +69,7 @@ const DEFAULT_ACCOUNT_PLANS: AccountPlan[] = [
         active: true
     },
     {
-        id: 'business',
+        id: '00000000-0000-4000-8000-000000000003',
         name: 'Empresa',
         description: 'Para lojas e pequenos negócios.',
         price_cents: 8990,
