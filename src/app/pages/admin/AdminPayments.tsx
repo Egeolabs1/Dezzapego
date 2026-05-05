@@ -29,6 +29,17 @@ type AccountPlan = {
     active: boolean;
 };
 
+const PERIOD_OPTIONS = [
+    { value: '/semana', label: 'Semana' },
+    { value: '/mês', label: 'Mês' }
+];
+
+function getAutomaticButtonLink(plan: Pick<AccountPlan, 'id' | 'name' | 'price_cents'>) {
+    if (plan.price_cents <= 0) return '/register';
+    if (plan.name.toLowerCase().includes('empresa')) return '/contato';
+    return `/register?plan=${encodeURIComponent(plan.id)}`;
+}
+
 const DEFAULT_ACCOUNT_PLANS: AccountPlan[] = [
     {
         id: '00000000-0000-4000-8000-000000000001',
@@ -59,7 +70,7 @@ const DEFAULT_ACCOUNT_PLANS: AccountPlan[] = [
         period_label: '/mês',
         features: ['Até 50 anúncios ativos', '10 fotos por anúncio', 'Destaque em 2 anúncios/mês', 'Suporte prioritário', 'Estatísticas detalhadas'],
         button_text: 'Assinar Pro',
-        button_link: '/register?plan=pro',
+        button_link: getAutomaticButtonLink({ id: '00000000-0000-4000-8000-000000000002', name: 'Pro', price_cents: 2990 }),
         max_active_ads: 50,
         max_photos_per_ad: 10,
         monthly_featured_ads: 2,
@@ -78,7 +89,7 @@ const DEFAULT_ACCOUNT_PLANS: AccountPlan[] = [
         period_label: '/mês',
         features: ['Anúncios ilimitados', '20 fotos por anúncio', 'Destaque em 10 anúncios/mês', 'Perfil verificado (Selo)', 'Painel de gestão avançado', 'Integração via API (Em breve)'],
         button_text: 'Falar com Comercial',
-        button_link: '/contato',
+        button_link: getAutomaticButtonLink({ id: '00000000-0000-4000-8000-000000000003', name: 'Empresa', price_cents: 8990 }),
         max_active_ads: null,
         max_photos_per_ad: 20,
         monthly_featured_ads: 10,
@@ -97,10 +108,14 @@ function toAccountPlan(row: Partial<AccountPlan>): AccountPlan {
         price_cents: Number(row.price_cents || 0),
         currency: row.currency || 'BRL',
         price_label: row.price_label || formatCents(Number(row.price_cents || 0), row.currency || 'BRL'),
-        period_label: row.period_label || '/mês',
+        period_label: PERIOD_OPTIONS.some((period) => period.value === row.period_label) ? row.period_label || '/mês' : '/mês',
         features: Array.isArray(row.features) ? row.features : [],
         button_text: row.button_text || 'Assinar',
-        button_link: row.button_link || '/register',
+        button_link: row.button_link || getAutomaticButtonLink({
+            id: row.id || '',
+            name: row.name || '',
+            price_cents: Number(row.price_cents || 0)
+        }),
         max_active_ads: row.max_active_ads === null ? null : Number(row.max_active_ads ?? 5),
         max_photos_per_ad: Number(row.max_photos_per_ad || 3),
         monthly_featured_ads: Number(row.monthly_featured_ads || 0),
@@ -217,10 +232,10 @@ export default function AdminPayments() {
                 currency: plan.currency,
                 price_label: plan.price_label,
                 period_label: plan.period_label,
-                features: plan.features,
-                button_text: plan.button_text,
-                button_link: plan.button_link,
-                max_active_ads: plan.max_active_ads,
+                    features: plan.features,
+                    button_text: plan.button_text,
+                    button_link: getAutomaticButtonLink(plan),
+                    max_active_ads: plan.max_active_ads,
                 max_photos_per_ad: plan.max_photos_per_ad,
                 monthly_featured_ads: plan.monthly_featured_ads,
                 highlighted: plan.highlighted,
@@ -272,8 +287,9 @@ export default function AdminPayments() {
     }
 
     function addNewAccountPlan() {
+        const id = crypto.randomUUID();
         const newPlan: AccountPlan = {
-            id: crypto.randomUUID(),
+            id,
             name: 'Novo Plano',
             description: 'Descrição do plano',
             price_cents: 0,
@@ -282,7 +298,7 @@ export default function AdminPayments() {
             period_label: '/mês',
             features: ['Funcionalidade 1'],
             button_text: 'Assinar',
-            button_link: '/register',
+            button_link: getAutomaticButtonLink({ id, name: 'Novo Plano', price_cents: 0 }),
             max_active_ads: 5,
             max_photos_per_ad: 3,
             monthly_featured_ads: 0,
@@ -428,12 +444,16 @@ export default function AdminPayments() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Período (Ex: /mês)</label>
-                                        <input
+                                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Período</label>
+                                        <select
                                             value={plan.period_label}
                                             onChange={(e) => updateLocalAccountPlan(plan.id, { period_label: e.target.value })}
-                                            className="w-full text-sm text-gray-500 mt-2"
-                                        />
+                                            className="w-full text-sm text-gray-700 mt-2 bg-gray-50 border border-gray-100 rounded-lg p-2"
+                                        >
+                                            {PERIOD_OPTIONS.map((period) => (
+                                                <option key={period.value} value={period.value}>{period.label}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
 
@@ -451,6 +471,7 @@ export default function AdminPayments() {
                                             }}
                                             className="w-full text-sm bg-white border border-blue-100 rounded-lg p-2"
                                         />
+                                        <p className="mt-1 text-[10px] font-medium text-blue-500">0 = ilimitado</p>
                                     </div>
                                     <div>
                                         <label className="text-[10px] font-bold uppercase text-blue-500 tracking-wider">Fotos/anúncio</label>
@@ -484,23 +505,16 @@ export default function AdminPayments() {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Link do Botão</label>
-                                        <input
-                                            value={plan.button_link}
-                                            onChange={(e) => updateLocalAccountPlan(plan.id, { button_link: e.target.value })}
-                                            className="w-full text-sm bg-gray-50 border border-gray-100 rounded-lg p-2"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Texto do Botão</label>
-                                        <input
-                                            value={plan.button_text}
-                                            onChange={(e) => updateLocalAccountPlan(plan.id, { button_text: e.target.value })}
-                                            className="w-full text-sm bg-gray-50 border border-gray-100 rounded-lg p-2"
-                                        />
-                                    </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Texto do Botão</label>
+                                    <input
+                                        value={plan.button_text}
+                                        onChange={(e) => updateLocalAccountPlan(plan.id, { button_text: e.target.value })}
+                                        className="w-full text-sm bg-gray-50 border border-gray-100 rounded-lg p-2"
+                                    />
+                                    <p className="mt-1 text-[10px] text-gray-400">
+                                        Link automático: {getAutomaticButtonLink(plan)}
+                                    </p>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">

@@ -25,6 +25,12 @@ type AccountPlan = {
     active: boolean;
 };
 
+function getAutomaticButtonLink(plan: Pick<AccountPlan, 'id' | 'name' | 'price_cents'>) {
+    if ((plan.price_cents || 0) <= 0) return '/register';
+    if (plan.name.toLowerCase().includes('empresa')) return '/contato';
+    return `/register?plan=${encodeURIComponent(plan.id)}`;
+}
+
 const DEFAULT_PLANS: AccountPlan[] = [
     {
         id: '00000000-0000-4000-8000-000000000001',
@@ -66,7 +72,7 @@ const DEFAULT_PLANS: AccountPlan[] = [
             'Estatísticas detalhadas'
         ],
         button_text: 'Assinar Pro',
-        button_link: '/register?plan=pro',
+        button_link: getAutomaticButtonLink({ id: '00000000-0000-4000-8000-000000000002', name: 'Pro', price_cents: 2990 }),
         max_active_ads: 50,
         max_photos_per_ad: 10,
         monthly_featured_ads: 2,
@@ -92,7 +98,7 @@ const DEFAULT_PLANS: AccountPlan[] = [
             'Integração via API (Em breve)'
         ],
         button_text: 'Falar com Comercial',
-        button_link: '/contato',
+        button_link: getAutomaticButtonLink({ id: '00000000-0000-4000-8000-000000000003', name: 'Empresa', price_cents: 8990 }),
         max_active_ads: null,
         max_photos_per_ad: 20,
         monthly_featured_ads: 10,
@@ -203,7 +209,7 @@ export default function Plans() {
                                 </ul>
 
                                 <Link
-                                    to={plan.button_link}
+                                    to={getAutomaticButtonLink(plan)}
                                     className={`block w-full py-3 px-6 rounded-lg text-center font-medium transition-colors ${plan.highlighted
                                         ? 'bg-blue-600 text-white hover:bg-blue-700'
                                         : 'bg-gray-100 text-gray-900 hover:bg-gray-200'

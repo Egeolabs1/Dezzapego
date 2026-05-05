@@ -1113,7 +1113,7 @@ values
     '/mês',
     array['Até 50 anúncios ativos', '10 fotos por anúncio', 'Destaque em 2 anúncios/mês', 'Suporte prioritário', 'Estatísticas detalhadas'],
     'Assinar Pro',
-    '/register?plan=pro',
+    '/register?plan=00000000-0000-4000-8000-000000000002',
     50,
     10,
     2,
