@@ -42,16 +42,10 @@ export default function SellerProfile() {
             }
 
             // 2. Fetch Ads
-            // Note: 'status' column might not exist yet if migration hasn't run.
-            // We should ideally wrap this, but for now assuming SQL fix will be applied.
-            // If column doesn't exist, this query will fail.
-            // To be safe against missing column in dev, we can omit status check if needed,
-            // but for production it should be there. Keeping it as it's part of the fix.
             const { data: adsData, error: adsError } = await supabase
                 .from('ads')
                 .select('*')
                 .eq('user_id', id)
-                //.eq('status', 'active') // Temporarily commented out until DB update is confirmed by user
                 .order('created_at', { ascending: false });
 
             if (adsError) throw adsError;
@@ -103,8 +97,9 @@ export default function SellerProfile() {
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
                     <div className="h-32 bg-gradient-to-r from-blue-600 to-blue-400"></div>
                     <div className="px-8 pb-8">
-                        <div className="relative flex flex-col md:flex-row items-start md:items-end -mt-12 mb-6 gap-6">
-                            <div className="w-24 h-24 bg-white rounded-full p-1 shadow-lg overflow-hidden">
+                        {/* Fixed Layout: Name and details below banner, only avatar overlaps */}
+                        <div className="relative flex flex-col md:flex-row items-start md:items-center mb-6 gap-6 pt-4">
+                            <div className="w-24 h-24 bg-white rounded-full p-1 shadow-lg overflow-hidden -mt-16 shrink-0 relative z-10">
                                 {profile.avatar_url ? (
                                     <img src={profile.avatar_url} alt={profile.full_name || 'Avatar'} className="w-full h-full object-cover rounded-full" />
                                 ) : (
