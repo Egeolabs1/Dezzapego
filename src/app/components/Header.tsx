@@ -42,15 +42,21 @@ export function Header({
     setMobileMenuOpen(false);
   };
 
-  const handleSearchSubmit = (e?: React.FormEvent) => {
-    e?.preventDefault();
+  const runSearch = (query: string) => {
+    const nextQuery = query.trim();
     const params = new URLSearchParams(window.location.search);
-    if (searchQuery.trim()) {
-      params.set('q', searchQuery.trim());
+    if (nextQuery) {
+      params.set('q', nextQuery);
     } else {
       params.delete('q');
     }
-    navigate(`/?${params.toString()}`);
+    const qs = params.toString();
+    navigate(qs ? `/?${qs}` : '/');
+  };
+
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    runSearch(searchQuery);
   };
 
   // Close dropdown when clicking outside
@@ -93,20 +99,25 @@ export function Header({
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
+                enterKeyHint="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
                 placeholder="Buscar por produtos, marcas ou categorias..."
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-12 pr-14 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+              <button
+                type="submit"
+                aria-label="Buscar"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md bg-blue-600 p-2 text-white transition-colors hover:bg-blue-700"
+              >
+                <Search className="h-4 w-4" />
+              </button>
               <SearchAutocomplete 
                 query={searchQuery} 
                 onSelect={(val) => {
                   setSearchQuery(val);
                   setTimeout(() => {
-                    const params = new URLSearchParams(window.location.search);
-                    params.set('q', val);
-                    navigate(`/?${params.toString()}`);
+                    runSearch(val);
                   }, 10);
                 }} 
               />
@@ -120,20 +131,25 @@ export function Header({
               </div>
               <input
                 type="text"
+                enterKeyHint="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
                 placeholder="Buscar..."
-                className="w-full pl-8 pr-2 py-1.5 bg-gray-100 border-none rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                className="w-full pl-8 pr-9 py-2 bg-gray-100 border-none rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
               />
+              <button
+                type="submit"
+                aria-label="Buscar"
+                className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md bg-blue-600 p-1.5 text-white transition-colors active:bg-blue-700"
+              >
+                <Search className="h-3.5 w-3.5" />
+              </button>
               <SearchAutocomplete 
                 query={searchQuery} 
                 onSelect={(val) => {
                   setSearchQuery(val);
                   setTimeout(() => {
-                    const params = new URLSearchParams(window.location.search);
-                    params.set('q', val);
-                    navigate(`/?${params.toString()}`);
+                    runSearch(val);
                   }, 10);
                 }} 
               />
