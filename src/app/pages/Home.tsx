@@ -5,6 +5,7 @@ import { formatPrice } from '../../lib/formatters';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Hero } from '../components/Hero';
+import { BannerSlot } from '../components/BannerSlot';
 import { useFilter } from '../contexts/FilterContext';
 import { AdSenseSlot } from '../components/AdSenseSlot';
 import { PUBLIC_ENV } from '../../lib/publicEnv';
@@ -248,6 +249,12 @@ export default function Home() {
                 onLocationChange={handleHeaderLocationChange}
             />
             <Hero />
+            {!selectedCategory && (
+                <BannerSlot placement="home_top" className="pt-4" />
+            )}
+            {selectedCategory && (
+                <BannerSlot placement="category_top" className="pt-4" />
+            )}
             <Categories
                 selectedCategory={selectedCategory}
                 onCategorySelect={handleCategorySelect}
