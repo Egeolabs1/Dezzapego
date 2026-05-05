@@ -3,8 +3,34 @@ import { TrendingUp, Shield, Clock, ChevronLeft, ChevronRight } from 'lucide-rea
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
+type Banner = {
+  id: string;
+  image_url: string;
+  mobile_image_url?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
+  cta_label?: string | null;
+  link?: string | null;
+  alt_text?: string | null;
+  placement?: string | null;
+  active?: boolean | null;
+  sort_order?: number | null;
+  start_at?: string | null;
+  end_at?: string | null;
+};
+
+const DEFAULT_TITLE = 'Desapegue e Ganhe Dinheiro';
+const DEFAULT_SUBTITLE = 'O maior site de desapego do Brasil. Venda o que nao usa mais e encontre produtos incriveis com precos especiais.';
+
+function isVisibleBanner(banner: Banner) {
+  const now = Date.now();
+  const startsAfterNow = banner.start_at ? new Date(banner.start_at).getTime() > now : false;
+  const endedBeforeNow = banner.end_at ? new Date(banner.end_at).getTime() < now : false;
+  return banner.active !== false && !startsAfterNow && !endedBeforeNow;
+}
+
 export function Hero() {
-  const [banners, setBanners] = useState<any[]>([]);
+  const [banners, setBanners] = useState<Banner[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const navigate = useNavigate();
 
@@ -15,10 +41,13 @@ export function Hero() {
           .from('banners')
           .select('*')
           .eq('active', true)
+          .eq('placement', 'home_hero')
+          .order('sort_order', { ascending: true })
           .order('created_at', { ascending: false });
 
-        if (data && data.length > 0) {
-          setBanners(data);
+        const visibleBanners = ((data || []) as Banner[]).filter(isVisibleBanner);
+        if (visibleBanners.length > 0) {
+          setBanners(visibleBanners);
         }
       } catch (e) {
         // Silent fail
@@ -39,11 +68,9 @@ export function Hero() {
   const prevSlide = () => setCurrentIndex((prev) => (prev - 1 + banners.length) % banners.length);
 
   const currentBanner = banners[currentIndex];
-  // Determine if we show default gradient OR the banner image
   const hasBanner = banners.length > 0;
-  const bgStyle = hasBanner
-    ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${currentBanner.image_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-    : {};
+  const title = currentBanner?.title?.trim() || DEFAULT_TITLE;
+  const subtitle = currentBanner?.subtitle?.trim() || DEFAULT_SUBTITLE;
 
   const handleBannerClick = () => {
     if (currentBanner?.link) {
@@ -58,17 +85,45 @@ export function Hero() {
   return (
     <div
       className={`relative text-white transition-all duration-700 ease-in-out ${!hasBanner ? 'bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500' : 'bg-gray-900'} ${currentBanner?.link ? 'cursor-pointer hover:opacity-95' : ''}`}
-      style={bgStyle} // Dynamic background image requires inline style
       onClick={handleBannerClick}
     >
+      {hasBanner && (
+        <>
+          <picture className="absolute inset-0">
+            {currentBanner.mobile_image_url && (
+              <source media="(max-width: 767px)" srcSet={currentBanner.mobile_image_url} />
+            )}
+            <img
+              src={currentBanner.image_url}
+              alt={currentBanner.alt_text || title}
+              className="h-full w-full object-cover"
+            />
+          </picture>
+          <div className="absolute inset-0 bg-black/50" />
+        </>
+      )}
+
       <div className="container mx-auto px-4 py-8 md:py-16 relative z-10">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="text-3xl md:text-5xl mb-4 font-bold drop-shadow-lg select-none">
-            Desapegue e Ganhe Dinheiro
+            {title}
           </h1>
           <p className="text-base md:text-xl text-blue-50 mb-6 md:mb-8 drop-shadow-md select-none">
-            O maior site de desapego do Brasil. Venda o que não usa mais e encontre produtos incríveis com preços especiais.
+            {subtitle}
           </p>
+
+          {currentBanner?.cta_label && currentBanner.link && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleBannerClick();
+              }}
+              className="mb-4 rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg transition-colors hover:bg-blue-50 md:mb-0"
+            >
+              {currentBanner.cta_label}
+            </button>
+          )}
 
           <div className="hidden md:grid grid-cols-3 gap-6 mt-12">
             <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 border border-white/20 shadow-lg transition-transform hover:-translate-y-1">

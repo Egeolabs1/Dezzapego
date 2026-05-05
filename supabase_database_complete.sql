@@ -1131,8 +1131,97 @@ grant execute on function delete_own_account() to authenticated;
 
 
 -- ---------------------------------------------------------------------------
--- 12. Tabelas admin (somente se existirem): audit_logs, banners, notifications
+-- 12. Tabelas admin: audit_logs, banners, notifications
 -- ---------------------------------------------------------------------------
+
+create table if not exists public.banners (
+  id uuid primary key default gen_random_uuid(),
+  image_url text not null,
+  mobile_image_url text,
+  title text,
+  subtitle text,
+  cta_label text,
+  link text,
+  alt_text text,
+  placement text not null default 'home_hero',
+  active boolean not null default true,
+  sort_order integer not null default 0,
+  start_at timestamptz,
+  end_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint banners_valid_period check (start_at is null or end_at is null or end_at > start_at),
+  constraint banners_valid_placement check (placement in ('home_hero', 'home_top', 'category_top'))
+);
+
+alter table public.banners add column if not exists mobile_image_url text;
+alter table public.banners add column if not exists title text;
+alter table public.banners add column if not exists subtitle text;
+alter table public.banners add column if not exists cta_label text;
+alter table public.banners add column if not exists link text;
+alter table public.banners add column if not exists alt_text text;
+alter table public.banners add column if not exists placement text not null default 'home_hero';
+alter table public.banners add column if not exists active boolean not null default true;
+alter table public.banners add column if not exists sort_order integer not null default 0;
+alter table public.banners add column if not exists start_at timestamptz;
+alter table public.banners add column if not exists end_at timestamptz;
+alter table public.banners add column if not exists created_at timestamptz not null default now();
+alter table public.banners add column if not exists updated_at timestamptz not null default now();
+
+update public.banners set placement = 'home_hero' where placement is null;
+update public.banners
+set placement = 'home_hero'
+where placement not in ('home_hero', 'home_top', 'category_top');
+update public.banners set active = true where active is null;
+update public.banners set sort_order = 0 where sort_order is null;
+update public.banners set created_at = now() where created_at is null;
+update public.banners set updated_at = now() where updated_at is null;
+
+alter table public.banners alter column placement set default 'home_hero';
+alter table public.banners alter column placement set not null;
+alter table public.banners alter column active set default true;
+alter table public.banners alter column active set not null;
+alter table public.banners alter column sort_order set default 0;
+alter table public.banners alter column sort_order set not null;
+alter table public.banners alter column created_at set default now();
+alter table public.banners alter column created_at set not null;
+alter table public.banners alter column updated_at set default now();
+alter table public.banners alter column updated_at set not null;
+
+do $banners_constraints$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'banners_valid_period'
+      and conrelid = 'public.banners'::regclass
+  ) then
+    alter table public.banners add constraint banners_valid_period
+      check (start_at is null or end_at is null or end_at > start_at);
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'banners_valid_placement'
+      and conrelid = 'public.banners'::regclass
+  ) then
+    alter table public.banners add constraint banners_valid_placement
+      check (placement in ('home_hero', 'home_top', 'category_top'));
+  end if;
+end $banners_constraints$;
+
+create index if not exists idx_banners_public_display
+  on public.banners(placement, active, sort_order, created_at desc);
+
+create index if not exists idx_banners_schedule
+  on public.banners(start_at, end_at)
+  where active = true;
+
+select public.create_trigger_if_missing(
+  'public', 'banners', 'trg_banners_updated_at',
+  $trg$create trigger trg_banners_updated_at
+    before update on public.banners
+    for each row execute function public.set_updated_at()$trg$
+);
 
 do $admin_rls$
 begin
@@ -1153,17 +1242,22 @@ begin
     end if;
   end if;
 
-  if exists (select 1 from pg_tables where schemaname = 'public' and tablename = 'banners') then
-    alter table public.banners enable row level security;
-    if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'banners' and policyname = 'Public read access for banners') then
-      create policy "Public read access for banners" on public.banners for select to public using (true);
-    else raise notice 'Política banners leitura pública já existe — pulando.'; end if;
-    if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'banners' and policyname = 'Admins can manage banners') then
-      create policy "Admins can manage banners" on public.banners for all to authenticated
-        using ((select p.role from public.profiles p where p.id = auth.uid()) = 'admin')
-        with check ((select p.role from public.profiles p where p.id = auth.uid()) = 'admin');
-    else raise notice 'Política banners admin já existe — pulando.'; end if;
-  end if;
+  alter table public.banners enable row level security;
+  drop policy if exists "Public read access for banners" on public.banners;
+  create policy "Public read access for banners" on public.banners for select to public
+    using (
+      active = true
+      and (start_at is null or start_at <= now())
+      and (end_at is null or end_at >= now())
+    );
+
+  drop policy if exists "Admins can manage banners" on public.banners;
+  create policy "Admins can manage banners" on public.banners for all to authenticated
+    using (public.is_admin())
+    with check (public.is_admin());
+
+  grant select on public.banners to anon, authenticated;
+  grant insert, update, delete on public.banners to authenticated;
 
   if exists (select 1 from pg_tables where schemaname = 'public' and tablename = 'notifications') then
     alter table public.notifications enable row level security;
