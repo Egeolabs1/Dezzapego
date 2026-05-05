@@ -828,11 +828,97 @@ create table if not exists public.account_plans (
 
 alter table public.account_plans add column if not exists price_cents integer not null default 0;
 alter table public.account_plans add column if not exists currency text not null default 'BRL';
+alter table public.account_plans add column if not exists description text not null default '';
+alter table public.account_plans add column if not exists price_label text not null default 'R$ 0';
+alter table public.account_plans add column if not exists period_label text not null default '/mês';
+alter table public.account_plans add column if not exists features text[] not null default '{}';
+alter table public.account_plans add column if not exists button_text text not null default 'Assinar';
+alter table public.account_plans add column if not exists button_link text not null default '/register';
 alter table public.account_plans add column if not exists max_active_ads integer;
 alter table public.account_plans add column if not exists max_photos_per_ad integer not null default 3;
 alter table public.account_plans add column if not exists monthly_featured_ads integer not null default 0;
+alter table public.account_plans add column if not exists highlighted boolean not null default false;
+alter table public.account_plans add column if not exists icon_name text not null default 'Zap';
+alter table public.account_plans add column if not exists active boolean not null default true;
+alter table public.account_plans add column if not exists sort_order integer not null default 0;
 alter table public.account_plans add column if not exists created_at timestamptz not null default now();
 alter table public.account_plans add column if not exists updated_at timestamptz not null default now();
+
+do $account_plans_features_type$
+declare
+  v_udt_name text;
+begin
+  select udt_name into v_udt_name
+  from information_schema.columns
+  where table_schema = 'public'
+    and table_name = 'account_plans'
+    and column_name = 'features';
+
+  if v_udt_name is not null and v_udt_name <> '_text' then
+    alter table public.account_plans add column if not exists features_text_tmp text[] default '{}';
+
+    update public.account_plans
+    set features_text_tmp = case
+      when features is null then '{}'::text[]
+      when jsonb_typeof(to_jsonb(features)) = 'array' then
+        coalesce((select array_agg(f.value) from jsonb_array_elements_text(to_jsonb(features)) as f(value)), '{}'::text[])
+      else array[features::text]
+    end;
+
+    alter table public.account_plans drop column features;
+    alter table public.account_plans rename column features_text_tmp to features;
+    alter table public.account_plans alter column features set default '{}';
+  end if;
+end $account_plans_features_type$;
+
+update public.account_plans set currency = 'BRL' where currency is null;
+update public.account_plans set description = '' where description is null;
+update public.account_plans set price_label = 'R$ 0' where price_label is null;
+update public.account_plans set period_label = '/mês' where period_label is null;
+update public.account_plans set features = '{}' where features is null;
+update public.account_plans set button_text = 'Assinar' where button_text is null;
+update public.account_plans set button_link = '/register' where button_link is null;
+update public.account_plans set max_photos_per_ad = 3 where max_photos_per_ad is null or max_photos_per_ad <= 0;
+update public.account_plans set monthly_featured_ads = 0 where monthly_featured_ads is null or monthly_featured_ads < 0;
+update public.account_plans set highlighted = false where highlighted is null;
+update public.account_plans set icon_name = 'Zap' where icon_name is null;
+update public.account_plans set active = true where active is null;
+update public.account_plans set sort_order = 0 where sort_order is null;
+update public.account_plans set created_at = now() where created_at is null;
+update public.account_plans set updated_at = now() where updated_at is null;
+
+alter table public.account_plans alter column price_cents set default 0;
+alter table public.account_plans alter column price_cents set not null;
+alter table public.account_plans alter column currency set default 'BRL';
+alter table public.account_plans alter column currency set not null;
+alter table public.account_plans alter column description set default '';
+alter table public.account_plans alter column description set not null;
+alter table public.account_plans alter column price_label set default 'R$ 0';
+alter table public.account_plans alter column price_label set not null;
+alter table public.account_plans alter column period_label set default '/mês';
+alter table public.account_plans alter column period_label set not null;
+alter table public.account_plans alter column features set default '{}';
+alter table public.account_plans alter column features set not null;
+alter table public.account_plans alter column button_text set default 'Assinar';
+alter table public.account_plans alter column button_text set not null;
+alter table public.account_plans alter column button_link set default '/register';
+alter table public.account_plans alter column button_link set not null;
+alter table public.account_plans alter column max_photos_per_ad set default 3;
+alter table public.account_plans alter column max_photos_per_ad set not null;
+alter table public.account_plans alter column monthly_featured_ads set default 0;
+alter table public.account_plans alter column monthly_featured_ads set not null;
+alter table public.account_plans alter column highlighted set default false;
+alter table public.account_plans alter column highlighted set not null;
+alter table public.account_plans alter column icon_name set default 'Zap';
+alter table public.account_plans alter column icon_name set not null;
+alter table public.account_plans alter column active set default true;
+alter table public.account_plans alter column active set not null;
+alter table public.account_plans alter column sort_order set default 0;
+alter table public.account_plans alter column sort_order set not null;
+alter table public.account_plans alter column created_at set default now();
+alter table public.account_plans alter column created_at set not null;
+alter table public.account_plans alter column updated_at set default now();
+alter table public.account_plans alter column updated_at set not null;
 
 notify pgrst, 'reload schema';
 
