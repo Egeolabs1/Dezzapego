@@ -10,6 +10,7 @@ export type FeaturedPlan = {
     currency: string;
     active: boolean;
     sort_order: number;
+    description?: string | null;
 };
 
 export type FeaturedPayment = {

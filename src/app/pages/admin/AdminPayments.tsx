@@ -13,16 +13,103 @@ type AccountPlan = {
     id: string;
     name: string;
     description: string;
+    price_cents: number;
+    currency: string;
     price_label: string;
     period_label: string;
     features: string[];
     button_text: string;
     button_link: string;
+    max_active_ads: number | null;
+    max_photos_per_ad: number;
+    monthly_featured_ads: number;
     highlighted: boolean;
     icon_name: string;
     sort_order: number;
     active: boolean;
 };
+
+const DEFAULT_ACCOUNT_PLANS: AccountPlan[] = [
+    {
+        id: 'free',
+        name: 'Grátis',
+        description: 'Para quem está começando a desapegar.',
+        price_cents: 0,
+        currency: 'BRL',
+        price_label: 'R$ 0',
+        period_label: '/mês',
+        features: ['Até 5 anúncios ativos', '3 fotos por anúncio', 'Chat com compradores', 'Suporte básico'],
+        button_text: 'Começar Grátis',
+        button_link: '/register',
+        max_active_ads: 5,
+        max_photos_per_ad: 3,
+        monthly_featured_ads: 0,
+        highlighted: false,
+        icon_name: 'Zap',
+        sort_order: 0,
+        active: true
+    },
+    {
+        id: 'pro',
+        name: 'Pro',
+        description: 'Para quem vende com frequência.',
+        price_cents: 2990,
+        currency: 'BRL',
+        price_label: 'R$ 29,90',
+        period_label: '/mês',
+        features: ['Até 50 anúncios ativos', '10 fotos por anúncio', 'Destaque em 2 anúncios/mês', 'Suporte prioritário', 'Estatísticas detalhadas'],
+        button_text: 'Assinar Pro',
+        button_link: '/register?plan=pro',
+        max_active_ads: 50,
+        max_photos_per_ad: 10,
+        monthly_featured_ads: 2,
+        highlighted: true,
+        icon_name: 'Star',
+        sort_order: 1,
+        active: true
+    },
+    {
+        id: 'business',
+        name: 'Empresa',
+        description: 'Para lojas e pequenos negócios.',
+        price_cents: 8990,
+        currency: 'BRL',
+        price_label: 'R$ 89,90',
+        period_label: '/mês',
+        features: ['Anúncios ilimitados', '20 fotos por anúncio', 'Destaque em 10 anúncios/mês', 'Perfil verificado (Selo)', 'Painel de gestão avançado', 'Integração via API (Em breve)'],
+        button_text: 'Falar com Comercial',
+        button_link: '/contato',
+        max_active_ads: null,
+        max_photos_per_ad: 20,
+        monthly_featured_ads: 10,
+        highlighted: false,
+        icon_name: 'Shield',
+        sort_order: 2,
+        active: true
+    }
+];
+
+function toAccountPlan(row: Partial<AccountPlan>): AccountPlan {
+    return {
+        id: row.id || crypto.randomUUID(),
+        name: row.name || 'Novo Plano',
+        description: row.description || '',
+        price_cents: Number(row.price_cents || 0),
+        currency: row.currency || 'BRL',
+        price_label: row.price_label || formatCents(Number(row.price_cents || 0), row.currency || 'BRL'),
+        period_label: row.period_label || '/mês',
+        features: Array.isArray(row.features) ? row.features : [],
+        button_text: row.button_text || 'Assinar',
+        button_link: row.button_link || '/register',
+        max_active_ads: row.max_active_ads === null ? null : Number(row.max_active_ads ?? 5),
+        max_photos_per_ad: Number(row.max_photos_per_ad || 3),
+        monthly_featured_ads: Number(row.monthly_featured_ads || 0),
+        highlighted: Boolean(row.highlighted),
+        icon_name: row.icon_name || 'Zap',
+        sort_order: Number(row.sort_order || 0),
+        active: row.active !== false
+    };
+}
 
 export default function AdminPayments() {
     const [featuredPlans, setFeaturedPlans] = useState<FeaturedPlan[]>([]);
@@ -71,7 +158,7 @@ export default function AdminPayments() {
             if (paymentsError) throw paymentsError;
 
             setFeaturedPlans((fPlansData || []) as FeaturedPlan[]);
-            setAccountPlans((aPlansData || []) as AccountPlan[]);
+            setAccountPlans(aPlansData?.length ? (aPlansData as Partial<AccountPlan>[]).map(toAccountPlan) : DEFAULT_ACCOUNT_PLANS);
             setPayments((paymentsData || []) as AdminPayment[]);
         } catch (error) {
             console.error('Error fetching payments:', error);
@@ -90,6 +177,8 @@ export default function AdminPayments() {
                     name: plan.name,
                     duration_days: plan.duration_days,
                     price_cents: plan.price_cents,
+                    currency: plan.currency || 'BRL',
+                    sort_order: plan.sort_order,
                     active: plan.active,
                 })
                 .eq('id', plan.id);
@@ -113,11 +202,16 @@ export default function AdminPayments() {
                     id: plan.id,
                     name: plan.name,
                     description: plan.description,
+                    price_cents: plan.price_cents,
+                    currency: plan.currency,
                     price_label: plan.price_label,
                     period_label: plan.period_label,
                     features: plan.features,
                     button_text: plan.button_text,
                     button_link: plan.button_link,
+                    max_active_ads: plan.max_active_ads,
+                    max_photos_per_ad: plan.max_photos_per_ad,
+                    monthly_featured_ads: plan.monthly_featured_ads,
                     highlighted: plan.highlighted,
                     icon_name: plan.icon_name,
                     sort_order: plan.sort_order,
@@ -160,11 +254,16 @@ export default function AdminPayments() {
             id: crypto.randomUUID(),
             name: 'Novo Plano',
             description: 'Descrição do plano',
+            price_cents: 0,
+            currency: 'BRL',
             price_label: 'R$ 0',
             period_label: '/mês',
             features: ['Funcionalidade 1'],
             button_text: 'Assinar',
             button_link: '/register',
+            max_active_ads: 5,
+            max_photos_per_ad: 3,
+            monthly_featured_ads: 0,
             highlighted: false,
             icon_name: 'Zap',
             sort_order: accountPlans.length,
@@ -302,7 +401,7 @@ export default function AdminPayments() {
                                         <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Preço (Ex: R$ 29,90)</label>
                                         <input
                                             value={plan.price_label}
-                                            onChange={(e) => updateLocalAccountPlan(plan.id, { price_label: e.target.value })}
+                                            onChange={(e) => updateLocalAccountPlan(plan.id, { price_label: e.target.value, price_cents: Math.round(Number(e.target.value.replace(/[^\d,.-]/g, '').replace(',', '.')) * 100) || 0 })}
                                             className="w-full text-lg font-bold text-gray-900"
                                         />
                                     </div>
@@ -316,6 +415,43 @@ export default function AdminPayments() {
                                     </div>
                                 </div>
 
+                                <div className="grid grid-cols-3 gap-3 rounded-xl border border-blue-100 bg-blue-50/40 p-3">
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase text-blue-500 tracking-wider">Anúncios ativos</label>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            placeholder="0 = ilimitado"
+                                            value={plan.max_active_ads ?? 0}
+                                            onChange={(e) => {
+                                                const value = Number(e.target.value);
+                                                updateLocalAccountPlan(plan.id, { max_active_ads: value <= 0 ? null : value });
+                                            }}
+                                            className="w-full text-sm bg-white border border-blue-100 rounded-lg p-2"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase text-blue-500 tracking-wider">Fotos/anúncio</label>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            value={plan.max_photos_per_ad}
+                                            onChange={(e) => updateLocalAccountPlan(plan.id, { max_photos_per_ad: Math.max(1, Number(e.target.value) || 1) })}
+                                            className="w-full text-sm bg-white border border-blue-100 rounded-lg p-2"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase text-blue-500 tracking-wider">Destaques/mês</label>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            value={plan.monthly_featured_ads}
+                                            onChange={(e) => updateLocalAccountPlan(plan.id, { monthly_featured_ads: Math.max(0, Number(e.target.value) || 0) })}
+                                            className="w-full text-sm bg-white border border-blue-100 rounded-lg p-2"
+                                        />
+                                    </div>
+                                </div>
+
                                 <div>
                                     <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider block mb-2">Vantagens (uma por linha)</label>
                                     <textarea
@@ -324,6 +460,25 @@ export default function AdminPayments() {
                                         rows={4}
                                         className="w-full text-xs text-gray-600 bg-gray-50 rounded-xl p-3 border border-gray-100 focus:ring-2 focus:ring-blue-100 focus:outline-none"
                                     />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Link do Botão</label>
+                                        <input
+                                            value={plan.button_link}
+                                            onChange={(e) => updateLocalAccountPlan(plan.id, { button_link: e.target.value })}
+                                            className="w-full text-sm bg-gray-50 border border-gray-100 rounded-lg p-2"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Texto do Botão</label>
+                                        <input
+                                            value={plan.button_text}
+                                            onChange={(e) => updateLocalAccountPlan(plan.id, { button_text: e.target.value })}
+                                            className="w-full text-sm bg-gray-50 border border-gray-100 rounded-lg p-2"
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
@@ -422,6 +577,15 @@ export default function AdminPayments() {
                                         className="w-full text-sm font-semibold text-blue-600"
                                     />
                                 </div>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Ordem</label>
+                                <input
+                                    type="number"
+                                    value={plan.sort_order}
+                                    onChange={(event) => updateLocalFeaturedPlan(plan.id, { sort_order: Number(event.target.value) })}
+                                    className="w-full text-sm font-semibold"
+                                />
                             </div>
                             <div className="flex items-center justify-between">
                                 <label className="flex items-center gap-2 text-xs font-medium text-gray-600">

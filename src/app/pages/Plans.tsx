@@ -9,11 +9,16 @@ type AccountPlan = {
     id: string;
     name: string;
     description: string;
+    price_cents?: number;
+    currency?: string;
     price_label: string;
     period_label: string;
     features: string[];
     button_text: string;
     button_link: string;
+    max_active_ads?: number | null;
+    max_photos_per_ad?: number;
+    monthly_featured_ads?: number;
     highlighted: boolean;
     icon_name: string;
     sort_order: number;
@@ -22,9 +27,11 @@ type AccountPlan = {
 
 const DEFAULT_PLANS: AccountPlan[] = [
     {
-        id: '1',
+        id: 'free',
         name: 'Grátis',
         description: 'Para quem está começando a desapegar.',
+        price_cents: 0,
+        currency: 'BRL',
         price_label: 'R$ 0',
         period_label: '/mês',
         features: [
@@ -35,15 +42,20 @@ const DEFAULT_PLANS: AccountPlan[] = [
         ],
         button_text: 'Começar Grátis',
         button_link: '/register',
+        max_active_ads: 5,
+        max_photos_per_ad: 3,
+        monthly_featured_ads: 0,
         highlighted: false,
         icon_name: 'Zap',
         sort_order: 0,
         active: true
     },
     {
-        id: '2',
+        id: 'pro',
         name: 'Pro',
         description: 'Para quem vende com frequência.',
+        price_cents: 2990,
+        currency: 'BRL',
         price_label: 'R$ 29,90',
         period_label: '/mês',
         features: [
@@ -55,15 +67,20 @@ const DEFAULT_PLANS: AccountPlan[] = [
         ],
         button_text: 'Assinar Pro',
         button_link: '/register?plan=pro',
+        max_active_ads: 50,
+        max_photos_per_ad: 10,
+        monthly_featured_ads: 2,
         highlighted: true,
         icon_name: 'Star',
         sort_order: 1,
         active: true
     },
     {
-        id: '3',
+        id: 'business',
         name: 'Empresa',
         description: 'Para lojas e pequenos negócios.',
+        price_cents: 8990,
+        currency: 'BRL',
         price_label: 'R$ 89,90',
         period_label: '/mês',
         features: [
@@ -76,6 +93,9 @@ const DEFAULT_PLANS: AccountPlan[] = [
         ],
         button_text: 'Falar com Comercial',
         button_link: '/contato',
+        max_active_ads: null,
+        max_photos_per_ad: 20,
+        monthly_featured_ads: 10,
         highlighted: false,
         icon_name: 'Shield',
         sort_order: 2,

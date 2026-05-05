@@ -798,6 +798,42 @@ create table if not exists public.featured_plans (
   updated_at timestamptz not null default now()
 );
 
+alter table public.featured_plans drop constraint if exists featured_plans_duration_days_check;
+alter table public.featured_plans add constraint featured_plans_duration_days_check check (duration_days > 0);
+alter table public.featured_plans add column if not exists description text;
+alter table public.featured_plans add column if not exists sort_order integer not null default 0;
+alter table public.featured_plans add column if not exists updated_at timestamptz not null default now();
+
+create table if not exists public.account_plans (
+  id text primary key,
+  name text not null,
+  description text not null default '',
+  price_cents integer not null default 0 check (price_cents >= 0),
+  currency text not null default 'BRL',
+  price_label text not null default 'R$ 0',
+  period_label text not null default '/mês',
+  features text[] not null default '{}',
+  button_text text not null default 'Assinar',
+  button_link text not null default '/register',
+  max_active_ads integer check (max_active_ads is null or max_active_ads >= 0),
+  max_photos_per_ad integer not null default 3 check (max_photos_per_ad > 0),
+  monthly_featured_ads integer not null default 0 check (monthly_featured_ads >= 0),
+  highlighted boolean not null default false,
+  icon_name text not null default 'Zap',
+  active boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.account_plans add column if not exists price_cents integer not null default 0;
+alter table public.account_plans add column if not exists currency text not null default 'BRL';
+alter table public.account_plans add column if not exists max_active_ads integer;
+alter table public.account_plans add column if not exists max_photos_per_ad integer not null default 3;
+alter table public.account_plans add column if not exists monthly_featured_ads integer not null default 0;
+alter table public.account_plans add column if not exists created_at timestamptz not null default now();
+alter table public.account_plans add column if not exists updated_at timestamptz not null default now();
+
 create table if not exists public.featured_payments (
   id uuid primary key default gen_random_uuid(),
   ad_id uuid not null references public.ads(id) on delete cascade,
@@ -834,6 +870,8 @@ create table if not exists public.site_visits (
 
 create index if not exists idx_featured_plans_active
   on public.featured_plans(active, sort_order);
+create index if not exists idx_account_plans_active
+  on public.account_plans(active, sort_order);
 create index if not exists idx_featured_payments_status
   on public.featured_payments(status);
 create index if not exists idx_featured_payments_provider
@@ -862,6 +900,13 @@ select public.create_trigger_if_missing(
   'public', 'featured_plans', 'trg_featured_plans_updated_at',
   $trg$create trigger trg_featured_plans_updated_at
     before update on public.featured_plans
+    for each row execute function public.set_updated_at()$trg$
+);
+
+select public.create_trigger_if_missing(
+  'public', 'account_plans', 'trg_account_plans_updated_at',
+  $trg$create trigger trg_account_plans_updated_at
+    before update on public.account_plans
     for each row execute function public.set_updated_at()$trg$
 );
 
@@ -940,10 +985,94 @@ values
 on conflict (id) do update set
   name = excluded.name,
   duration_days = excluded.duration_days,
+  price_cents = excluded.price_cents,
   currency = excluded.currency,
+  active = excluded.active,
+  sort_order = excluded.sort_order;
+
+insert into public.account_plans (
+  id, name, description, price_cents, currency, price_label, period_label, features,
+  button_text, button_link, max_active_ads, max_photos_per_ad, monthly_featured_ads,
+  highlighted, icon_name, active, sort_order
+)
+values
+  (
+    'free',
+    'Grátis',
+    'Para quem está começando a desapegar.',
+    0,
+    'BRL',
+    'R$ 0',
+    '/mês',
+    array['Até 5 anúncios ativos', '3 fotos por anúncio', 'Chat com compradores', 'Suporte básico'],
+    'Começar Grátis',
+    '/register',
+    5,
+    3,
+    0,
+    false,
+    'Zap',
+    true,
+    0
+  ),
+  (
+    'pro',
+    'Pro',
+    'Para quem vende com frequência.',
+    2990,
+    'BRL',
+    'R$ 29,90',
+    '/mês',
+    array['Até 50 anúncios ativos', '10 fotos por anúncio', 'Destaque em 2 anúncios/mês', 'Suporte prioritário', 'Estatísticas detalhadas'],
+    'Assinar Pro',
+    '/register?plan=pro',
+    50,
+    10,
+    2,
+    true,
+    'Star',
+    true,
+    1
+  ),
+  (
+    'business',
+    'Empresa',
+    'Para lojas e pequenos negócios.',
+    8990,
+    'BRL',
+    'R$ 89,90',
+    '/mês',
+    array['Anúncios ilimitados', '20 fotos por anúncio', 'Destaque em 10 anúncios/mês', 'Perfil verificado (Selo)', 'Painel de gestão avançado', 'Integração via API (Em breve)'],
+    'Falar com Comercial',
+    '/contato',
+    null,
+    20,
+    10,
+    false,
+    'Shield',
+    true,
+    2
+  )
+on conflict (id) do update set
+  name = excluded.name,
+  description = excluded.description,
+  price_cents = excluded.price_cents,
+  currency = excluded.currency,
+  price_label = excluded.price_label,
+  period_label = excluded.period_label,
+  features = excluded.features,
+  button_text = excluded.button_text,
+  button_link = excluded.button_link,
+  max_active_ads = excluded.max_active_ads,
+  max_photos_per_ad = excluded.max_photos_per_ad,
+  monthly_featured_ads = excluded.monthly_featured_ads,
+  highlighted = excluded.highlighted,
+  icon_name = excluded.icon_name,
+  active = excluded.active,
   sort_order = excluded.sort_order;
 
 alter table public.featured_plans enable row level security;
+alter table public.account_plans enable row level security;
 alter table public.featured_payments enable row level security;
 alter table public.site_visits enable row level security;
 
@@ -957,6 +1086,18 @@ select public.create_policy_if_missing(
   'public', 'featured_plans', 'Admins can manage featured plans',
   $pol$create policy "Admins can manage featured plans"
     on public.featured_plans for all using (public.is_admin()) with check (public.is_admin())$pol$
+);
+
+select public.create_policy_if_missing(
+  'public', 'account_plans', 'Anyone can view active account plans',
+  $pol$create policy "Anyone can view active account plans"
+    on public.account_plans for select using (active = true or public.is_admin())$pol$
+);
+
+select public.create_policy_if_missing(
+  'public', 'account_plans', 'Admins can manage account plans',
+  $pol$create policy "Admins can manage account plans"
+    on public.account_plans for all using (public.is_admin()) with check (public.is_admin())$pol$
 );
 
 select public.create_policy_if_missing(
@@ -978,10 +1119,14 @@ select public.create_policy_if_missing(
 );
 
 grant select on public.featured_plans to anon, authenticated;
+grant select on public.account_plans to anon, authenticated;
+grant insert, update, delete on public.featured_plans to authenticated;
+grant insert, update, delete on public.account_plans to authenticated;
 grant select on public.featured_payments to authenticated;
 grant select on public.site_visits to authenticated;
 
 comment on table public.featured_plans is 'Planos configuráveis de destaque pago.';
+comment on table public.account_plans is 'Planos de conta configuráveis, incluindo limites de anúncios, fotos e destaques mensais.';
 comment on table public.featured_payments is 'Pagamentos de destaque (Stripe ou PixGo).';
 comment on table public.site_visits is 'Analytics interna de página (gravação via service role em API).';
 
