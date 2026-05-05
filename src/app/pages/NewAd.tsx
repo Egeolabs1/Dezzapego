@@ -234,6 +234,7 @@ export default function NewAd() {
                 user_id: user.id,
                 seller,
                 featured: false,
+                status: 'pending',
                 views: 0,
                 details: buildNormalizedDetails(formData.category, formData.subcategory, formData.details),
             };
@@ -247,8 +248,8 @@ export default function NewAd() {
             }
 
             localStorage.removeItem(`${DRAFT_STORAGE_KEY}:${user.id}`);
-            toast.success('Anúncio criado com sucesso!');
-            navigate('/');
+            toast.success('Anúncio enviado! Ele ficará visível após a aprovação da moderação.');
+            navigate('/meus-anuncios');
         } catch (error: unknown) {
             const msg = error instanceof Error ? error.message : 'Erro ao criar anúncio. Tente novamente.';
             toast.error(msg);

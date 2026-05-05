@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { LocationSelector } from './LocationSelector';
 import { Logo, LogoIcon } from './Logo';
 import { Notifications } from './Notifications';
+import { SearchAutocomplete } from './SearchAutocomplete';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useFilter } from '../contexts/FilterContext';
@@ -98,6 +99,17 @@ export function Header({
                 placeholder="Buscar por produtos, marcas ou categorias..."
                 className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+              <SearchAutocomplete 
+                query={searchQuery} 
+                onSelect={(val) => {
+                  setSearchQuery(val);
+                  setTimeout(() => {
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('q', val);
+                    navigate(`/?${params.toString()}`);
+                  }, 10);
+                }} 
+              />
             </form>
           </div>
 
@@ -113,6 +125,17 @@ export function Header({
                 onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
                 placeholder="Buscar..."
                 className="w-full pl-8 pr-2 py-1.5 bg-gray-100 border-none rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              />
+              <SearchAutocomplete 
+                query={searchQuery} 
+                onSelect={(val) => {
+                  setSearchQuery(val);
+                  setTimeout(() => {
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('q', val);
+                    navigate(`/?${params.toString()}`);
+                  }, 10);
+                }} 
               />
             </form>
             {!hideLocationFilter && (

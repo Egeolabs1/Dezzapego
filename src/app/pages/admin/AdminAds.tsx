@@ -1,112 +1,141 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { formatPrice, formatDate } from '../../../lib/formatters';
-import { Trash2, Edit, Eye, Search, Star, Download } from 'lucide-react';
+import { Trash2, Edit, Eye, Search, Star, Download, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext';
 import { logAdminAction } from '../../../lib/adminLogger';
+
+type AdStatus = 'pending' | 'active' | 'rejected';
+
+const STATUS_TABS: { key: AdStatus; label: string; icon: React.ReactNode; color: string }[] = [
+    { key: 'pending', label: 'Pendentes', icon: <Clock className="w-4 h-4" />, color: 'text-amber-600' },
+    { key: 'active', label: 'Ativos', icon: <CheckCircle className="w-4 h-4" />, color: 'text-green-600' },
+    { key: 'rejected', label: 'Rejeitados', icon: <XCircle className="w-4 h-4" />, color: 'text-red-600' },
+];
+
+const STATUS_BADGE: Record<AdStatus, string> = {
+    pending: 'bg-amber-100 text-amber-700',
+    active: 'bg-green-100 text-green-700',
+    rejected: 'bg-red-100 text-red-700',
+};
+
+const STATUS_LABEL: Record<AdStatus, string> = {
+    pending: 'Pendente',
+    active: 'Ativo',
+    rejected: 'Rejeitado',
+};
 
 export default function AdminAds() {
     const { user } = useAuth();
     const [ads, setAds] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [activeTab, setActiveTab] = useState<AdStatus>('pending');
+    const [counts, setCounts] = useState<Record<AdStatus, number>>({ pending: 0, active: 0, rejected: 0 });
 
     useEffect(() => {
         fetchAds();
     }, []);
 
     async function fetchAds() {
+        setLoading(true);
         try {
             const { data, error } = await supabase
                 .from('ads')
                 .select('*')
-                .order('publishedAt', { ascending: false });
+                .order('created_at', { ascending: false });
 
             if (error) throw error;
-            setAds(data || []);
+            const all = data || [];
+            setAds(all);
+            setCounts({
+                pending: all.filter(a => a.status === 'pending').length,
+                active: all.filter(a => a.status === 'active').length,
+                rejected: all.filter(a => a.status === 'rejected').length,
+            });
         } catch (error) {
-            console.error('Error fetching ads:', error);
             toast.error('Erro ao carregar anúncios.');
         } finally {
             setLoading(false);
         }
     }
 
-    async function handleDelete(id: string) {
-        if (!confirm('Tem certeza que deseja excluir este anúncio permanentemente?')) return;
+    async function changeStatus(id: string, newStatus: AdStatus) {
+        try {
+            const { error } = await supabase.from('ads').update({ status: newStatus }).eq('id', id);
+            if (error) throw error;
+            await logAdminAction(user?.email, 'UPDATE_AD_STATUS', `Ad ${id} → ${newStatus}`);
+            setAds(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
+            setCounts(prev => {
+                const old = ads.find(a => a.id === id)?.status as AdStatus | undefined;
+                if (!old) return prev;
+                return { ...prev, [old]: prev[old] - 1, [newStatus]: prev[newStatus] + 1 };
+            });
+            toast.success(newStatus === 'active' ? 'Anúncio aprovado!' : 'Anúncio rejeitado.');
+        } catch {
+            toast.error('Erro ao atualizar status.');
+        }
+    }
 
+    async function handleDelete(id: string) {
+        if (!confirm('Excluir este anúncio permanentemente?')) return;
         try {
             const { error } = await supabase.from('ads').delete().eq('id', id);
             if (error) throw error;
-
             await logAdminAction(user?.email, 'DELETE_AD', `Ad Deleted: ${id}`);
-
-            toast.success('Anúncio removido pelo Admin.');
-            setAds(prev => prev.filter(ad => ad.id !== id));
-        } catch (error) {
-            console.error('Error deleting ad:', error);
+            toast.success('Anúncio removido.');
+            setAds(prev => prev.filter(a => a.id !== id));
+        } catch {
             toast.error('Erro ao excluir anúncio.');
         }
     }
 
     async function toggleFeatured(ad: any) {
+        const newFeatured = !ad.featured;
         try {
-            const newStatus = !ad.featured;
-            const { error } = await supabase
-                .from('ads')
-                .update({ featured: newStatus })
-                .eq('id', ad.id);
-
+            const { error } = await supabase.from('ads').update({ featured: newFeatured }).eq('id', ad.id);
             if (error) throw error;
-
-            await logAdminAction(user?.email, 'FEATURE_AD', `Ad ${ad.id} featured: ${newStatus}`);
-
-            setAds(prev => prev.map(item =>
-                item.id === ad.id ? { ...item, featured: newStatus } : item
-            ));
-
-            toast.success(newStatus ? 'Anúncio destacado!' : 'Destaque removido.');
-        } catch (error) {
-            console.error('Error toggling featured:', error);
+            await logAdminAction(user?.email, 'FEATURE_AD', `Ad ${ad.id} featured: ${newFeatured}`);
+            setAds(prev => prev.map(a => a.id === ad.id ? { ...a, featured: newFeatured } : a));
+            toast.success(newFeatured ? 'Anúncio destacado!' : 'Destaque removido.');
+        } catch {
             toast.error('Erro ao alterar destaque.');
         }
     }
 
     function handleExport() {
-        const headers = ['ID', 'Título', 'Preço', 'Categoria', 'Vendedor', 'Data', 'Destaque'];
+        const headers = ['ID', 'Título', 'Preço', 'Categoria', 'Vendedor', 'Status', 'Data'];
         const csvContent = [
             headers.join(','),
             ...ads.map(ad => [
                 ad.id,
-                `"${ad.title.replace(/"/g, '""')}"`,
+                `"${(ad.title || '').replace(/"/g, '""')}"`,
                 ad.price,
                 ad.category,
                 `"${ad.seller?.name || ''}"`,
-                ad.publishedAt,
-                ad.featured ? 'Sim' : 'Não'
+                ad.status || 'active',
+                ad.created_at,
             ].join(','))
         ].join('\n');
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', 'anuncios_export.csv');
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
+        link.href = URL.createObjectURL(blob);
+        link.download = 'anuncios_export.csv';
         link.click();
-        document.body.removeChild(link);
     }
 
-    const filteredAds = ads.filter(ad =>
-        ad.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ad.seller?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    const tabAds = ads.filter(ad => (ad.status || 'active') === activeTab);
+    const filteredAds = tabAds.filter(ad =>
+        (ad.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (ad.seller?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
         <div className="space-y-6">
+            {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <h1 className="text-2xl font-bold text-gray-800">Gerenciar Anúncios</h1>
                 <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
@@ -130,6 +159,38 @@ export default function AdminAds() {
                 </div>
             </div>
 
+            {/* Status Tabs */}
+            <div className="flex gap-2 border-b border-gray-200">
+                {STATUS_TABS.map(tab => (
+                    <button
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key)}
+                        className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                            activeTab === tab.key
+                                ? 'border-blue-600 text-blue-700'
+                                : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                        <span className={activeTab === tab.key ? 'text-blue-600' : tab.color}>{tab.icon}</span>
+                        {tab.label}
+                        <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${
+                            activeTab === tab.key ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                            {counts[tab.key]}
+                        </span>
+                    </button>
+                ))}
+            </div>
+
+            {/* Pending alert */}
+            {activeTab === 'pending' && counts.pending > 0 && (
+                <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                    <Clock className="w-4 h-4 flex-shrink-0" />
+                    <span><strong>{counts.pending} anúncio{counts.pending > 1 ? 's' : ''}</strong> aguardando moderação. Revise e aprove ou rejeite.</span>
+                </div>
+            )}
+
+            {/* Table */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -138,76 +199,113 @@ export default function AdminAds() {
                                 <th className="p-4 font-medium">Produto</th>
                                 <th className="p-4 font-medium">Preço</th>
                                 <th className="p-4 font-medium">Vendedor</th>
+                                <th className="p-4 font-medium">Status</th>
                                 <th className="p-4 font-medium">Data</th>
                                 <th className="p-4 font-medium text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {loading ? (
-                                <tr><td colSpan={5} className="p-8 text-center text-gray-500">Carregando...</td></tr>
+                                <tr><td colSpan={6} className="p-8 text-center text-gray-500">Carregando...</td></tr>
                             ) : filteredAds.length === 0 ? (
-                                <tr><td colSpan={5} className="p-8 text-center text-gray-500">Nenhum anúncio encontrado.</td></tr>
+                                <tr><td colSpan={6} className="p-8 text-center text-gray-500">
+                                    {activeTab === 'pending' ? 'Nenhum anúncio pendente. ✅' : 'Nenhum anúncio encontrado.'}
+                                </td></tr>
                             ) : (
-                                filteredAds.map(ad => (
-                                    <tr key={ad.id} className={`hover:bg-gray-50 transition-colors ${ad.featured ? 'bg-yellow-50/50' : ''}`}>
-                                        <td className="p-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="relative">
-                                                    <img src={ad.images?.[0]} alt="" className="w-10 h-10 rounded bg-gray-100 object-cover" />
-                                                    {ad.featured && (
-                                                        <div className="absolute -top-1 -right-1 bg-yellow-400 text-white rounded-full p-0.5">
-                                                            <Star className="w-2 h-2 fill-current" />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="max-w-[200px]">
-                                                    <p className="font-medium text-gray-900 truncate">{ad.title}</p>
-                                                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                                                        <span className="truncate">{ad.category}</span>
-                                                        {ad.featured && <span className="text-yellow-600 font-medium">• Destaque</span>}
+                                filteredAds.map(ad => {
+                                    const status = (ad.status || 'active') as AdStatus;
+                                    return (
+                                        <tr key={ad.id} className={`hover:bg-gray-50 transition-colors ${ad.featured ? 'bg-yellow-50/30' : ''}`}>
+                                            <td className="p-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="relative">
+                                                        <img src={ad.images?.[0]} alt="" className="w-10 h-10 rounded bg-gray-100 object-cover" />
+                                                        {ad.featured && (
+                                                            <div className="absolute -top-1 -right-1 bg-yellow-400 text-white rounded-full p-0.5">
+                                                                <Star className="w-2 h-2 fill-current" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="max-w-[200px]">
+                                                        <p className="font-medium text-gray-900 truncate">{ad.title}</p>
+                                                        <p className="text-xs text-gray-400 truncate">{ad.category}</p>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="p-4 text-sm font-medium text-gray-900">{formatPrice(ad.price)}</td>
-                                        <td className="p-4 text-sm text-gray-600">
-                                            {ad.seller?.name || 'N/A'}
-                                            <span className="block text-xs text-gray-400">ID: {ad.seller?.id?.slice(0, 8)}...</span>
-                                        </td>
-                                        <td className="p-4 text-sm text-gray-500">{formatDate(ad.publishedAt)}</td>
-                                        <td className="p-4">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={() => toggleFeatured(ad)}
-                                                    className={`p-2 rounded-lg transition-colors ${ad.featured
-                                                        ? 'text-yellow-500 bg-yellow-50 hover:bg-yellow-100'
-                                                        : 'text-gray-400 hover:text-yellow-500 hover:bg-gray-100'
-                                                        }`}
-                                                    title={ad.featured ? "Remover destaque" : "Destacar anúncio"}
-                                                >
-                                                    <Star className={`w-4 h-4 ${ad.featured ? 'fill-current' : ''}`} />
-                                                </button>
-                                                <Link to={`/anuncio/${ad.id}`} target='_blank'>
-                                                    <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Ver anúncio">
-                                                        <Eye className="w-4 h-4" />
+                                            </td>
+                                            <td className="p-4 text-sm font-medium text-gray-900">{formatPrice(ad.price)}</td>
+                                            <td className="p-4 text-sm text-gray-600">
+                                                {ad.seller?.name || 'N/A'}
+                                                <span className="block text-xs text-gray-400">ID: {ad.seller?.id?.slice(0, 8)}...</span>
+                                            </td>
+                                            <td className="p-4">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${STATUS_BADGE[status]}`}>
+                                                    {STATUS_LABEL[status]}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 text-sm text-gray-500">{formatDate(ad.created_at || ad.publishedAt)}</td>
+                                            <td className="p-4">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    {status === 'pending' && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => changeStatus(ad.id, 'active')}
+                                                                className="p-2 text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+                                                                title="Aprovar anúncio"
+                                                            >
+                                                                <CheckCircle className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => changeStatus(ad.id, 'rejected')}
+                                                                className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                                                                title="Rejeitar anúncio"
+                                                            >
+                                                                <XCircle className="w-4 h-4" />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    {status === 'rejected' && (
+                                                        <button
+                                                            onClick={() => changeStatus(ad.id, 'active')}
+                                                            className="p-2 text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+                                                            title="Reativar anúncio"
+                                                        >
+                                                            <CheckCircle className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                    {status === 'active' && (
+                                                        <button
+                                                            onClick={() => toggleFeatured(ad)}
+                                                            className={`p-2 rounded-lg transition-colors ${ad.featured
+                                                                ? 'text-yellow-500 bg-yellow-50 hover:bg-yellow-100'
+                                                                : 'text-gray-400 hover:text-yellow-500 hover:bg-gray-100'
+                                                            }`}
+                                                            title={ad.featured ? 'Remover destaque' : 'Destacar anúncio'}
+                                                        >
+                                                            <Star className={`w-4 h-4 ${ad.featured ? 'fill-current' : ''}`} />
+                                                        </button>
+                                                    )}
+                                                    <Link to={`/anuncio/${ad.id}`} target="_blank">
+                                                        <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Ver anúncio">
+                                                            <Eye className="w-4 h-4" />
+                                                        </button>
+                                                    </Link>
+                                                    <Link to={`/editar/${ad.id}`}>
+                                                        <button className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg" title="Editar">
+                                                            <Edit className="w-4 h-4" />
+                                                        </button>
+                                                    </Link>
+                                                    <button
+                                                        onClick={() => handleDelete(ad.id)}
+                                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                                        title="Excluir"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
                                                     </button>
-                                                </Link>
-                                                <Link to={`/editar/${ad.id}`}>
-                                                    <button className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg" title="Editar anúncio">
-                                                        <Edit className="w-4 h-4" />
-                                                    </button>
-                                                </Link>
-                                                <button
-                                                    onClick={() => handleDelete(ad.id)}
-                                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                                                    title="Excluir anúncio"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>

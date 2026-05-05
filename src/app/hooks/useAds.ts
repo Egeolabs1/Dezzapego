@@ -57,6 +57,7 @@ export function useAds(filters?: AdsFilters) {
                         const { data: adData, error: adsError } = await supabase
                             .from('ads')
                             .select('*')
+                            .eq('status', 'active')
                             .in('id', ids);
 
                         if (adsError) throw adsError;
@@ -68,7 +69,8 @@ export function useAds(filters?: AdsFilters) {
                     // 2. Standard Search
                     const { data: adData, error: adsError } = await supabase
                         .from('ads')
-                        .select('*');
+                        .select('*')
+                        .eq('status', 'active');
 
                     if (adsError) throw adsError;
                     data = adData;

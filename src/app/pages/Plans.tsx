@@ -1,63 +1,132 @@
+import { useEffect, useState } from 'react';
 import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
 import { Check, Star, Zap, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 import SEO from '../../components/SEO';
 
+type AccountPlan = {
+    id: string;
+    name: string;
+    description: string;
+    price_label: string;
+    period_label: string;
+    features: string[];
+    button_text: string;
+    button_link: string;
+    highlighted: boolean;
+    icon_name: string;
+    sort_order: number;
+    active: boolean;
+};
+
+const DEFAULT_PLANS: AccountPlan[] = [
+    {
+        id: '1',
+        name: 'Grátis',
+        description: 'Para quem está começando a desapegar.',
+        price_label: 'R$ 0',
+        period_label: '/mês',
+        features: [
+            'Até 5 anúncios ativos',
+            '3 fotos por anúncio',
+            'Chat com compradores',
+            'Suporte básico'
+        ],
+        button_text: 'Começar Grátis',
+        button_link: '/register',
+        highlighted: false,
+        icon_name: 'Zap',
+        sort_order: 0,
+        active: true
+    },
+    {
+        id: '2',
+        name: 'Pro',
+        description: 'Para quem vende com frequência.',
+        price_label: 'R$ 29,90',
+        period_label: '/mês',
+        features: [
+            'Até 50 anúncios ativos',
+            '10 fotos por anúncio',
+            'Destaque em 2 anúncios/mês',
+            'Suporte prioritário',
+            'Estatísticas detalhadas'
+        ],
+        button_text: 'Assinar Pro',
+        button_link: '/register?plan=pro',
+        highlighted: true,
+        icon_name: 'Star',
+        sort_order: 1,
+        active: true
+    },
+    {
+        id: '3',
+        name: 'Empresa',
+        description: 'Para lojas e pequenos negócios.',
+        price_label: 'R$ 89,90',
+        period_label: '/mês',
+        features: [
+            'Anúncios ilimitados',
+            '20 fotos por anúncio',
+            'Destaque em 10 anúncios/mês',
+            'Perfil verificado (Selo)',
+            'Painel de gestão avançado',
+            'Integração via API (Em breve)'
+        ],
+        button_text: 'Falar com Comercial',
+        button_link: '/contato',
+        highlighted: false,
+        icon_name: 'Shield',
+        sort_order: 2,
+        active: true
+    }
+];
+
 export default function Plans() {
-    const plans = [
-        {
-            name: 'Grátis',
-            price: 'R$ 0',
-            period: '/mês',
-            description: 'Para quem está começando a desapegar.',
-            features: [
-                'Até 5 anúncios ativos',
-                '3 fotos por anúncio',
-                'Chat com compradores',
-                'Suporte básico'
-            ],
-            buttonText: 'Começar Grátis',
-            buttonLink: '/register',
-            highlighted: false,
-            icon: Zap
-        },
-        {
-            name: 'Pro',
-            price: 'R$ 29,90',
-            period: '/mês',
-            description: 'Para quem vende com frequência.',
-            features: [
-                'Até 50 anúncios ativos',
-                '10 fotos por anúncio',
-                'Destaque em 2 anúncios/mês',
-                'Suporte prioritário',
-                'Estatísticas detalhadas'
-            ],
-            buttonText: 'Assinar Pro',
-            buttonLink: '/register?plan=pro',
-            highlighted: true,
-            icon: Star
-        },
-        {
-            name: 'Empresa',
-            price: 'R$ 89,90',
-            period: '/mês',
-            description: 'Para lojas e pequenos negócios.',
-            features: [
-                'Anúncios ilimitados',
-                '20 fotos por anúncio',
-                'Destaque em 10 anúncios/mês',
-                'Perfil verificado (Selo)',
-                'Painel de gestão avançado',
-                'Integração via API (Em breve)'
-            ],
-            buttonText: 'Falar com Comercial',
-            buttonLink: '/contato',
-            highlighted: false,
-            icon: Shield
+    const [plans, setPlans] = useState<AccountPlan[]>(DEFAULT_PLANS);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchPlans();
+    }, []);
+
+    async function fetchPlans() {
+        try {
+            const { data, error } = await supabase
+                .from('account_plans')
+                .select('*')
+                .eq('active', true)
+                .order('sort_order', { ascending: true });
+
+            if (error) {
+                // If table doesn't exist, we'll just use the default plans
+                if (error.code !== 'PGRST116') console.error('Error fetching plans:', error);
+                return;
+            }
+
+            if (data && data.length > 0) {
+                setPlans(data as AccountPlan[]);
+            }
+        } catch (err) {
+            console.error('Unexpected error fetching plans:', err);
+        } finally {
+            setLoading(false);
         }
-    ];
+    }
+
+    const getIcon = (name: string) => {
+        switch (name) {
+            case 'Star': return Star;
+            case 'Shield': return Shield;
+            case 'Zap':
+            default: return Zap;
+        }
+    };
+
+    if (loading && plans === DEFAULT_PLANS) {
+        // Optional: show a loading state if needed, but since we have defaults, it's smoother to just show them
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -76,11 +145,11 @@ export default function Plans() {
 
                 <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
                     {plans.map((plan) => {
-                        const Icon = plan.icon;
+                        const Icon = getIcon(plan.icon_name);
                         return (
                             <div
-                                key={plan.name}
-                                className={`relative rounded-2xl bg-white p-8 shadow-lg transition-all hover:shadow-xl ${plan.highlighted ? 'ring-2 ring-blue-600 scale-105 z-10' : 'border border-gray-100'
+                                key={plan.id}
+                                className={`relative rounded-2xl bg-white p-8 shadow-lg transition-all hover:shadow-xl ${plan.highlighted ? 'ring-2 ring-blue-600 md:scale-105 z-10' : 'border border-gray-100'
                                     }`}
                             >
                                 {plan.highlighted && (
@@ -99,8 +168,8 @@ export default function Plans() {
                                 </div>
 
                                 <div className="mb-6">
-                                    <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
-                                    <span className="text-gray-500">{plan.period}</span>
+                                    <span className="text-4xl font-bold text-gray-900">{plan.price_label}</span>
+                                    <span className="text-gray-500">{plan.period_label}</span>
                                 </div>
 
                                 <ul className="space-y-4 mb-8">
@@ -114,13 +183,13 @@ export default function Plans() {
                                 </ul>
 
                                 <Link
-                                    to={plan.buttonLink}
+                                    to={plan.button_link}
                                     className={`block w-full py-3 px-6 rounded-lg text-center font-medium transition-colors ${plan.highlighted
                                         ? 'bg-blue-600 text-white hover:bg-blue-700'
                                         : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                                         }`}
                                 >
-                                    {plan.buttonText}
+                                    {plan.button_text}
                                 </Link>
                             </div>
                         );
@@ -141,8 +210,6 @@ export default function Plans() {
                     </div>
                 </div>
             </main>
-
-            <Footer />
         </div>
     );
 }

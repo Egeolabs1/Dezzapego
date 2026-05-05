@@ -1,4 +1,6 @@
-import { BookmarkPlus, Heart, LayoutGrid, List as ListIcon, Loader2, Trash2 } from 'lucide-react';
+import { BookmarkPlus, Heart, LayoutGrid, List as ListIcon, Trash2 } from 'lucide-react';
+import { AdCardSkeleton } from './ui/skeleton';
+
 import type { Ad } from '../../types';
 import { useMemo, useState } from 'react';
 import { formatPrice, formatDate } from '../../lib/formatters';
@@ -241,8 +243,10 @@ export function AdsList({
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className={viewMode === 'grid' ? "grid grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4" : "flex flex-col gap-4"}>
+        {[...Array(6)].map((_, i) => (
+          <AdCardSkeleton key={i} />
+        ))}
       </div>
     );
   }

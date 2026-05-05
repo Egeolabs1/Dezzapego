@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Header } from '../components/Header';
-import { Loader2, Plus, Trash2, Edit, Star, CreditCard, QrCode, X, LayoutGrid } from 'lucide-react';
+import { Loader2, Plus, Trash2, Edit, Star, CreditCard, QrCode, X, LayoutGrid, Clock, XCircle } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Ad } from '../../types';
 import { formatPrice } from '../../lib/formatters';
@@ -33,20 +33,14 @@ export default function MyAds() {
     useEffect(() => {
         const userId = user?.id;
         async function fetchMyAds() {
-            if (!userId) {
-                setLoading(false);
-                return;
-            }
-
+            if (!userId) { setLoading(false); return; }
             try {
                 const { data, error } = await supabase
                     .from('ads')
                     .select('*')
                     .eq('user_id', userId)
-                    .order('publishedAt', { ascending: false });
-
+                    .order('created_at', { ascending: false });
                 if (error) throw error;
-
                 setAds(data || []);
             } catch (error) {
                 console.error('Error fetching my ads:', error);
@@ -54,36 +48,22 @@ export default function MyAds() {
                 setLoading(false);
             }
         }
-
         fetchMyAds();
     }, [user?.id]);
 
     useEffect(() => {
         const userId = user?.id;
         if (!userId) return;
-
         async function fetchFeaturedData() {
             const [{ data: plansData }, { data: paymentsData }] = await Promise.all([
-                supabase
-                    .from('featured_plans')
-                    .select('*')
-                    .eq('active', true)
-                    .order('sort_order', { ascending: true }),
-                supabase
-                    .from('featured_payments')
-                    .select('*, featured_plans(name, duration_days)')
-                    .eq('user_id', userId)
-                    .order('created_at', { ascending: false }),
+                supabase.from('featured_plans').select('*').eq('active', true).order('sort_order', { ascending: true }),
+                supabase.from('featured_payments').select('*, featured_plans(name, duration_days)').eq('user_id', userId!).order('created_at', { ascending: false }),
             ]);
-
             const activePlans = (plansData || []) as FeaturedPlan[];
             setPlans(activePlans);
             setPayments((paymentsData || []) as FeaturedPayment[]);
-            if (!selectedPlanId && activePlans[0]) {
-                setSelectedPlanId(activePlans[0].id);
-            }
+            if (!selectedPlanId && activePlans[0]) setSelectedPlanId(activePlans[0].id);
         }
-
         fetchFeaturedData();
     }, [user, selectedPlanId]);
 
@@ -100,17 +80,14 @@ export default function MyAds() {
     }, [searchParams, setSearchParams]);
 
     const handleDelete = async (id: string, e: React.MouseEvent) => {
-        e.preventDefault(); // Prevent navigation
+        e.preventDefault();
         if (!confirm('Deseja realmente excluir este anúncio?')) return;
-
         try {
             const { error } = await supabase.from('ads').delete().eq('id', id);
             if (error) throw error;
-
             setAds(prev => prev.filter(ad => ad.id !== id));
             toast.success('Anúncio excluído com sucesso!');
         } catch (error) {
-            console.error('Error deleting ad:', error);
             toast.error('Erro ao excluir anúncio.');
         }
     };
@@ -119,30 +96,19 @@ export default function MyAds() {
         e.preventDefault();
         setSelectedAd(ad);
         setPixResult(null);
-        if (!selectedPlanId && plans[0]) {
-            setSelectedPlanId(plans[0].id);
-        }
+        if (!selectedPlanId && plans[0]) setSelectedPlanId(plans[0].id);
     };
 
     const handleCreatePayment = async () => {
-        if (!selectedAd || !selectedPlanId) {
-            toast.error('Escolha um plano de destaque.');
-            return;
-        }
-
+        if (!selectedAd || !selectedPlanId) { toast.error('Escolha um plano de destaque.'); return; }
         setCreatingPayment(true);
         try {
             const result = await createFeaturedPayment(selectedAd.id, selectedPlanId, provider);
-            if (result.checkoutUrl) {
-                window.location.href = result.checkoutUrl;
-                return;
-            }
-
+            if (result.checkoutUrl) { window.location.href = result.checkoutUrl; return; }
             if (result.pix) {
                 setPixResult(result.pix);
                 toast.success('PIX gerado. O destaque será ativado após a confirmação do pagamento.');
             }
-
             const { data } = await supabase
                 .from('featured_payments')
                 .select('*, featured_plans(name, duration_days)')
@@ -156,17 +122,15 @@ export default function MyAds() {
         }
     };
 
-    const getLatestPaymentForAd = (adId: string) => payments.find((payment) => payment.ad_id === adId);
+    const getLatestPaymentForAd = (adId: string) => payments.find(p => p.ad_id === adId);
 
     const getFeaturedStatus = (ad: Ad) => {
         const rawExpiresAt = (ad as Ad & { featured_expires_at?: string }).featured_expires_at || ad.featuredExpiresAt;
         if (!ad.featured) return null;
         if (!rawExpiresAt) return 'Destaque ativo';
-
         const expiresAt = new Date(rawExpiresAt);
         if (Number.isNaN(expiresAt.getTime())) return 'Destaque ativo';
         if (expiresAt < new Date()) return 'Destaque expirado';
-
         return `Destaque até ${expiresAt.toLocaleDateString('pt-BR')}`;
     };
 
@@ -185,138 +149,172 @@ export default function MyAds() {
         );
     }
 
+    const pendingCount = ads.filter(a => (a as any).status === 'pending').length;
+    const rejectedCount = ads.filter(a => (a as any).status === 'rejected').length;
+
     return (
         <div className="min-h-screen bg-gray-50">
             <SEO title="Meus anúncios" description="Gerencie seus anúncios no Dezzapego." noIndex />
             <Header hideLocationFilter />
 
             <main className="container mx-auto px-4 py-8 max-w-7xl">
-            <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
-                <div>
-                    <p className="text-sm font-medium text-blue-700 mb-1">Área do anunciante</p>
-                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-                        <LayoutGrid className="w-8 h-8 text-blue-600 hidden sm:block" aria-hidden />
-                        Meus anúncios
-                    </h1>
-                    <p className="text-gray-600 mt-2 max-w-xl">
-                        Edite, exclua ou destaque seus anúncios. Alterações ficam disponíveis no site após salvar.
-                    </p>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-3 shrink-0 w-full sm:w-auto">
-                    <button
-                        type="button"
-                        onClick={() => navigate('/dashboard')}
-                        className="flex items-center justify-center px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-colors"
-                    >
-                        Minha conta
-                    </button>
-                    <Link
-                        to="/anunciar"
-                        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold shadow-sm"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Criar anúncio
-                    </Link>
-                </div>
-            </header>
-
-            {loading ? (
-                <div className="flex justify-center py-16">
-                    <Loader2 className="w-8 h-8 animate-spin text-blue-600" aria-label="Carregando" />
-                </div>
-            ) : ads.length === 0 ? (
-                <div className="text-center py-16 bg-white rounded-2xl border border-gray-200 shadow-sm">
-                    <p className="text-lg text-gray-600 mb-4">Você ainda não tem anúncios publicados.</p>
-                    <Link
-                        to="/anunciar"
-                        className="text-blue-600 font-medium hover:underline"
-                    >
-                        Comece a vender agora!
-                    </Link>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {ads.map((ad) => {
-                        const latestPayment = getLatestPaymentForAd(ad.id);
-                        const featuredStatus = getFeaturedStatus(ad);
-
-                        return (
-                        <Link to={`/anuncio/${ad.id}`} key={ad.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 overflow-hidden group block">
-                            {/* Image */}
-                            <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
-                                <img
-                                    src={ad.images[0]}
-                                    alt={ad.title}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                />
-                                <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-medium text-gray-700 shadow-sm">
-                                    {ad.category}
-                                </div>
-                                {featuredStatus && (
-                                    <div className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 px-2 py-1 rounded-md text-xs font-bold shadow-sm flex items-center gap-1">
-                                        <Star className="w-3 h-3 fill-current" />
-                                        Destaque
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Content */}
-                            <div className="p-4">
-                                <div className="mb-2">
-                                    <h3 className="font-semibold text-gray-800 truncate" title={ad.title}>
-                                        {ad.title}
-                                    </h3>
-                                    <p className="text-lg font-bold text-blue-600">
-                                        {formatPrice(ad.price)}
-                                    </p>
-                                    {featuredStatus && (
-                                        <p className="text-xs font-medium text-yellow-700 mt-1">{featuredStatus}</p>
-                                    )}
-                                    {latestPayment && !featuredStatus && (
-                                        <p className={`text-xs mt-1 ${paymentStatusClass(latestPayment.status)}`}>
-                                            {paymentStatusLabel(latestPayment)}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 gap-2">
-                                    <span className="text-xs text-gray-500">
-                                        {new Date(ad.publishedAt).toLocaleDateString('pt-BR')} -- {ad.views} visualizações
-                                    </span>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={(e) => openFeaturedModal(ad, e)}
-                                            className="p-1.5 text-yellow-600 hover:bg-yellow-50 rounded-md transition-colors"
-                                            title="Destacar anúncio"
-                                        >
-                                            <Star className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                navigate(`/editar/${ad.id}`);
-                                            }}
-                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                                            title="Editar"
-                                        >
-                                            <Edit className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={(e) => handleDelete(ad.id, e)}
-                                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                                            title="Excluir"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
+                    <div>
+                        <p className="text-sm font-medium text-blue-700 mb-1">Área do anunciante</p>
+                        <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+                            <LayoutGrid className="w-8 h-8 text-blue-600 hidden sm:block" aria-hidden />
+                            Meus anúncios
+                        </h1>
+                        <p className="text-gray-600 mt-2 max-w-xl">
+                            Edite, exclua ou destaque seus anúncios. Alterações ficam disponíveis no site após salvar.
+                        </p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3 shrink-0 w-full sm:w-auto">
+                        <button
+                            type="button"
+                            onClick={() => navigate('/dashboard')}
+                            className="flex items-center justify-center px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                        >
+                            Minha conta
+                        </button>
+                        <Link
+                            to="/anunciar"
+                            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold shadow-sm"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Criar anúncio
                         </Link>
-                        );
-                    })}
-                </div>
-            )}
+                    </div>
+                </header>
+
+                {/* Status alerts */}
+                {pendingCount > 0 && (
+                    <div className="mb-6 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                        <Clock className="w-4 h-4 flex-shrink-0" />
+                        <span><strong>{pendingCount} anúncio{pendingCount > 1 ? 's' : ''}</strong> aguardando análise da moderação. Eles ficarão visíveis após aprovação.</span>
+                    </div>
+                )}
+                {rejectedCount > 0 && (
+                    <div className="mb-6 flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-800">
+                        <XCircle className="w-4 h-4 flex-shrink-0" />
+                        <span><strong>{rejectedCount} anúncio{rejectedCount > 1 ? 's' : ''}</strong> foi rejeitado. Entre em contato com o suporte para mais informações.</span>
+                    </div>
+                )}
+
+                {loading ? (
+                    <div className="flex justify-center py-16">
+                        <Loader2 className="w-8 h-8 animate-spin text-blue-600" aria-label="Carregando" />
+                    </div>
+                ) : ads.length === 0 ? (
+                    <div className="text-center py-16 bg-white rounded-2xl border border-gray-200 shadow-sm">
+                        <p className="text-lg text-gray-600 mb-4">Você ainda não tem anúncios publicados.</p>
+                        <Link to="/anunciar" className="text-blue-600 font-medium hover:underline">
+                            Comece a vender agora!
+                        </Link>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {ads.map((ad) => {
+                            const latestPayment = getLatestPaymentForAd(ad.id);
+                            const featuredStatus = getFeaturedStatus(ad);
+                            const adStatus = (ad as any).status || 'active';
+
+                            return (
+                                <Link
+                                    to={adStatus === 'active' ? `/anuncio/${ad.id}` : '#'}
+                                    key={ad.id}
+                                    className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border overflow-hidden group block ${
+                                        adStatus === 'rejected' ? 'border-red-200 opacity-75' :
+                                        adStatus === 'pending' ? 'border-amber-200' :
+                                        'border-gray-100'
+                                    }`}
+                                    onClick={adStatus !== 'active' ? (e) => e.preventDefault() : undefined}
+                                >
+                                    {/* Image */}
+                                    <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
+                                        <img
+                                            src={ad.images[0]}
+                                            alt={ad.title}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                        />
+                                        <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-medium text-gray-700 shadow-sm">
+                                            {ad.category}
+                                        </div>
+                                        {featuredStatus && (
+                                            <div className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 px-2 py-1 rounded-md text-xs font-bold shadow-sm flex items-center gap-1">
+                                                <Star className="w-3 h-3 fill-current" />
+                                                Destaque
+                                            </div>
+                                        )}
+                                        {adStatus === 'pending' && (
+                                            <div className="absolute bottom-0 left-0 right-0 bg-amber-500/90 text-white text-center py-1 text-xs font-semibold">
+                                                ⏳ Em análise — aguardando moderação
+                                            </div>
+                                        )}
+                                        {adStatus === 'rejected' && (
+                                            <div className="absolute bottom-0 left-0 right-0 bg-red-600/90 text-white text-center py-1 text-xs font-semibold">
+                                                ✕ Rejeitado pela moderação
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="p-4">
+                                        <div className="mb-2">
+                                            <h3 className="font-semibold text-gray-800 truncate" title={ad.title}>
+                                                {ad.title}
+                                            </h3>
+                                            <p className="text-lg font-bold text-blue-600">
+                                                {formatPrice(ad.price)}
+                                            </p>
+                                            {featuredStatus && (
+                                                <p className="text-xs font-medium text-yellow-700 mt-1">{featuredStatus}</p>
+                                            )}
+                                            {latestPayment && !featuredStatus && (
+                                                <p className={`text-xs mt-1 ${paymentStatusClass(latestPayment.status)}`}>
+                                                    {paymentStatusLabel(latestPayment)}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 gap-2">
+                                            <span className="text-xs text-gray-500">
+                                                {ad.views ?? 0} visualizações
+                                            </span>
+                                            <div className="flex gap-2">
+                                                {adStatus === 'active' && (
+                                                    <button
+                                                        onClick={(e) => openFeaturedModal(ad, e)}
+                                                        className="p-1.5 text-yellow-600 hover:bg-yellow-50 rounded-md transition-colors"
+                                                        title="Destacar anúncio"
+                                                    >
+                                                        <Star className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={(e) => { e.preventDefault(); navigate(`/editar/${ad.id}`); }}
+                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                                    title="Editar"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => handleDelete(ad.id, e)}
+                                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                                    title="Excluir"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                )}
             </main>
+
             {selectedAd && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-xl max-w-xl w-full p-6 relative">
@@ -352,7 +350,7 @@ export default function MyAds() {
                                     className={`text-left rounded-xl border p-4 transition-colors ${selectedPlanId === plan.id
                                         ? 'border-blue-600 bg-blue-50'
                                         : 'border-gray-200 hover:border-blue-300'
-                                        }`}
+                                    }`}
                                 >
                                     <p className="font-semibold text-gray-900">{plan.duration_days} dias</p>
                                     <p className="text-lg font-bold text-blue-600">{formatCents(plan.price_cents, plan.currency)}</p>
@@ -367,7 +365,7 @@ export default function MyAds() {
                                 className={`flex items-center justify-center gap-2 rounded-xl border p-3 font-medium ${provider === 'stripe'
                                     ? 'border-blue-600 bg-blue-50 text-blue-700'
                                     : 'border-gray-200 text-gray-700'
-                                    }`}
+                                }`}
                             >
                                 <CreditCard className="w-4 h-4" />
                                 Stripe
@@ -377,7 +375,7 @@ export default function MyAds() {
                                 className={`flex items-center justify-center gap-2 rounded-xl border p-3 font-medium ${provider === 'pixgo'
                                     ? 'border-blue-600 bg-blue-50 text-blue-700'
                                     : 'border-gray-200 text-gray-700'
-                                    }`}
+                                }`}
                             >
                                 <QrCode className="w-4 h-4" />
                                 PIX PixGo

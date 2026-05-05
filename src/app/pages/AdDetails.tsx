@@ -2,15 +2,18 @@ import { useEffect, useState, FormEvent, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import {
-    Loader2, MapPin, Calendar, Share2, MessageCircle,
+    MapPin, Calendar, Share2, MessageCircle,
     Flag, X, AlertTriangle, ShieldCheck, ChevronRight, Heart, User, Trash2, Pencil, ChevronLeft
 } from 'lucide-react';
 import { Ad, Profile } from '../../types';
-import { formatPrice } from '../../lib/formatters';
+import { formatPrice, formatDate } from '../../lib/formatters';
+
 import { toast } from 'sonner';
 import { Header } from '../components/Header';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../../components/SEO';
+import { AdDetailsSkeleton } from '../components/ui/skeleton';
+
 import { toAbsoluteUrl } from '../../lib/seo';
 import { buildAdDetailStructuredGraph, getKeywordsForAd } from '../../lib/categorySeo';
 import { incrementAdViewOnce } from '../../lib/adViews';
@@ -248,8 +251,10 @@ export default function AdDetails() {
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center h-[calc(100vh-80px)]">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <div className="bg-gray-50 min-h-screen">
+                <Header />
+
+                <AdDetailsSkeleton />
             </div>
         );
     }
@@ -262,7 +267,7 @@ export default function AdDetails() {
     const sellerBadges = getSellerTrustBadges(profile, ad.seller);
 
     return (
-        <div className="bg-gray-50 min-h-screen pb-12">
+        <div className="bg-gray-50 min-h-screen pb-24 md:pb-12">
             <SEO
                 title={ad.title}
                 description={`${formatPrice(ad.price)} — ${(ad.description ?? '').slice(0, 155)}`}
@@ -553,11 +558,31 @@ export default function AdDetails() {
                                         </div>
                                     </div>
                                 </Link>
-                                <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
-                                    <Calendar className="w-4 h-4" />
-                                    <span>
-                                        No Dezzapego desde {new Date(profile?.created_at || ad.seller?.memberSince || new Date().toISOString()).getFullYear()}
-                                    </span>
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                                        <Calendar className="w-4 h-4 text-gray-400" />
+                                        <span>
+                                            Membro desde {new Date(profile?.created_at || ad.seller?.memberSince || new Date().toISOString()).getFullYear()}
+                                        </span>
+                                    </div>
+
+                                    {(profile?.city || profile?.state) && (
+                                        <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                                            <MapPin className="w-4 h-4 text-gray-400" />
+                                            <span>
+                                                De {profile.city}{profile.city && profile.state ? ', ' : ''}{profile.state}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {profile?.last_access_at && (
+                                        <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                                            <span>
+                                                Último acesso: {formatDate(profile.last_access_at)}
+                                            </span>
+                                        </div>
+                                    )}
+
                                 </div>
                                 {sellerBadges.length > 0 && (
                                     <div className="mt-3 flex flex-wrap gap-2">
@@ -773,6 +798,16 @@ export default function AdDetails() {
                     )}
                 </div>
             )}
+            {/* Mobile Sticky Contact Button */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-200 z-40">
+                <button
+                    onClick={handleContact}
+                    className="w-full flex items-center justify-center gap-3 bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg active:scale-95 transition-all"
+                >
+                    <MessageCircle className="w-6 h-6" />
+                    Chamar no WhatsApp
+                </button>
+            </div>
         </div>
     );
 }

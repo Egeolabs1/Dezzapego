@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CreditCard, Eye, RefreshCw, Save, Search, Star } from 'lucide-react';
+import { CreditCard, Eye, RefreshCw, Save, Search, Star, Zap, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../../lib/supabase';
 import { FeaturedPayment, FeaturedPlan, formatCents } from '../../../lib/featuredPayments';
@@ -9,14 +9,31 @@ type AdminPayment = FeaturedPayment & {
     profiles?: { full_name?: string | null; email?: string | null } | null;
 };
 
+type AccountPlan = {
+    id: string;
+    name: string;
+    description: string;
+    price_label: string;
+    period_label: string;
+    features: string[];
+    button_text: string;
+    button_link: string;
+    highlighted: boolean;
+    icon_name: string;
+    sort_order: number;
+    active: boolean;
+};
+
 export default function AdminPayments() {
-    const [plans, setPlans] = useState<FeaturedPlan[]>([]);
+    const [featuredPlans, setFeaturedPlans] = useState<FeaturedPlan[]>([]);
+    const [accountPlans, setAccountPlans] = useState<AccountPlan[]>([]);
     const [payments, setPayments] = useState<AdminPayment[]>([]);
     const [loading, setLoading] = useState(true);
     const [savingPlanId, setSavingPlanId] = useState<string | null>(null);
+    const [savingAccountPlanId, setSavingAccountPlanId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [providerFilter, setProviderFilter] = useState('all');
+    const providerFilter = 'all';
     const [selectedPayment, setSelectedPayment] = useState<AdminPayment | null>(null);
 
     useEffect(() => {
@@ -26,9 +43,17 @@ export default function AdminPayments() {
     async function fetchPaymentsData() {
         setLoading(true);
         try {
-            const [{ data: plansData, error: plansError }, { data: paymentsData, error: paymentsError }] = await Promise.all([
+            const [
+                { data: fPlansData, error: fPlansError },
+                { data: aPlansData, error: aPlansError },
+                { data: paymentsData, error: paymentsError }
+            ] = await Promise.all([
                 supabase
                     .from('featured_plans')
+                    .select('*')
+                    .order('sort_order', { ascending: true }),
+                supabase
+                    .from('account_plans')
                     .select('*')
                     .order('sort_order', { ascending: true }),
                 supabase
@@ -38,10 +63,15 @@ export default function AdminPayments() {
                     .limit(200),
             ]);
 
-            if (plansError) throw plansError;
+            if (fPlansError) throw fPlansError;
+            // Silently handle account_plans error if table doesn't exist yet
+            if (aPlansError && aPlansError.code !== 'PGRST116') {
+                console.warn('Account plans table might be missing:', aPlansError);
+            }
             if (paymentsError) throw paymentsError;
 
-            setPlans((plansData || []) as FeaturedPlan[]);
+            setFeaturedPlans((fPlansData || []) as FeaturedPlan[]);
+            setAccountPlans((aPlansData || []) as AccountPlan[]);
             setPayments((paymentsData || []) as AdminPayment[]);
         } catch (error) {
             console.error('Error fetching payments:', error);
@@ -51,7 +81,7 @@ export default function AdminPayments() {
         }
     }
 
-    async function updatePlan(plan: FeaturedPlan) {
+    async function updateFeaturedPlan(plan: FeaturedPlan) {
         setSavingPlanId(plan.id);
         try {
             const { error } = await supabase
@@ -65,7 +95,7 @@ export default function AdminPayments() {
                 .eq('id', plan.id);
 
             if (error) throw error;
-            toast.success('Plano atualizado.');
+            toast.success('Plano de destaque atualizado.');
         } catch (error) {
             console.error('Error updating plan:', error);
             toast.error('Erro ao atualizar plano.');
@@ -74,8 +104,73 @@ export default function AdminPayments() {
         }
     }
 
-    function updateLocalPlan(planId: string, updates: Partial<FeaturedPlan>) {
-        setPlans((prev) => prev.map((plan) => plan.id === planId ? { ...plan, ...updates } : plan));
+    async function updateAccountPlan(plan: AccountPlan) {
+        setSavingAccountPlanId(plan.id);
+        try {
+            const { error } = await supabase
+                .from('account_plans')
+                .upsert({
+                    id: plan.id,
+                    name: plan.name,
+                    description: plan.description,
+                    price_label: plan.price_label,
+                    period_label: plan.period_label,
+                    features: plan.features,
+                    button_text: plan.button_text,
+                    button_link: plan.button_link,
+                    highlighted: plan.highlighted,
+                    icon_name: plan.icon_name,
+                    sort_order: plan.sort_order,
+                    active: plan.active,
+                });
+
+            if (error) throw error;
+            toast.success('Plano de conta atualizado.');
+            fetchPaymentsData();
+        } catch (error) {
+            console.error('Error updating account plan:', error);
+            toast.error('Erro ao atualizar plano. Verifique se a tabela account_plans existe.');
+        } finally {
+            setSavingAccountPlanId(null);
+        }
+    }
+
+    function updateLocalFeaturedPlan(planId: string, updates: Partial<FeaturedPlan>) {
+        setFeaturedPlans((prev) => prev.map((plan) => plan.id === planId ? { ...plan, ...updates } : plan));
+    }
+
+    function updateLocalAccountPlan(planId: string, updates: Partial<AccountPlan>) {
+        setAccountPlans((prev) => prev.map((plan) => plan.id === planId ? { ...plan, ...updates } : plan));
+    }
+
+    async function deleteAccountPlan(id: string) {
+        if (!window.confirm('Tem certeza que deseja excluir este plano?')) return;
+        try {
+            const { error } = await supabase.from('account_plans').delete().eq('id', id);
+            if (error) throw error;
+            setAccountPlans(prev => prev.filter(p => p.id !== id));
+            toast.success('Plano excluído.');
+        } catch (error) {
+            toast.error('Erro ao excluir plano.');
+        }
+    }
+
+    function addNewAccountPlan() {
+        const newPlan: AccountPlan = {
+            id: crypto.randomUUID(),
+            name: 'Novo Plano',
+            description: 'Descrição do plano',
+            price_label: 'R$ 0',
+            period_label: '/mês',
+            features: ['Funcionalidade 1'],
+            button_text: 'Assinar',
+            button_link: '/register',
+            highlighted: false,
+            icon_name: 'Zap',
+            sort_order: accountPlans.length,
+            active: true
+        };
+        setAccountPlans([...accountPlans, newPlan]);
     }
 
     async function updatePaymentStatus(payment: AdminPayment, status: AdminPayment['status']) {
@@ -144,94 +239,224 @@ export default function AdminPayments() {
     });
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-12">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800">Pagamentos e Destaques</h1>
-                    <p className="text-sm text-gray-500 mt-1">Controle planos, pagamentos Stripe/PixGo e ativações de destaque.</p>
+                    <h1 className="text-2xl font-bold text-gray-800">Pagamentos e Planos</h1>
+                    <p className="text-sm text-gray-500 mt-1">Configure os planos de conta, destaques avulsos e gerencie pagamentos.</p>
                 </div>
                 <button
                     onClick={fetchPaymentsData}
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 shadow-sm transition-all"
                 >
                     <RefreshCw className="w-4 h-4" />
-                    Atualizar
+                    Atualizar Dados
                 </button>
             </div>
 
-            <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <div className="flex items-center gap-2 mb-6">
-                    <Star className="w-5 h-5 text-yellow-500" />
-                    <h2 className="text-lg font-semibold text-gray-800">Planos de destaque</h2>
+            {/* Account Plans Section */}
+            <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-2">
+                        <Zap className="w-5 h-5 text-blue-600" />
+                        <h2 className="text-xl font-bold text-gray-900">Planos de Conta (Subscription)</h2>
+                    </div>
+                    <button
+                        onClick={addNewAccountPlan}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 font-semibold transition-all"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Novo Plano
+                    </button>
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    {plans.map((plan) => (
-                        <div key={plan.id} className="border border-gray-200 rounded-xl p-4 space-y-4">
-                            <div>
-                                <label className="text-xs font-medium text-gray-500">Nome</label>
-                                <input
-                                    title="Nome do plano"
-                                    value={plan.name}
-                                    onChange={(event) => updateLocalPlan(plan.id, { name: event.target.value })}
-                                    className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="text-xs font-medium text-gray-500">Dias</label>
+
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    {accountPlans.map((plan) => (
+                        <div key={plan.id} className={`relative border rounded-2xl p-6 transition-all ${plan.highlighted ? 'border-blue-600 ring-4 ring-blue-50 bg-blue-50/10' : 'border-gray-200 bg-white'}`}>
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Nome do Plano</label>
                                     <input
-                                        title="Duração do plano em dias"
-                                        type="number"
-                                        value={plan.duration_days}
-                                        onChange={(event) => updateLocalPlan(plan.id, { duration_days: Number(event.target.value) })}
-                                        className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
+                                        value={plan.name}
+                                        onChange={(e) => updateLocalAccountPlan(plan.id, { name: e.target.value })}
+                                        className="text-xl font-bold text-gray-900 bg-transparent border-b border-transparent focus:border-blue-600 focus:outline-none w-full"
                                     />
                                 </div>
+                                <button onClick={() => deleteAccountPlan(plan.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
                                 <div>
-                                    <label className="text-xs font-medium text-gray-500">Preço (R$)</label>
+                                    <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Descrição Curta</label>
                                     <input
-                                        title="Preço do plano em reais"
-                                        type="number"
-                                        min={10}
-                                        step="0.01"
-                                        value={(plan.price_cents / 100).toFixed(2)}
-                                        onChange={(event) => updateLocalPlan(plan.id, { price_cents: Math.round(Number(event.target.value) * 100) })}
-                                        className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
+                                        value={plan.description}
+                                        onChange={(e) => updateLocalAccountPlan(plan.id, { description: e.target.value })}
+                                        className="w-full text-sm text-gray-600 bg-transparent border-b border-gray-100 py-1"
                                     />
                                 </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Preço (Ex: R$ 29,90)</label>
+                                        <input
+                                            value={plan.price_label}
+                                            onChange={(e) => updateLocalAccountPlan(plan.id, { price_label: e.target.value })}
+                                            className="w-full text-lg font-bold text-gray-900"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Período (Ex: /mês)</label>
+                                        <input
+                                            value={plan.period_label}
+                                            onChange={(e) => updateLocalAccountPlan(plan.id, { period_label: e.target.value })}
+                                            className="w-full text-sm text-gray-500 mt-2"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider block mb-2">Vantagens (uma por linha)</label>
+                                    <textarea
+                                        value={plan.features.join('\n')}
+                                        onChange={(e) => updateLocalAccountPlan(plan.id, { features: e.target.value.split('\n') })}
+                                        rows={4}
+                                        className="w-full text-xs text-gray-600 bg-gray-50 rounded-xl p-3 border border-gray-100 focus:ring-2 focus:ring-blue-100 focus:outline-none"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Ícone (Zap, Star, Shield)</label>
+                                        <select
+                                            value={plan.icon_name}
+                                            onChange={(e) => updateLocalAccountPlan(plan.id, { icon_name: e.target.value })}
+                                            className="w-full text-sm bg-gray-50 border border-gray-100 rounded-lg p-2"
+                                        >
+                                            <option value="Zap">Zap (Raio)</option>
+                                            <option value="Star">Star (Estrela)</option>
+                                            <option value="Shield">Shield (Escudo)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Ordem</label>
+                                        <input
+                                            type="number"
+                                            value={plan.sort_order}
+                                            onChange={(e) => updateLocalAccountPlan(plan.id, { sort_order: Number(e.target.value) })}
+                                            className="w-full text-sm bg-gray-50 border border-gray-100 rounded-lg p-2"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between pt-2">
+                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={plan.highlighted}
+                                            onChange={(e) => updateLocalAccountPlan(plan.id, { highlighted: e.target.checked })}
+                                            className="w-4 h-4 text-blue-600 rounded border-gray-300"
+                                        />
+                                        Plano em Destaque
+                                    </label>
+                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={plan.active}
+                                            onChange={(e) => updateLocalAccountPlan(plan.id, { active: e.target.checked })}
+                                            className="w-4 h-4 text-green-600 rounded border-gray-300"
+                                        />
+                                        Ativo
+                                    </label>
+                                </div>
+
+                                <button
+                                    onClick={() => updateAccountPlan(plan)}
+                                    disabled={savingAccountPlanId === plan.id}
+                                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all shadow-md ${plan.highlighted ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-900 text-white hover:bg-black'}`}
+                                >
+                                    <Save className="w-4 h-4" />
+                                    {savingAccountPlanId === plan.id ? 'Salvando...' : 'Salvar Configurações'}
+                                </button>
                             </div>
-                            <label className="flex items-center gap-2 text-sm text-gray-700">
-                                <input
-                                    type="checkbox"
-                                    checked={plan.active}
-                                    onChange={(event) => updateLocalPlan(plan.id, { active: event.target.checked })}
-                                />
-                                Plano ativo
-                            </label>
-                            <button
-                                onClick={() => updatePlan(plan)}
-                                disabled={savingPlanId === plan.id}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60"
-                            >
-                                <Save className="w-4 h-4" />
-                                {savingPlanId === plan.id ? 'Salvando...' : 'Salvar plano'}
-                            </button>
                         </div>
                     ))}
                 </div>
             </section>
 
-            <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            {/* Featured Plans (Destaques Avulsos) Section */}
+            <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center gap-2 mb-8">
+                    <Star className="w-5 h-5 text-yellow-500" />
+                    <h2 className="text-xl font-bold text-gray-900">Destaques Avulsos (Ads)</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {featuredPlans.map((plan) => (
+                        <div key={plan.id} className="border border-gray-200 rounded-2xl p-5 space-y-4 bg-gray-50/50">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Título do Destaque</label>
+                                <input
+                                    value={plan.name}
+                                    onChange={(event) => updateLocalFeaturedPlan(plan.id, { name: event.target.value })}
+                                    className="w-full font-bold text-gray-900 bg-transparent border-b border-gray-200"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Duração (Dias)</label>
+                                    <input
+                                        type="number"
+                                        value={plan.duration_days}
+                                        onChange={(event) => updateLocalFeaturedPlan(plan.id, { duration_days: Number(event.target.value) })}
+                                        className="w-full text-sm font-semibold"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Preço (R$)</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        value={(plan.price_cents / 100).toFixed(2)}
+                                        onChange={(event) => updateLocalFeaturedPlan(plan.id, { price_cents: Math.round(Number(event.target.value) * 100) })}
+                                        className="w-full text-sm font-semibold text-blue-600"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <label className="flex items-center gap-2 text-xs font-medium text-gray-600">
+                                    <input
+                                        type="checkbox"
+                                        checked={plan.active}
+                                        onChange={(event) => updateLocalFeaturedPlan(plan.id, { active: event.target.checked })}
+                                    />
+                                    Habilitado
+                                </label>
+                                <button
+                                    onClick={() => updateFeaturedPlan(plan)}
+                                    disabled={savingPlanId === plan.id}
+                                    className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold hover:bg-gray-50 shadow-sm"
+                                >
+                                    {savingPlanId === plan.id ? '...' : 'Salvar'}
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            {/* Payments Table Section */}
+            <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-50/50">
                     <div className="flex items-center gap-2">
                         <CreditCard className="w-5 h-5 text-gray-500" />
-                        <h2 className="text-lg font-semibold text-gray-800">Pagamentos recentes</h2>
+                        <h2 className="text-lg font-semibold text-gray-800">Histórico de Pagamentos</h2>
                     </div>
                     <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
                         <select
                             value={statusFilter}
                             onChange={(event) => setStatusFilter(event.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg bg-white"
+                            className="px-3 py-2 border border-gray-300 rounded-xl bg-white text-sm"
                             title="Filtrar por status"
                         >
                             <option value="all">Todos os status</option>
@@ -241,23 +466,13 @@ export default function AdminPayments() {
                             <option value="refunded">Estornados</option>
                             <option value="failed">Falhos</option>
                         </select>
-                        <select
-                            value={providerFilter}
-                            onChange={(event) => setProviderFilter(event.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg bg-white"
-                            title="Filtrar por provedor"
-                        >
-                            <option value="all">Todos provedores</option>
-                            <option value="stripe">Stripe</option>
-                            <option value="pixgo">PixGo</option>
-                        </select>
-                        <div className="relative w-full md:w-72">
+                        <div className="relative w-full md:w-64">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input
                                 value={searchTerm}
                                 onChange={(event) => setSearchTerm(event.target.value)}
-                                placeholder="Buscar pagamento..."
-                                className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg"
+                                placeholder="Buscar transação..."
+                                className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl text-sm"
                             />
                         </div>
                     </div>
@@ -266,47 +481,47 @@ export default function AdminPayments() {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
-                            <tr className="bg-gray-50 text-xs text-gray-500 uppercase border-b border-gray-100">
-                                <th className="p-4 font-medium">Anúncio</th>
-                                <th className="p-4 font-medium">Plano</th>
-                                <th className="p-4 font-medium">Valor</th>
-                                <th className="p-4 font-medium">Provedor</th>
-                                <th className="p-4 font-medium">Status</th>
-                                <th className="p-4 font-medium">Criado em</th>
-                                <th className="p-4 font-medium text-right">Ações</th>
+                            <tr className="text-[10px] text-gray-400 uppercase tracking-widest border-b border-gray-100">
+                                <th className="p-4 font-bold">Item / Usuário</th>
+                                <th className="p-4 font-bold">Plano</th>
+                                <th className="p-4 font-bold">Valor</th>
+                                <th className="p-4 font-bold">Gateway</th>
+                                <th className="p-4 font-bold">Status</th>
+                                <th className="p-4 font-bold">Data</th>
+                                <th className="p-4 font-bold text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {loading ? (
-                                <tr><td colSpan={7} className="p-8 text-center text-gray-500">Carregando...</td></tr>
+                                <tr><td colSpan={7} className="p-12 text-center text-gray-400 animate-pulse font-medium">Buscando dados no servidor...</td></tr>
                             ) : filteredPayments.length === 0 ? (
-                                <tr><td colSpan={7} className="p-8 text-center text-gray-500">Nenhum pagamento encontrado.</td></tr>
+                                <tr><td colSpan={7} className="p-12 text-center text-gray-500">Nenhum registro encontrado.</td></tr>
                             ) : filteredPayments.map((payment) => (
-                                <tr key={payment.id} className="hover:bg-gray-50">
+                                <tr key={payment.id} className="hover:bg-gray-50 transition-colors group">
                                     <td className="p-4">
-                                        <p className="font-medium text-gray-900 max-w-xs truncate">{payment.ads?.title || payment.ad_id}</p>
-                                        <p className="text-xs text-gray-500">{payment.id}</p>
+                                        <p className="font-semibold text-gray-900 max-w-xs truncate">{payment.ads?.title || 'Upgrade de Conta'}</p>
+                                        <p className="text-[10px] text-gray-400 font-mono">{payment.id}</p>
                                     </td>
-                                    <td className="p-4 text-sm text-gray-700">
+                                    <td className="p-4 text-sm text-gray-600">
                                         {payment.featured_plans?.name || payment.plan_id}
                                     </td>
-                                    <td className="p-4 text-sm font-semibold text-gray-900">
+                                    <td className="p-4 text-sm font-bold text-gray-900">
                                         {formatCents(payment.amount_cents, payment.currency)}
                                     </td>
-                                    <td className="p-4 text-sm text-gray-700 uppercase">{payment.provider}</td>
+                                    <td className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">{payment.provider}</td>
                                     <td className="p-4">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusClass(payment.status)}`}>
+                                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${statusClass(payment.status)}`}>
                                             {statusLabel(payment.status)}
                                         </span>
                                     </td>
-                                    <td className="p-4 text-sm text-gray-500">
-                                        {new Date(payment.created_at).toLocaleString('pt-BR')}
+                                    <td className="p-4 text-xs text-gray-500">
+                                        {new Date(payment.created_at).toLocaleDateString('pt-BR')}
                                     </td>
                                     <td className="p-4">
-                                        <div className="flex items-center justify-end gap-2">
+                                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 onClick={() => setSelectedPayment(payment)}
-                                                className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl"
                                                 title="Ver detalhes"
                                             >
                                                 <Eye className="w-4 h-4" />
@@ -317,14 +532,13 @@ export default function AdminPayments() {
                                                     const nextStatus = event.target.value as AdminPayment['status'];
                                                     if (nextStatus) updatePaymentStatus(payment, nextStatus);
                                                 }}
-                                                className="text-xs border border-gray-300 rounded-lg px-2 py-1 bg-white"
-                                                title="Ação administrativa"
+                                                className="text-[10px] font-bold border border-gray-200 rounded-lg px-2 py-1 bg-white"
                                             >
-                                                <option value="">Ação</option>
-                                                <option value="paid">Ativar destaque</option>
-                                                <option value="expired">Marcar expirado</option>
-                                                <option value="refunded">Marcar estornado</option>
-                                                <option value="failed">Marcar falho</option>
+                                                <option value="">Status</option>
+                                                <option value="paid">Confirmar</option>
+                                                <option value="expired">Expirar</option>
+                                                <option value="refunded">Estornar</option>
+                                                <option value="failed">Falhou</option>
                                             </select>
                                         </div>
                                     </td>
@@ -334,38 +548,36 @@ export default function AdminPayments() {
                     </table>
                 </div>
             </section>
+
             {selectedPayment && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-auto p-6">
-                        <div className="flex items-start justify-between gap-4 mb-6">
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                             <div>
-                                <h3 className="text-xl font-bold text-gray-900">Detalhes do pagamento</h3>
-                                <p className="text-sm text-gray-500">{selectedPayment.id}</p>
+                                <h3 className="text-xl font-bold text-gray-900">Comprovante de Transação</h3>
+                                <p className="text-xs text-gray-400 font-mono mt-1">{selectedPayment.id}</p>
                             </div>
                             <button
                                 onClick={() => setSelectedPayment(null)}
-                                className="text-gray-500 hover:text-gray-800"
+                                className="p-2 text-gray-400 hover:text-gray-900 hover:bg-white rounded-xl shadow-sm transition-all"
                             >
-                                Fechar
+                                <Plus className="w-5 h-5 rotate-45" />
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <Detail label="Anúncio" value={selectedPayment.ads?.title || selectedPayment.ad_id} />
-                            <Detail label="Plano" value={selectedPayment.featured_plans?.name || selectedPayment.plan_id} />
-                            <Detail label="Provedor" value={selectedPayment.provider.toUpperCase()} />
-                            <Detail label="Status" value={statusLabel(selectedPayment.status)} />
-                            <Detail label="Valor bruto" value={formatCents(selectedPayment.gross_amount_cents || selectedPayment.amount_cents, selectedPayment.currency)} />
-                            <Detail label="Valor líquido" value={formatCents(selectedPayment.net_amount_cents || 0, selectedPayment.currency)} />
-                            <Detail label="Taxas" value={formatCents(selectedPayment.fee_amount_cents || 0, selectedPayment.currency)} />
-                            <Detail label="ID externo" value={selectedPayment.external_id || 'N/A'} />
-                            <Detail label="Checkout externo" value={selectedPayment.external_checkout_id || 'N/A'} />
-                            <Detail label="Expira em" value={selectedPayment.expires_at ? new Date(selectedPayment.expires_at).toLocaleString('pt-BR') : 'N/A'} />
+                        <div className="p-6 grid grid-cols-2 gap-4">
+                            <Detail label="Item Relacionado" value={selectedPayment.ads?.title || 'Plano de Conta'} />
+                            <Detail label="Pacote Adquirido" value={selectedPayment.featured_plans?.name || selectedPayment.plan_id} />
+                            <Detail label="Gateway" value={selectedPayment.provider.toUpperCase()} />
+                            <Detail label="Estado Atual" value={statusLabel(selectedPayment.status)} />
+                            <Detail label="Total Pago" value={formatCents(selectedPayment.gross_amount_cents || selectedPayment.amount_cents, selectedPayment.currency)} />
+                            <Detail label="Líquido Recebido" value={formatCents(selectedPayment.net_amount_cents || 0, selectedPayment.currency)} />
+                            <Detail label="Taxas Gateway" value={formatCents(selectedPayment.fee_amount_cents || 0, selectedPayment.currency)} />
+                            <Detail label="Data de Expiração" value={selectedPayment.expires_at ? new Date(selectedPayment.expires_at).toLocaleString('pt-BR') : 'Sem expiração'} />
                         </div>
 
-                        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Payload title="Payload provedor" value={selectedPayment.provider_payload} />
-                            <Payload title="Payload webhook" value={selectedPayment.webhook_payload} />
+                        <div className="p-6 bg-gray-50 grid grid-cols-1 gap-4">
+                            <Payload title="Dados brutos do gateway" value={selectedPayment.provider_payload} />
                         </div>
                     </div>
                 </div>
@@ -376,9 +588,9 @@ export default function AdminPayments() {
 
 function Detail({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
-            <p className="text-xs font-semibold uppercase text-gray-500">{label}</p>
-            <p className="mt-1 text-gray-900 break-words">{value}</p>
+        <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+            <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">{label}</p>
+            <p className="text-sm font-bold text-gray-900 break-words">{value}</p>
         </div>
     );
 }
@@ -386,9 +598,9 @@ function Detail({ label, value }: { label: string; value: string }) {
 function Payload({ title, value }: { title: string; value: unknown }) {
     return (
         <div>
-            <p className="text-sm font-semibold text-gray-800 mb-2">{title}</p>
-            <pre className="max-h-64 overflow-auto rounded-lg bg-gray-950 text-gray-100 p-3 text-xs">
-                {value ? JSON.stringify(value, null, 2) : 'Sem payload'}
+            <p className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">{title}</p>
+            <pre className="max-h-48 overflow-auto rounded-2xl bg-gray-900 text-green-400 p-4 text-[10px] font-mono leading-relaxed shadow-inner">
+                {value ? JSON.stringify(value, null, 2) : '// Nenhum dado disponível'}
             </pre>
         </div>
     );
@@ -396,22 +608,22 @@ function Payload({ title, value }: { title: string; value: unknown }) {
 
 function statusLabel(status: FeaturedPayment['status']) {
     const labels = {
-        pending: 'Pendente',
-        paid: 'Pago',
+        pending: 'Aguardando',
+        paid: 'Aprovado',
         expired: 'Expirado',
         refunded: 'Estornado',
-        failed: 'Falhou',
+        failed: 'Cancelado',
     };
     return labels[status] || status;
 }
 
 function statusClass(status: FeaturedPayment['status']) {
     const classes = {
-        pending: 'bg-orange-50 text-orange-700',
-        paid: 'bg-green-50 text-green-700',
-        expired: 'bg-gray-100 text-gray-700',
-        refunded: 'bg-purple-50 text-purple-700',
-        failed: 'bg-red-50 text-red-700',
+        pending: 'bg-amber-100 text-amber-700',
+        paid: 'bg-emerald-100 text-emerald-700',
+        expired: 'bg-slate-100 text-slate-500',
+        refunded: 'bg-fuchsia-100 text-fuchsia-700',
+        failed: 'bg-rose-100 text-rose-700',
     };
     return classes[status] || 'bg-gray-100 text-gray-700';
 }
