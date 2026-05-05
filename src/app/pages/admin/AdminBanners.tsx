@@ -34,9 +34,9 @@ type Banner = {
 };
 
 const PLACEMENTS = [
-    { value: 'home_hero', label: 'Home - banner principal' },
-    { value: 'home_top', label: 'Home - topo secundario' },
-    { value: 'category_top', label: 'Topo de categorias' }
+    { value: 'home_hero', label: 'Home - banner principal', help: 'Primeiro banner da pagina inicial.' },
+    { value: 'home_top', label: 'Home - topo secundario', help: 'Aparece abaixo do banner principal, somente na Home.' },
+    { value: 'category_top', label: 'Topo de categorias', help: 'Aparece nas paginas de categoria, acima da lista de anuncios.' }
 ];
 
 const CONTROL_CLASS = 'w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100';
@@ -75,6 +75,10 @@ function isMissingBucketError(error: unknown) {
     const storageError = error as { statusCode?: number | string; message?: string };
     return String(storageError.message || '').toLowerCase().includes('bucket not found')
         || String(storageError.statusCode || '') === '404';
+}
+
+function getPlacementHelp(value: string | null | undefined) {
+    return PLACEMENTS.find((placement) => placement.value === value)?.help || PLACEMENTS[0].help;
 }
 
 export default function AdminBanners() {
@@ -383,6 +387,9 @@ export default function AdminBanners() {
                                                 <option key={placement.value} value={placement.value}>{placement.label}</option>
                                             ))}
                                         </select>
+                                        <p className="mt-1 text-xs text-gray-500">
+                                            {getPlacementHelp(banner.placement)}
+                                        </p>
                                     </Field>
                                 </div>
 

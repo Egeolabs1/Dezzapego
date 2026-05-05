@@ -32,7 +32,8 @@ function isVisibleBanner(banner: Banner) {
 }
 
 export function BannerSlot({ placement, className = '' }: BannerSlotProps) {
-    const [banner, setBanner] = useState<Banner | null>(null);
+    const [banners, setBanners] = useState<Banner[]>([]);
+    const [currentIndex, setCurrentIndex] = useState(0);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -51,10 +52,10 @@ export function BannerSlot({ placement, className = '' }: BannerSlotProps) {
 
                 if (ignore) return;
 
-                const visibleBanner = ((data || []) as Banner[]).find(isVisibleBanner) || null;
-                setBanner(visibleBanner);
+                setBanners(((data || []) as Banner[]).filter(isVisibleBanner));
+                setCurrentIndex(0);
             } catch {
-                if (!ignore) setBanner(null);
+                if (!ignore) setBanners([]);
             }
         }
 
@@ -65,6 +66,15 @@ export function BannerSlot({ placement, className = '' }: BannerSlotProps) {
         };
     }, [placement]);
 
+    useEffect(() => {
+        if (banners.length <= 1) return;
+        const interval = window.setInterval(() => {
+            setCurrentIndex((prev) => (prev + 1) % banners.length);
+        }, 6000);
+        return () => window.clearInterval(interval);
+    }, [banners.length]);
+
+    const banner = banners[currentIndex];
     if (!banner) return null;
 
     const title = banner.title?.trim();
@@ -112,6 +122,17 @@ export function BannerSlot({ placement, className = '' }: BannerSlotProps) {
                             )}
                         </div>
                     </div>
+                )}
+
+                {banners.length > 1 && (
+                    <span className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+                        {banners.map((item, index) => (
+                            <span
+                                key={item.id}
+                                className={`h-1.5 rounded-full bg-white transition-all ${index === currentIndex ? 'w-5 opacity-95' : 'w-1.5 opacity-50'}`}
+                            />
+                        ))}
+                    </span>
                 )}
             </button>
         </section>
