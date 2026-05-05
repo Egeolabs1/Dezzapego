@@ -1,6 +1,6 @@
-export function Skeleton({ className = '' }: { className?: string }) {
+export function Skeleton({ className = '', ...props }: React.ComponentProps<'div'>) {
     return (
-        <div className={`animate-pulse rounded-md bg-gray-200 ${className}`} />
+        <div className={`animate-pulse rounded-md bg-gray-200 ${className}`} {...props} />
     );
 }
 
