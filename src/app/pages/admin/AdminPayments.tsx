@@ -34,9 +34,8 @@ const PERIOD_OPTIONS = [
     { value: '/mês', label: 'Mês' }
 ];
 
-function getAutomaticButtonLink(plan: Pick<AccountPlan, 'id' | 'name' | 'price_cents'>) {
+function getAutomaticButtonLink(plan: Pick<AccountPlan, 'id' | 'price_cents'>) {
     if (plan.price_cents <= 0) return '/register';
-    if (plan.name.toLowerCase().includes('empresa')) return '/contato';
     return `/register?plan=${encodeURIComponent(plan.id)}`;
 }
 
@@ -70,7 +69,7 @@ const DEFAULT_ACCOUNT_PLANS: AccountPlan[] = [
         period_label: '/mês',
         features: ['Até 50 anúncios ativos', '10 fotos por anúncio', 'Destaque em 2 anúncios/mês', 'Suporte prioritário', 'Estatísticas detalhadas'],
         button_text: 'Assinar Pro',
-        button_link: getAutomaticButtonLink({ id: '00000000-0000-4000-8000-000000000002', name: 'Pro', price_cents: 2990 }),
+        button_link: getAutomaticButtonLink({ id: '00000000-0000-4000-8000-000000000002', price_cents: 2990 }),
         max_active_ads: 50,
         max_photos_per_ad: 10,
         monthly_featured_ads: 2,
@@ -88,8 +87,8 @@ const DEFAULT_ACCOUNT_PLANS: AccountPlan[] = [
         price_label: 'R$ 89,90',
         period_label: '/mês',
         features: ['Anúncios ilimitados', '20 fotos por anúncio', 'Destaque em 10 anúncios/mês', 'Perfil verificado (Selo)', 'Painel de gestão avançado', 'Integração via API (Em breve)'],
-        button_text: 'Falar com Comercial',
-        button_link: getAutomaticButtonLink({ id: '00000000-0000-4000-8000-000000000003', name: 'Empresa', price_cents: 8990 }),
+        button_text: 'Assinar Empresa',
+        button_link: getAutomaticButtonLink({ id: '00000000-0000-4000-8000-000000000003', price_cents: 8990 }),
         max_active_ads: null,
         max_photos_per_ad: 20,
         monthly_featured_ads: 10,
@@ -113,7 +112,6 @@ function toAccountPlan(row: Partial<AccountPlan>): AccountPlan {
         button_text: row.button_text || 'Assinar',
         button_link: row.button_link || getAutomaticButtonLink({
             id: row.id || '',
-            name: row.name || '',
             price_cents: Number(row.price_cents || 0)
         }),
         max_active_ads: row.max_active_ads === null ? null : Number(row.max_active_ads ?? 5),
@@ -234,7 +232,7 @@ export default function AdminPayments() {
                 period_label: plan.period_label,
                     features: plan.features,
                     button_text: plan.button_text,
-                    button_link: getAutomaticButtonLink(plan),
+                    button_link: plan.button_link || getAutomaticButtonLink(plan),
                     max_active_ads: plan.max_active_ads,
                 max_photos_per_ad: plan.max_photos_per_ad,
                 monthly_featured_ads: plan.monthly_featured_ads,
@@ -298,7 +296,7 @@ export default function AdminPayments() {
             period_label: '/mês',
             features: ['Funcionalidade 1'],
             button_text: 'Assinar',
-            button_link: getAutomaticButtonLink({ id, name: 'Novo Plano', price_cents: 0 }),
+            button_link: getAutomaticButtonLink({ id, price_cents: 0 }),
             max_active_ads: 5,
             max_photos_per_ad: 3,
             monthly_featured_ads: 0,
@@ -512,8 +510,18 @@ export default function AdminPayments() {
                                         onChange={(e) => updateLocalAccountPlan(plan.id, { button_text: e.target.value })}
                                         className="w-full text-sm bg-gray-50 border border-gray-100 rounded-lg p-2"
                                     />
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Link do Botão</label>
+                                    <input
+                                        value={plan.button_link}
+                                        onChange={(e) => updateLocalAccountPlan(plan.id, { button_link: e.target.value })}
+                                        placeholder={getAutomaticButtonLink(plan)}
+                                        className="w-full text-sm bg-gray-50 border border-gray-100 rounded-lg p-2"
+                                    />
                                     <p className="mt-1 text-[10px] text-gray-400">
-                                        Link automático: {getAutomaticButtonLink(plan)}
+                                        Use o padrão para assinatura: {getAutomaticButtonLink(plan)}
                                     </p>
                                 </div>
 

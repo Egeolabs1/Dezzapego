@@ -947,6 +947,44 @@ create table if not exists public.featured_payments (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.account_plan_payments (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  plan_id uuid not null references public.account_plans(id),
+  provider text not null check (provider in ('stripe', 'pixgo')),
+  status text not null default 'pending' check (status in ('pending', 'paid', 'expired', 'refunded', 'failed')),
+  amount_cents integer not null check (amount_cents >= 0),
+  gross_amount_cents integer not null default 0 check (gross_amount_cents >= 0),
+  net_amount_cents integer not null default 0 check (net_amount_cents >= 0),
+  fee_amount_cents integer not null default 0 check (fee_amount_cents >= 0),
+  currency text not null default 'BRL',
+  external_id text,
+  external_checkout_id text,
+  checkout_url text,
+  qr_code text,
+  qr_image_url text,
+  provider_payload jsonb,
+  webhook_payload jsonb,
+  paid_at timestamptz,
+  expires_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.user_account_subscriptions (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  plan_id uuid not null references public.account_plans(id),
+  status text not null default 'active' check (status in ('active', 'past_due', 'canceled', 'expired')),
+  provider text not null check (provider in ('stripe', 'pixgo', 'admin')),
+  current_period_start timestamptz not null default now(),
+  current_period_end timestamptz not null,
+  max_active_ads integer,
+  max_photos_per_ad integer,
+  monthly_featured_ads integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.site_visits (
   id uuid primary key default gen_random_uuid(),
   session_id text not null,
@@ -968,6 +1006,11 @@ create index if not exists idx_featured_payments_ad_id on public.featured_paymen
 create index if not exists idx_featured_payments_user_id on public.featured_payments(user_id);
 create index if not exists idx_featured_payments_created_at on public.featured_payments(created_at desc);
 create index if not exists idx_featured_payments_external_id on public.featured_payments(provider, external_id);
+create index if not exists idx_account_plan_payments_status on public.account_plan_payments(status);
+create index if not exists idx_account_plan_payments_provider on public.account_plan_payments(provider);
+create index if not exists idx_account_plan_payments_user_id on public.account_plan_payments(user_id);
+create index if not exists idx_account_plan_payments_external_id on public.account_plan_payments(provider, external_id);
+create index if not exists idx_user_account_subscriptions_period on public.user_account_subscriptions(status, current_period_end);
 create index if not exists idx_site_visits_created_at on public.site_visits(created_at desc);
 create index if not exists idx_site_visits_path on public.site_visits(path);
 create index if not exists idx_site_visits_session_created_at on public.site_visits(session_id, created_at desc);
@@ -1009,6 +1052,20 @@ select public.create_trigger_if_missing(
   'public', 'featured_payments', 'trg_featured_payments_updated_at',
   $trg$create trigger trg_featured_payments_updated_at
     before update on public.featured_payments
+    for each row execute function public.set_updated_at()$trg$
+);
+
+select public.create_trigger_if_missing(
+  'public', 'account_plan_payments', 'trg_account_plan_payments_updated_at',
+  $trg$create trigger trg_account_plan_payments_updated_at
+    before update on public.account_plan_payments
+    for each row execute function public.set_updated_at()$trg$
+);
+
+select public.create_trigger_if_missing(
+  'public', 'user_account_subscriptions', 'trg_user_account_subscriptions_updated_at',
+  $trg$create trigger trg_user_account_subscriptions_updated_at
+    before update on public.user_account_subscriptions
     for each row execute function public.set_updated_at()$trg$
 );
 
@@ -1131,8 +1188,8 @@ values
     'R$ 89,90',
     '/mês',
     array['Anúncios ilimitados', '20 fotos por anúncio', 'Destaque em 10 anúncios/mês', 'Perfil verificado (Selo)', 'Painel de gestão avançado', 'Integração via API (Em breve)'],
-    'Falar com Comercial',
-    '/contato',
+    'Assinar Empresa',
+    '/register?plan=00000000-0000-4000-8000-000000000003',
     null,
     20,
     10,
@@ -1162,6 +1219,8 @@ on conflict (id) do update set
 alter table public.featured_plans enable row level security;
 alter table public.account_plans enable row level security;
 alter table public.featured_payments enable row level security;
+alter table public.account_plan_payments enable row level security;
+alter table public.user_account_subscriptions enable row level security;
 alter table public.site_visits enable row level security;
 
 select public.create_policy_if_missing(
@@ -1201,6 +1260,30 @@ select public.create_policy_if_missing(
 );
 
 select public.create_policy_if_missing(
+  'public', 'account_plan_payments', 'Users can view own account plan payments',
+  $pol$create policy "Users can view own account plan payments"
+    on public.account_plan_payments for select using (auth.uid() = user_id or public.is_admin())$pol$
+);
+
+select public.create_policy_if_missing(
+  'public', 'account_plan_payments', 'Admins can manage account plan payments',
+  $pol$create policy "Admins can manage account plan payments"
+    on public.account_plan_payments for all using (public.is_admin()) with check (public.is_admin())$pol$
+);
+
+select public.create_policy_if_missing(
+  'public', 'user_account_subscriptions', 'Users can view own account subscription',
+  $pol$create policy "Users can view own account subscription"
+    on public.user_account_subscriptions for select using (auth.uid() = user_id or public.is_admin())$pol$
+);
+
+select public.create_policy_if_missing(
+  'public', 'user_account_subscriptions', 'Admins can manage account subscriptions',
+  $pol$create policy "Admins can manage account subscriptions"
+    on public.user_account_subscriptions for all using (public.is_admin()) with check (public.is_admin())$pol$
+);
+
+select public.create_policy_if_missing(
   'public', 'site_visits', 'Admins can view site visits',
   $pol$create policy "Admins can view site visits"
     on public.site_visits for select using (public.is_admin())$pol$
@@ -1211,11 +1294,15 @@ grant select on public.account_plans to anon, authenticated;
 grant insert, update, delete on public.featured_plans to authenticated;
 grant insert, update, delete on public.account_plans to authenticated;
 grant select on public.featured_payments to authenticated;
+grant select on public.account_plan_payments to authenticated;
+grant select on public.user_account_subscriptions to authenticated;
 grant select on public.site_visits to authenticated;
 
 comment on table public.featured_plans is 'Planos configuráveis de destaque pago.';
 comment on table public.account_plans is 'Planos de conta configuráveis, incluindo limites de anúncios, fotos e destaques mensais.';
 comment on table public.featured_payments is 'Pagamentos de destaque (Stripe ou PixGo).';
+comment on table public.account_plan_payments is 'Pagamentos de planos de conta via Stripe ou PixGo.';
+comment on table public.user_account_subscriptions is 'Assinatura ativa do usuário e limites derivados do plano pago.';
 comment on table public.site_visits is 'Analytics interna de página (gravação via service role em API).';
 
 notify pgrst, 'reload schema';

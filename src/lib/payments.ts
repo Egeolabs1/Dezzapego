@@ -32,6 +32,8 @@ export type CreateFeaturedPaymentInput = {
   planId?: string;
 };
 
+export type AccountPlanPaymentStatus = 'pending' | 'paid' | 'expired' | 'refunded' | 'failed';
+
 export function jsonResponse(body: unknown, init?: ResponseInit) {
   return NextResponse.json(body, init);
 }
@@ -149,6 +151,59 @@ export async function activateFeaturedAd(supabase: SupabaseClient, paymentId: st
   return { payment, expiresAt: expiresAt.toISOString() };
 }
 
+export async function activateAccountPlan(supabase: SupabaseClient, paymentId: string) {
+  const { data: payment, error: paymentError } = await supabase
+    .from('account_plan_payments')
+    .select('*, account_plans(*)')
+    .eq('id', paymentId)
+    .maybeSingle();
+
+  if (paymentError) throw paymentError;
+  if (!payment) throw new Error(`Pagamento de plano não encontrado: ${paymentId}`);
+
+  const now = new Date();
+  const currentExpiration = payment.expires_at ? new Date(payment.expires_at) : null;
+  const startsAt = currentExpiration && currentExpiration > now ? currentExpiration : now;
+  const expiresAt = new Date(startsAt);
+  expiresAt.setMonth(expiresAt.getMonth() + 1);
+
+  const plan = payment.account_plans as {
+    max_active_ads?: number | null;
+    max_photos_per_ad?: number | null;
+    monthly_featured_ads?: number | null;
+  } | null;
+
+  const { error: updatePaymentError } = await supabase
+    .from('account_plan_payments')
+    .update({
+      status: 'paid',
+      paid_at: now.toISOString(),
+      expires_at: expiresAt.toISOString(),
+    })
+    .eq('id', paymentId);
+
+  if (updatePaymentError) throw updatePaymentError;
+
+  const { error: subscriptionError } = await supabase
+    .from('user_account_subscriptions')
+    .upsert({
+      user_id: payment.user_id,
+      plan_id: payment.plan_id,
+      status: 'active',
+      provider: payment.provider,
+      current_period_start: startsAt.toISOString(),
+      current_period_end: expiresAt.toISOString(),
+      max_active_ads: plan?.max_active_ads ?? null,
+      max_photos_per_ad: plan?.max_photos_per_ad ?? null,
+      monthly_featured_ads: plan?.monthly_featured_ads ?? 0,
+      updated_at: now.toISOString(),
+    }, { onConflict: 'user_id' });
+
+  if (subscriptionError) throw subscriptionError;
+
+  return { payment, expiresAt: expiresAt.toISOString() };
+}
+
 export async function markPaymentStatus(supabase: SupabaseClient, paymentId: string, status: FeaturedPaymentStatus, payload?: unknown) {
   const updates: Record<string, unknown> = {
     status,
@@ -158,6 +213,23 @@ export async function markPaymentStatus(supabase: SupabaseClient, paymentId: str
   const { error } = await supabase
     .from('featured_payments')
     .update(updates)
+    .eq('id', paymentId);
+
+  if (error) throw error;
+}
+
+export async function markAccountPlanPaymentStatus(
+  supabase: SupabaseClient,
+  paymentId: string,
+  status: AccountPlanPaymentStatus,
+  payload?: unknown,
+) {
+  const { error } = await supabase
+    .from('account_plan_payments')
+    .update({
+      status,
+      webhook_payload: payload,
+    })
     .eq('id', paymentId);
 
   if (error) throw error;

@@ -22,6 +22,7 @@ import SafetyTips from './pages/SafetyTips';
 import Contact from './pages/Contact';
 import SiteMap from './pages/SiteMap';
 import Plans from './pages/Plans';
+import PlanCheckout from './pages/PlanCheckout';
 import Maintenance from './pages/Maintenance';
 import About from './pages/About';
 import GuidePage from './pages/GuidePage';
@@ -130,6 +131,7 @@ export function AppContent() {
         <Route path="/contato" element={<Contact />} />
         <Route path="/conta-suspensa" element={<AccountSuspended />} />
         <Route path="/planos" element={<Plans />} />
+        <Route path="/checkout/plano" element={<PlanCheckout />} />
         <Route path="/sobre" element={<About />} />
         <Route path="/guias/:guideSlug" element={<GuidePage />} />
         <Route path="/cidade/:stateSlug/:citySlug" element={<LocationLanding />} />

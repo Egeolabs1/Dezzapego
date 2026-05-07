@@ -1,7 +1,9 @@
 import {
+  activateAccountPlan,
   activateFeaturedAd,
   getSupabaseAdmin,
   jsonResponse,
+  markAccountPlanPaymentStatus,
   markPaymentStatus,
   verifyHmacSha256Signature,
 } from '@/lib/payments';
@@ -50,6 +52,35 @@ export async function POST(req: Request) {
     }
 
     const supabase = getSupabaseAdmin();
+    const { data: accountPayment } = await supabase
+      .from('account_plan_payments')
+      .select('id')
+      .eq('id', paymentId)
+      .maybeSingle();
+
+    if (accountPayment) {
+      await supabase
+        .from('account_plan_payments')
+        .update({
+          external_id: pixgoPaymentId,
+          gross_amount_cents: payload.data?.amounts?.gross ? Math.round(payload.data.amounts.gross * 100) : undefined,
+          net_amount_cents: payload.data?.amounts?.net ? Math.round(payload.data.amounts.net * 100) : undefined,
+          fee_amount_cents: payload.data?.amounts?.fee_total ? Math.round(payload.data.amounts.fee_total * 100) : undefined,
+          currency: payload.data?.amounts?.currency || undefined,
+          webhook_payload: payload,
+        })
+        .eq('id', paymentId);
+
+      if (payload.event === 'payment.completed') {
+        await activateAccountPlan(supabase, paymentId);
+      } else if (payload.event === 'payment.expired') {
+        await markAccountPlanPaymentStatus(supabase, paymentId, 'expired', payload);
+      } else if (payload.event === 'payment.refunded') {
+        await markAccountPlanPaymentStatus(supabase, paymentId, 'refunded', payload);
+      }
+
+      return jsonResponse({ received: true });
+    }
 
     await supabase
       .from('featured_payments')

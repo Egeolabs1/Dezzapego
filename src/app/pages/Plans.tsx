@@ -4,6 +4,7 @@ import { Check, Star, Zap, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import SEO from '../../components/SEO';
+import { useAuth } from '../contexts/AuthContext';
 
 type AccountPlan = {
     id: string;
@@ -25,10 +26,23 @@ type AccountPlan = {
     active: boolean;
 };
 
-function getAutomaticButtonLink(plan: Pick<AccountPlan, 'id' | 'name' | 'price_cents'>) {
+function getAutomaticButtonLink(plan: Pick<AccountPlan, 'id' | 'price_cents'>) {
     if ((plan.price_cents || 0) <= 0) return '/register';
-    if (plan.name.toLowerCase().includes('empresa')) return '/contato';
     return `/register?plan=${encodeURIComponent(plan.id)}`;
+}
+
+function getPlanActionLink(plan: AccountPlan, isLoggedIn: boolean, authLoading: boolean) {
+    const configuredLink = (plan.button_link || '').trim() || getAutomaticButtonLink(plan);
+
+    if (!isLoggedIn && !authLoading) return configuredLink;
+
+    if (configuredLink === '/register') return '/anunciar';
+    if (configuredLink.startsWith('/register?')) {
+        const query = configuredLink.split('?')[1] || `plan=${encodeURIComponent(plan.id)}`;
+        return `/checkout/plano?${query}`;
+    }
+
+    return configuredLink;
 }
 
 const DEFAULT_PLANS: AccountPlan[] = [
@@ -72,7 +86,7 @@ const DEFAULT_PLANS: AccountPlan[] = [
             'Estatísticas detalhadas'
         ],
         button_text: 'Assinar Pro',
-        button_link: getAutomaticButtonLink({ id: '00000000-0000-4000-8000-000000000002', name: 'Pro', price_cents: 2990 }),
+        button_link: getAutomaticButtonLink({ id: '00000000-0000-4000-8000-000000000002', price_cents: 2990 }),
         max_active_ads: 50,
         max_photos_per_ad: 10,
         monthly_featured_ads: 2,
@@ -97,8 +111,8 @@ const DEFAULT_PLANS: AccountPlan[] = [
             'Painel de gestão avançado',
             'Integração via API (Em breve)'
         ],
-        button_text: 'Falar com Comercial',
-        button_link: getAutomaticButtonLink({ id: '00000000-0000-4000-8000-000000000003', name: 'Empresa', price_cents: 8990 }),
+        button_text: 'Assinar Empresa',
+        button_link: getAutomaticButtonLink({ id: '00000000-0000-4000-8000-000000000003', price_cents: 8990 }),
         max_active_ads: null,
         max_photos_per_ad: 20,
         monthly_featured_ads: 10,
@@ -110,6 +124,7 @@ const DEFAULT_PLANS: AccountPlan[] = [
 ];
 
 export default function Plans() {
+    const { user, loading: authLoading } = useAuth();
     const [plans, setPlans] = useState<AccountPlan[]>(DEFAULT_PLANS);
     const [loading, setLoading] = useState(true);
 
@@ -209,7 +224,7 @@ export default function Plans() {
                                 </ul>
 
                                 <Link
-                                    to={getAutomaticButtonLink(plan)}
+                                    to={getPlanActionLink(plan, Boolean(user), authLoading)}
                                     className={`block w-full py-3 px-6 rounded-lg text-center font-medium transition-colors ${plan.highlighted
                                         ? 'bg-blue-600 text-white hover:bg-blue-700'
                                         : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
