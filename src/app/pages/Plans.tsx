@@ -45,88 +45,11 @@ function getPlanActionLink(plan: AccountPlan, isLoggedIn: boolean, authLoading: 
     return configuredLink;
 }
 
-const DEFAULT_PLANS: AccountPlan[] = [
-    {
-        id: '00000000-0000-4000-8000-000000000001',
-        name: 'Grátis',
-        description: 'Para quem está começando a desapegar.',
-        price_cents: 0,
-        currency: 'BRL',
-        price_label: 'R$ 0',
-        period_label: '/mês',
-        features: [
-            'Até 5 anúncios ativos',
-            '3 fotos por anúncio',
-            'Chat com compradores',
-            'Suporte básico'
-        ],
-        button_text: 'Começar Grátis',
-        button_link: '/register',
-        max_active_ads: 5,
-        max_photos_per_ad: 3,
-        monthly_featured_ads: 0,
-        highlighted: false,
-        icon_name: 'Zap',
-        sort_order: 0,
-        active: true
-    },
-    {
-        id: '00000000-0000-4000-8000-000000000002',
-        name: 'Pro',
-        description: 'Para quem vende com frequência.',
-        price_cents: 2990,
-        currency: 'BRL',
-        price_label: 'R$ 29,90',
-        period_label: '/mês',
-        features: [
-            'Até 50 anúncios ativos',
-            '10 fotos por anúncio',
-            'Destaque em 2 anúncios/mês',
-            'Suporte prioritário',
-            'Estatísticas detalhadas'
-        ],
-        button_text: 'Assinar Pro',
-        button_link: getAutomaticButtonLink({ id: '00000000-0000-4000-8000-000000000002', price_cents: 2990 }),
-        max_active_ads: 50,
-        max_photos_per_ad: 10,
-        monthly_featured_ads: 2,
-        highlighted: true,
-        icon_name: 'Star',
-        sort_order: 1,
-        active: true
-    },
-    {
-        id: '00000000-0000-4000-8000-000000000003',
-        name: 'Empresa',
-        description: 'Para lojas e pequenos negócios.',
-        price_cents: 8990,
-        currency: 'BRL',
-        price_label: 'R$ 89,90',
-        period_label: '/mês',
-        features: [
-            'Anúncios ilimitados',
-            '20 fotos por anúncio',
-            'Destaque em 10 anúncios/mês',
-            'Perfil verificado (Selo)',
-            'Painel de gestão avançado',
-            'Integração via API (Em breve)'
-        ],
-        button_text: 'Assinar Empresa',
-        button_link: getAutomaticButtonLink({ id: '00000000-0000-4000-8000-000000000003', price_cents: 8990 }),
-        max_active_ads: null,
-        max_photos_per_ad: 20,
-        monthly_featured_ads: 10,
-        highlighted: false,
-        icon_name: 'Shield',
-        sort_order: 2,
-        active: true
-    }
-];
-
 export default function Plans() {
     const { user, loading: authLoading } = useAuth();
-    const [plans, setPlans] = useState<AccountPlan[]>(DEFAULT_PLANS);
+    const [plans, setPlans] = useState<AccountPlan[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
 
     useEffect(() => {
         fetchPlans();
@@ -141,16 +64,19 @@ export default function Plans() {
                 .order('sort_order', { ascending: true });
 
             if (error) {
-                // If table doesn't exist, we'll just use the default plans
                 if (error.code !== 'PGRST116') console.error('Error fetching plans:', error);
+                setLoadError(true);
                 return;
             }
 
             if (data && data.length > 0) {
                 setPlans(data as AccountPlan[]);
+            } else {
+                setLoadError(true);
             }
         } catch (err) {
             console.error('Unexpected error fetching plans:', err);
+            setLoadError(true);
         } finally {
             setLoading(false);
         }
@@ -164,10 +90,6 @@ export default function Plans() {
             default: return Zap;
         }
     };
-
-    if (loading && plans === DEFAULT_PLANS) {
-        // Optional: show a loading state if needed, but since we have defaults, it's smoother to just show them
-    }
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -185,7 +107,37 @@ export default function Plans() {
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                    {plans.map((plan) => {
+                    {loading ? (
+                        [0, 1, 2].map((item) => (
+                            <div
+                                key={item}
+                                className="relative rounded-2xl bg-white p-8 shadow-lg border border-gray-100"
+                            >
+                                <div className="mb-6">
+                                    <div className="w-12 h-12 rounded-lg bg-gray-100 animate-pulse mb-4" />
+                                    <div className="h-7 w-28 rounded bg-gray-100 animate-pulse" />
+                                    <div className="mt-3 h-4 w-48 rounded bg-gray-100 animate-pulse" />
+                                </div>
+                                <div className="mb-6 h-10 w-36 rounded bg-gray-100 animate-pulse" />
+                                <div className="space-y-4 mb-8">
+                                    {[0, 1, 2, 3].map((line) => (
+                                        <div key={line} className="flex items-start gap-3">
+                                            <div className="h-5 w-5 shrink-0 rounded bg-gray-100 animate-pulse" />
+                                            <div className="h-4 w-full rounded bg-gray-100 animate-pulse" />
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="h-12 w-full rounded-lg bg-gray-100 animate-pulse" />
+                            </div>
+                        ))
+                    ) : loadError ? (
+                        <div className="md:col-span-3 rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
+                            <h2 className="text-xl font-bold text-gray-900">Planos indisponíveis no momento</h2>
+                            <p className="mt-2 text-gray-600">
+                                Não foi possível carregar os valores atualizados. Tente novamente em instantes.
+                            </p>
+                        </div>
+                    ) : plans.map((plan) => {
                         const Icon = getIcon(plan.icon_name);
                         return (
                             <div
