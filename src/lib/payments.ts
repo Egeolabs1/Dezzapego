@@ -107,6 +107,7 @@ export async function activateFeaturedAd(supabase: SupabaseClient, paymentId: st
 
   if (paymentError) throw paymentError;
   if (!payment) throw new Error(`Pagamento não encontrado: ${paymentId}`);
+  const shouldCountCoupon = payment.status !== 'paid' && payment.coupon_id;
 
   const plan = payment.featured_plans as { duration_days?: number } | null;
   const durationDays = Number(plan?.duration_days || 0);
@@ -147,6 +148,7 @@ export async function activateFeaturedAd(supabase: SupabaseClient, paymentId: st
     .eq('id', payment.ad_id);
 
   if (updateAdError) throw updateAdError;
+  if (shouldCountCoupon) await incrementCouponUsage(supabase, payment.coupon_id);
 
   return { payment, expiresAt: expiresAt.toISOString() };
 }
@@ -160,6 +162,7 @@ export async function activateAccountPlan(supabase: SupabaseClient, paymentId: s
 
   if (paymentError) throw paymentError;
   if (!payment) throw new Error(`Pagamento de plano não encontrado: ${paymentId}`);
+  const shouldCountCoupon = payment.status !== 'paid' && payment.coupon_id;
 
   const now = new Date();
   const currentExpiration = payment.expires_at ? new Date(payment.expires_at) : null;
@@ -200,8 +203,27 @@ export async function activateAccountPlan(supabase: SupabaseClient, paymentId: s
     }, { onConflict: 'user_id' });
 
   if (subscriptionError) throw subscriptionError;
+  if (shouldCountCoupon) await incrementCouponUsage(supabase, payment.coupon_id);
 
   return { payment, expiresAt: expiresAt.toISOString() };
+}
+
+async function incrementCouponUsage(supabase: SupabaseClient, couponId: string) {
+  const { data: coupon, error: couponError } = await supabase
+    .from('discount_coupons')
+    .select('used_count')
+    .eq('id', couponId)
+    .maybeSingle();
+
+  if (couponError) throw couponError;
+  if (!coupon) return;
+
+  const { error } = await supabase
+    .from('discount_coupons')
+    .update({ used_count: Number(coupon.used_count || 0) + 1 })
+    .eq('id', couponId);
+
+  if (error) throw error;
 }
 
 export async function markPaymentStatus(supabase: SupabaseClient, paymentId: string, status: FeaturedPaymentStatus, payload?: unknown) {

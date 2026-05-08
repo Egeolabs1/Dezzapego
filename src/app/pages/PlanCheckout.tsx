@@ -4,6 +4,7 @@ import { CreditCard, Loader2, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
 import SEO from '../../components/SEO';
 import { createAccountPlanPayment } from '../../lib/accountPlanPayments';
+import { calculateCouponDiscount, DiscountCoupon, normalizeCouponCode } from '../../lib/discountCoupons';
 import { FeaturedProvider, formatCents } from '../../lib/featuredPayments';
 import { supabase } from '../../lib/supabase';
 import { Header } from '../components/Header';
@@ -30,6 +31,9 @@ export default function PlanCheckout() {
     const [loading, setLoading] = useState(true);
     const [creatingPayment, setCreatingPayment] = useState(false);
     const [pixResult, setPixResult] = useState<{ qrCode?: string; qrImageUrl?: string; expiresAt?: string } | null>(null);
+    const [couponCode, setCouponCode] = useState('');
+    const [coupon, setCoupon] = useState<DiscountCoupon | null>(null);
+    const [checkingCoupon, setCheckingCoupon] = useState(false);
 
     useEffect(() => {
         if (authLoading) return;
@@ -70,7 +74,7 @@ export default function PlanCheckout() {
         setPixResult(null);
 
         try {
-            const result = await createAccountPlanPayment(plan.id, provider);
+            const result = await createAccountPlanPayment(plan.id, provider, coupon?.code || couponCode);
             if (result.checkoutUrl) {
                 window.location.href = result.checkoutUrl;
                 return;
@@ -85,6 +89,45 @@ export default function PlanCheckout() {
             setCreatingPayment(false);
         }
     }
+
+    async function applyCoupon() {
+        if (!plan) return;
+        const code = normalizeCouponCode(couponCode);
+        if (!code) {
+            setCoupon(null);
+            return;
+        }
+
+        setCheckingCoupon(true);
+        try {
+            const { data: sessionData } = await supabase.auth.getSession();
+            const accessToken = sessionData.session?.access_token;
+            if (!accessToken) throw new Error('Faça login para usar cupom.');
+
+            const response = await fetch('/api/discount-coupons/validate', {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json',
+                    authorization: `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({ code, appliesTo: 'account_plan', amountCents: plan.price_cents }),
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload?.error || 'Cupom inválido.');
+
+            setCoupon(payload.coupon as DiscountCoupon);
+            setCouponCode(code);
+            toast.success('Cupom aplicado.');
+        } catch (error) {
+            setCoupon(null);
+            toast.error(error instanceof Error ? error.message : 'Cupom inválido.');
+        } finally {
+            setCheckingCoupon(false);
+        }
+    }
+
+    const discountCents = plan && coupon ? calculateCouponDiscount(coupon, plan.price_cents) : 0;
+    const finalAmountCents = plan ? Math.max(0, plan.price_cents - discountCents) : 0;
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -125,6 +168,46 @@ export default function PlanCheckout() {
 
                     <aside className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
                         <h2 className="text-lg font-bold text-gray-900">Pagamento</h2>
+                        {plan && (
+                            <div className="mt-4 rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm">
+                                <div className="flex justify-between text-gray-600">
+                                    <span>Subtotal</span>
+                                    <span>{formatCents(plan.price_cents, plan.currency)}</span>
+                                </div>
+                                {coupon && (
+                                    <div className="mt-1 flex justify-between text-emerald-700">
+                                        <span>Cupom {coupon.code}</span>
+                                        <span>-{formatCents(discountCents, plan.currency)}</span>
+                                    </div>
+                                )}
+                                <div className="mt-2 flex justify-between border-t border-gray-200 pt-2 font-bold text-gray-900">
+                                    <span>Total</span>
+                                    <span>{formatCents(finalAmountCents, plan.currency)}</span>
+                                </div>
+                            </div>
+                        )}
+                        <div className="mt-4">
+                            <label className="text-xs font-bold uppercase tracking-wide text-gray-500">Cupom de desconto</label>
+                            <div className="mt-2 flex gap-2">
+                                <input
+                                    value={couponCode}
+                                    onChange={(event) => {
+                                        setCouponCode(event.target.value.toUpperCase());
+                                        setCoupon(null);
+                                    }}
+                                    placeholder="EX: PROMO10"
+                                    className="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm uppercase"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={applyCoupon}
+                                    disabled={!plan || checkingCoupon}
+                                    className="rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-60"
+                                >
+                                    {checkingCoupon ? '...' : 'Aplicar'}
+                                </button>
+                            </div>
+                        </div>
                         <div className="mt-4 grid grid-cols-2 gap-3">
                             <button
                                 type="button"
@@ -132,7 +215,10 @@ export default function PlanCheckout() {
                                 className={`flex items-center justify-center gap-2 rounded-lg border p-3 text-sm font-semibold ${provider === 'stripe' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-700'}`}
                             >
                                 <CreditCard className="h-4 w-4" />
-                                Stripe
+                                <span className="text-left leading-tight">
+                                    Cartão de crédito
+                                    <span className="block text-xs font-medium opacity-75">via Stripe</span>
+                                </span>
                             </button>
                             <button
                                 type="button"
@@ -151,7 +237,7 @@ export default function PlanCheckout() {
                             className="mt-5 flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60"
                         >
                             {creatingPayment ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            {provider === 'stripe' ? 'Ir para Stripe' : 'Gerar PIX'}
+                            {provider === 'stripe' ? 'Pagar com cartão de crédito' : 'Gerar PIX'}
                         </button>
 
                         {pixResult && (

@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
-import { CreditCard, Eye, RefreshCw, Save, Search, Star, Zap, Plus, Trash2 } from 'lucide-react';
+import { CreditCard, Eye, RefreshCw, Save, Search, Star, Zap, Plus, Trash2, TicketPercent } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../../lib/supabase';
 import { FeaturedPayment, FeaturedPlan, formatCents } from '../../../lib/featuredPayments';
+import { DiscountCoupon } from '../../../lib/discountCoupons';
 
 type AdminPayment = FeaturedPayment & {
     ads?: { title?: string; images?: string[] } | null;
     profiles?: { full_name?: string | null; email?: string | null } | null;
+    discount_cents?: number;
+    coupon_code?: string | null;
 };
 
 type AccountPlan = {
@@ -140,10 +143,12 @@ function omitKey<T extends Record<string, unknown>>(payload: T, key: string) {
 export default function AdminPayments() {
     const [featuredPlans, setFeaturedPlans] = useState<FeaturedPlan[]>([]);
     const [accountPlans, setAccountPlans] = useState<AccountPlan[]>([]);
+    const [coupons, setCoupons] = useState<DiscountCoupon[]>([]);
     const [payments, setPayments] = useState<AdminPayment[]>([]);
     const [loading, setLoading] = useState(true);
     const [savingPlanId, setSavingPlanId] = useState<string | null>(null);
     const [savingAccountPlanId, setSavingAccountPlanId] = useState<string | null>(null);
+    const [savingCouponId, setSavingCouponId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const providerFilter = 'all';
@@ -159,6 +164,7 @@ export default function AdminPayments() {
             const [
                 { data: fPlansData, error: fPlansError },
                 { data: aPlansData, error: aPlansError },
+                { data: couponsData, error: couponsError },
                 { data: paymentsData, error: paymentsError }
             ] = await Promise.all([
                 supabase
@@ -169,6 +175,10 @@ export default function AdminPayments() {
                     .from('account_plans')
                     .select('*')
                     .order('sort_order', { ascending: true }),
+                supabase
+                    .from('discount_coupons')
+                    .select('*')
+                    .order('created_at', { ascending: false }),
                 supabase
                     .from('featured_payments')
                     .select('*, featured_plans(name, duration_days), ads(title, images)')
@@ -181,10 +191,12 @@ export default function AdminPayments() {
             if (aPlansError && aPlansError.code !== 'PGRST116') {
                 console.warn('Account plans table might be missing:', aPlansError);
             }
+            if (couponsError && couponsError.code !== 'PGRST116') throw couponsError;
             if (paymentsError) throw paymentsError;
 
             setFeaturedPlans((fPlansData || []) as FeaturedPlan[]);
             setAccountPlans(aPlansData?.length ? (aPlansData as Partial<AccountPlan>[]).map(toAccountPlan) : DEFAULT_ACCOUNT_PLANS);
+            setCoupons((couponsData || []) as DiscountCoupon[]);
             setPayments((paymentsData || []) as AdminPayment[]);
         } catch (error) {
             console.error('Error fetching payments:', error);
@@ -270,6 +282,71 @@ export default function AdminPayments() {
 
     function updateLocalAccountPlan(planId: string, updates: Partial<AccountPlan>) {
         setAccountPlans((prev) => prev.map((plan) => plan.id === planId ? { ...plan, ...updates } : plan));
+    }
+
+    function updateLocalCoupon(couponId: string, updates: Partial<DiscountCoupon>) {
+        setCoupons((prev) => prev.map((coupon) => coupon.id === couponId ? { ...coupon, ...updates } : coupon));
+    }
+
+    function addNewCoupon() {
+        setCoupons((prev) => [{
+            id: crypto.randomUUID(),
+            code: 'NOVOCUPOM',
+            description: '',
+            applies_to: 'all',
+            discount_type: 'percent',
+            discount_value: 10,
+            max_uses: null,
+            used_count: 0,
+            starts_at: null,
+            ends_at: null,
+            active: true,
+        }, ...prev]);
+    }
+
+    async function saveCoupon(coupon: DiscountCoupon) {
+        setSavingCouponId(coupon.id);
+        try {
+            const code = coupon.code.trim().toUpperCase();
+            if (!code) throw new Error('Informe um código.');
+            if (coupon.discount_type === 'percent' && (coupon.discount_value <= 0 || coupon.discount_value > 100)) {
+                throw new Error('Percentual deve estar entre 1 e 100.');
+            }
+
+            const { error } = await supabase.from('discount_coupons').upsert({
+                id: coupon.id,
+                code,
+                description: coupon.description || null,
+                applies_to: coupon.applies_to,
+                discount_type: coupon.discount_type,
+                discount_value: Math.max(0, Number(coupon.discount_value) || 0),
+                max_uses: coupon.max_uses === null ? null : Math.max(1, Number(coupon.max_uses) || 1),
+                used_count: Math.max(0, Number(coupon.used_count) || 0),
+                starts_at: coupon.starts_at || null,
+                ends_at: coupon.ends_at || null,
+                active: coupon.active,
+            });
+
+            if (error) throw error;
+            toast.success('Cupom salvo.');
+            fetchPaymentsData();
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Erro ao salvar cupom.');
+        } finally {
+            setSavingCouponId(null);
+        }
+    }
+
+    async function deleteCoupon(id: string) {
+        if (!window.confirm('Tem certeza que deseja excluir este cupom?')) return;
+        try {
+            const { error } = await supabase.from('discount_coupons').delete().eq('id', id);
+            if (error) throw error;
+            setCoupons((prev) => prev.filter((coupon) => coupon.id !== id));
+            toast.success('Cupom excluído.');
+        } catch (error) {
+            toast.error('Erro ao excluir cupom.');
+        }
     }
 
     async function deleteAccountPlan(id: string) {
@@ -654,6 +731,165 @@ export default function AdminPayments() {
                 </div>
             </section>
 
+            {/* Coupons Section */}
+            <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-2">
+                        <TicketPercent className="w-5 h-5 text-emerald-600" />
+                        <h2 className="text-xl font-bold text-gray-900">Cupons de Desconto</h2>
+                    </div>
+                    <button
+                        onClick={addNewCoupon}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl hover:bg-emerald-100 font-semibold transition-all"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Novo Cupom
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    {coupons.map((coupon) => (
+                        <div key={coupon.id} className="rounded-2xl border border-gray-200 bg-gray-50/50 p-5">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="grid flex-1 grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Código</label>
+                                        <input
+                                            value={coupon.code}
+                                            onChange={(event) => updateLocalCoupon(coupon.id, { code: event.target.value.toUpperCase() })}
+                                            className="w-full rounded-lg border border-gray-200 bg-white p-2 text-sm font-bold uppercase text-gray-900"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Aplicar em</label>
+                                        <select
+                                            value={coupon.applies_to}
+                                            onChange={(event) => updateLocalCoupon(coupon.id, { applies_to: event.target.value as DiscountCoupon['applies_to'] })}
+                                            className="w-full rounded-lg border border-gray-200 bg-white p-2 text-sm"
+                                        >
+                                            <option value="all">Planos e destaques</option>
+                                            <option value="account_plan">Somente planos</option>
+                                            <option value="featured">Somente destaques</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => deleteCoupon(coupon.id)}
+                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                    title="Excluir cupom"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Tipo</label>
+                                    <select
+                                        value={coupon.discount_type}
+                                        onChange={(event) => updateLocalCoupon(coupon.id, { discount_type: event.target.value as DiscountCoupon['discount_type'] })}
+                                        className="w-full rounded-lg border border-gray-200 bg-white p-2 text-sm"
+                                    >
+                                        <option value="percent">Percentual</option>
+                                        <option value="fixed">Valor fixo</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">
+                                        {coupon.discount_type === 'percent' ? 'Desconto (%)' : 'Desconto (centavos)'}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={coupon.discount_type === 'percent' ? 100 : undefined}
+                                        value={coupon.discount_value}
+                                        onChange={(event) => updateLocalCoupon(coupon.id, { discount_value: Number(event.target.value) || 0 })}
+                                        className="w-full rounded-lg border border-gray-200 bg-white p-2 text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Uso máximo</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        placeholder="0 = ilimitado"
+                                        value={coupon.max_uses ?? 0}
+                                        onChange={(event) => {
+                                            const value = Number(event.target.value) || 0;
+                                            updateLocalCoupon(coupon.id, { max_uses: value <= 0 ? null : value });
+                                        }}
+                                        className="w-full rounded-lg border border-gray-200 bg-white p-2 text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Usados</label>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        value={coupon.used_count}
+                                        onChange={(event) => updateLocalCoupon(coupon.id, { used_count: Number(event.target.value) || 0 })}
+                                        className="w-full rounded-lg border border-gray-200 bg-white p-2 text-sm"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Início</label>
+                                    <input
+                                        type="datetime-local"
+                                        value={toDateTimeLocal(coupon.starts_at)}
+                                        onChange={(event) => updateLocalCoupon(coupon.id, { starts_at: fromDateTimeLocal(event.target.value) })}
+                                        className="w-full rounded-lg border border-gray-200 bg-white p-2 text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Fim</label>
+                                    <input
+                                        type="datetime-local"
+                                        value={toDateTimeLocal(coupon.ends_at)}
+                                        onChange={(event) => updateLocalCoupon(coupon.id, { ends_at: fromDateTimeLocal(event.target.value) })}
+                                        className="w-full rounded-lg border border-gray-200 bg-white p-2 text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Descrição interna</label>
+                                    <input
+                                        value={coupon.description || ''}
+                                        onChange={(event) => updateLocalCoupon(coupon.id, { description: event.target.value })}
+                                        className="w-full rounded-lg border border-gray-200 bg-white p-2 text-sm"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mt-4 flex items-center justify-between rounded-xl border border-gray-200 bg-white p-3">
+                                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                    <input
+                                        type="checkbox"
+                                        checked={coupon.active}
+                                        onChange={(event) => updateLocalCoupon(coupon.id, { active: event.target.checked })}
+                                    />
+                                    Ativo
+                                </label>
+                                <button
+                                    onClick={() => saveCoupon(coupon)}
+                                    disabled={savingCouponId === coupon.id}
+                                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
+                                >
+                                    <Save className="h-4 w-4" />
+                                    {savingCouponId === coupon.id ? 'Salvando...' : 'Salvar cupom'}
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                    {!loading && coupons.length === 0 && (
+                        <div className="rounded-2xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
+                            Nenhum cupom cadastrado.
+                        </div>
+                    )}
+                </div>
+            </section>
+
             {/* Payments Table Section */}
             <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-50/50">
@@ -716,6 +952,11 @@ export default function AdminPayments() {
                                     </td>
                                     <td className="p-4 text-sm font-bold text-gray-900">
                                         {formatCents(payment.amount_cents, payment.currency)}
+                                        {payment.discount_cents ? (
+                                            <p className="mt-1 text-[10px] font-semibold text-emerald-700">
+                                                Cupom {payment.coupon_code}: -{formatCents(payment.discount_cents, payment.currency)}
+                                            </p>
+                                        ) : null}
                                     </td>
                                     <td className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">{payment.provider}</td>
                                     <td className="p-4">
@@ -813,6 +1054,21 @@ function Payload({ title, value }: { title: string; value: unknown }) {
             </pre>
         </div>
     );
+}
+
+function toDateTimeLocal(value?: string | null) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function fromDateTimeLocal(value: string) {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toISOString();
 }
 
 function statusLabel(status: FeaturedPayment['status']) {

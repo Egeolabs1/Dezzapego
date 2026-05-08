@@ -57,7 +57,7 @@ export function formatCents(cents: number, currency = 'BRL') {
     }).format((Number(cents) || 0) / 100);
 }
 
-export async function createFeaturedPayment(adId: string, planId: string, provider: FeaturedProvider) {
+export async function createFeaturedPayment(adId: string, planId: string, provider: FeaturedProvider, couponCode?: string) {
     const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData.session?.access_token;
     if (!accessToken) throw new Error('Faça login para destacar o anúncio.');
@@ -72,7 +72,7 @@ export async function createFeaturedPayment(adId: string, planId: string, provid
             'content-type': 'application/json',
             authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ adId, planId }),
+        body: JSON.stringify({ adId, planId, couponCode }),
     });
 
     const payload = await response.json();

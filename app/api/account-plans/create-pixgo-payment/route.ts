@@ -1,7 +1,9 @@
+import { validateDiscountCoupon, normalizeCouponCode } from '@/lib/discountCoupons';
 import { getAuthenticatedUser, getSiteUrl, getSupabaseAdmin, jsonResponse } from '@/lib/payments';
 
 type RequestBody = {
   planId?: string;
+  couponCode?: string;
 };
 
 type PixGoCreatePaymentResponse = {
@@ -51,6 +53,12 @@ export async function POST(req: Request) {
       return jsonResponse({ error: 'Plano gratuito não precisa de pagamento.' }, { status: 400 });
     }
 
+    const couponResult = await validateDiscountCoupon(supabase, body.couponCode, 'account_plan', Number(plan.price_cents));
+    if (couponResult.error) return jsonResponse({ error: couponResult.error }, { status: 400 });
+    if (couponResult.finalAmountCents <= 0) {
+      return jsonResponse({ error: 'PixGo não aceita pagamento com valor zero. Use um cupom menor que 100%.' }, { status: 400 });
+    }
+
     const { data: payment, error: paymentError } = await supabase
       .from('account_plan_payments')
       .insert({
@@ -58,8 +66,11 @@ export async function POST(req: Request) {
         plan_id: plan.id,
         provider: 'pixgo',
         status: 'pending',
-        amount_cents: plan.price_cents,
+        amount_cents: couponResult.finalAmountCents,
         gross_amount_cents: plan.price_cents,
+        discount_cents: couponResult.discountCents,
+        coupon_id: couponResult.coupon?.id || null,
+        coupon_code: couponResult.coupon ? normalizeCouponCode(body.couponCode) : null,
         currency: plan.currency || 'BRL',
       })
       .select('id')
@@ -74,7 +85,7 @@ export async function POST(req: Request) {
         'X-API-Key': pixgoApiKey,
       },
       body: JSON.stringify({
-        amount: Number(plan.price_cents) / 100,
+        amount: couponResult.finalAmountCents / 100,
         description: `Dezzapego ${plan.name}`,
         customer_name: profile?.full_name || user.email || 'Cliente Dezzapego',
         customer_cpf: profile?.cpf_cnpj || undefined,

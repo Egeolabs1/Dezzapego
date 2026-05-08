@@ -13,7 +13,7 @@ export type AccountPlanPaymentResult = {
     };
 };
 
-export async function createAccountPlanPayment(planId: string, provider: FeaturedProvider) {
+export async function createAccountPlanPayment(planId: string, provider: FeaturedProvider, couponCode?: string) {
     const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData.session?.access_token;
     if (!accessToken) throw new Error('Faça login para assinar um plano.');
@@ -28,7 +28,7 @@ export async function createAccountPlanPayment(planId: string, provider: Feature
             'content-type': 'application/json',
             authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ planId, couponCode }),
     });
 
     const payload = await response.json();

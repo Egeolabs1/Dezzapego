@@ -8,6 +8,7 @@ import { Ad } from '../../types';
 import { formatPrice } from '../../lib/formatters';
 import { toast } from 'sonner';
 import SEO from '../../components/SEO';
+import { calculateCouponDiscount, DiscountCoupon, normalizeCouponCode } from '../../lib/discountCoupons';
 import {
     createFeaturedPayment,
     FeaturedPayment,
@@ -35,6 +36,9 @@ export default function MyAds() {
     const [provider, setProvider] = useState<FeaturedProvider>('stripe');
     const [creatingPayment, setCreatingPayment] = useState(false);
     const [pixResult, setPixResult] = useState<{ qrCode?: string; qrImageUrl?: string; expiresAt?: string } | null>(null);
+    const [couponCode, setCouponCode] = useState('');
+    const [coupon, setCoupon] = useState<DiscountCoupon | null>(null);
+    const [checkingCoupon, setCheckingCoupon] = useState(false);
     const [soldAd, setSoldAd] = useState<Ad | null>(null);
     const [contactInterests, setContactInterests] = useState<ContactInterest[]>([]);
     const [selectedBuyerId, setSelectedBuyerId] = useState('');
@@ -164,6 +168,8 @@ export default function MyAds() {
         e.preventDefault();
         setSelectedAd(ad);
         setPixResult(null);
+        setCoupon(null);
+        setCouponCode('');
         if (!selectedPlanId && plans[0]) setSelectedPlanId(plans[0].id);
     };
 
@@ -171,7 +177,7 @@ export default function MyAds() {
         if (!selectedAd || !selectedPlanId) { toast.error('Escolha um plano de destaque.'); return; }
         setCreatingPayment(true);
         try {
-            const result = await createFeaturedPayment(selectedAd.id, selectedPlanId, provider);
+            const result = await createFeaturedPayment(selectedAd.id, selectedPlanId, provider, coupon?.code || couponCode);
             if (result.checkoutUrl) { window.location.href = result.checkoutUrl; return; }
             if (result.pix) {
                 setPixResult(result.pix);
@@ -189,6 +195,44 @@ export default function MyAds() {
             setCreatingPayment(false);
         }
     };
+
+    async function applyCoupon() {
+        const selectedPlan = plans.find((plan) => plan.id === selectedPlanId);
+        if (!selectedPlan) return;
+
+        const code = normalizeCouponCode(couponCode);
+        if (!code) {
+            setCoupon(null);
+            return;
+        }
+
+        setCheckingCoupon(true);
+        try {
+            const { data: sessionData } = await supabase.auth.getSession();
+            const accessToken = sessionData.session?.access_token;
+            if (!accessToken) throw new Error('Faça login para usar cupom.');
+
+            const response = await fetch('/api/discount-coupons/validate', {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json',
+                    authorization: `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({ code, appliesTo: 'featured', amountCents: selectedPlan.price_cents }),
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload?.error || 'Cupom inválido.');
+
+            setCoupon(payload.coupon as DiscountCoupon);
+            setCouponCode(code);
+            toast.success('Cupom aplicado.');
+        } catch (error) {
+            setCoupon(null);
+            toast.error(error instanceof Error ? error.message : 'Cupom inválido.');
+        } finally {
+            setCheckingCoupon(false);
+        }
+    }
 
     const getLatestPaymentForAd = (adId: string) => payments.find(p => p.ad_id === adId);
 
@@ -441,6 +485,55 @@ export default function MyAds() {
                             ))}
                         </div>
 
+                        {(() => {
+                            const selectedPlan = plans.find((plan) => plan.id === selectedPlanId);
+                            const discountCents = selectedPlan && coupon ? calculateCouponDiscount(coupon, selectedPlan.price_cents) : 0;
+                            const finalAmountCents = selectedPlan ? Math.max(0, selectedPlan.price_cents - discountCents) : 0;
+
+                            return (
+                                <div className="mb-6 rounded-xl border border-gray-100 bg-gray-50 p-4">
+                                    <label className="text-xs font-bold uppercase tracking-wide text-gray-500">Cupom de desconto</label>
+                                    <div className="mt-2 flex gap-2">
+                                        <input
+                                            value={couponCode}
+                                            onChange={(event) => {
+                                                setCouponCode(event.target.value.toUpperCase());
+                                                setCoupon(null);
+                                            }}
+                                            placeholder="EX: PROMO10"
+                                            className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm uppercase"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={applyCoupon}
+                                            disabled={!selectedPlan || checkingCoupon}
+                                            className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-60"
+                                        >
+                                            {checkingCoupon ? '...' : 'Aplicar'}
+                                        </button>
+                                    </div>
+                                    {selectedPlan && (
+                                        <div className="mt-3 space-y-1 text-sm">
+                                            <div className="flex justify-between text-gray-600">
+                                                <span>Subtotal</span>
+                                                <span>{formatCents(selectedPlan.price_cents, selectedPlan.currency)}</span>
+                                            </div>
+                                            {coupon && (
+                                                <div className="flex justify-between text-emerald-700">
+                                                    <span>Cupom {coupon.code}</span>
+                                                    <span>-{formatCents(discountCents, selectedPlan.currency)}</span>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between border-t border-gray-200 pt-2 font-bold text-gray-900">
+                                                <span>Total</span>
+                                                <span>{formatCents(finalAmountCents, selectedPlan.currency)}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
                         <div className="grid grid-cols-2 gap-3 mb-6">
                             <button
                                 onClick={() => setProvider('stripe')}
@@ -450,7 +543,10 @@ export default function MyAds() {
                                 }`}
                             >
                                 <CreditCard className="w-4 h-4" />
-                                Stripe
+                                <span className="text-left leading-tight">
+                                    Cartão de crédito
+                                    <span className="block text-xs font-medium opacity-75">via Stripe</span>
+                                </span>
                             </button>
                             <button
                                 onClick={() => setProvider('pixgo')}
@@ -490,7 +586,7 @@ export default function MyAds() {
                             className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white rounded-xl py-3 font-semibold hover:bg-blue-700 transition-colors disabled:opacity-60"
                         >
                             {creatingPayment && <Loader2 className="w-4 h-4 animate-spin" />}
-                            {provider === 'stripe' ? 'Ir para pagamento Stripe' : 'Gerar PIX'}
+                            {provider === 'stripe' ? 'Pagar com cartão de crédito' : 'Gerar PIX'}
                         </button>
                     </div>
                 </div>

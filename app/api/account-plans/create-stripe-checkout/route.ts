@@ -1,8 +1,10 @@
 import Stripe from 'stripe';
+import { validateDiscountCoupon, normalizeCouponCode } from '@/lib/discountCoupons';
 import { getAuthenticatedUser, getSiteUrl, getSupabaseAdmin, jsonResponse } from '@/lib/payments';
 
 type RequestBody = {
   planId?: string;
+  couponCode?: string;
 };
 
 export async function POST(req: Request) {
@@ -33,6 +35,12 @@ export async function POST(req: Request) {
       return jsonResponse({ error: 'Plano gratuito não precisa de pagamento.' }, { status: 400 });
     }
 
+    const couponResult = await validateDiscountCoupon(supabase, body.couponCode, 'account_plan', Number(plan.price_cents));
+    if (couponResult.error) return jsonResponse({ error: couponResult.error }, { status: 400 });
+    if (couponResult.finalAmountCents <= 0) {
+      return jsonResponse({ error: 'Stripe não aceita checkout com valor zero. Use um cupom menor que 100%.' }, { status: 400 });
+    }
+
     const { data: payment, error: paymentError } = await supabase
       .from('account_plan_payments')
       .insert({
@@ -40,8 +48,11 @@ export async function POST(req: Request) {
         plan_id: plan.id,
         provider: 'stripe',
         status: 'pending',
-        amount_cents: plan.price_cents,
+        amount_cents: couponResult.finalAmountCents,
         gross_amount_cents: plan.price_cents,
+        discount_cents: couponResult.discountCents,
+        coupon_id: couponResult.coupon?.id || null,
+        coupon_code: couponResult.coupon ? normalizeCouponCode(body.couponCode) : null,
         currency: plan.currency || 'BRL',
       })
       .select('id')
@@ -59,7 +70,7 @@ export async function POST(req: Request) {
         {
           price_data: {
             currency: String(plan.currency || 'BRL').toLowerCase(),
-            unit_amount: Number(plan.price_cents),
+            unit_amount: couponResult.finalAmountCents,
             recurring: { interval: 'month' },
             product_data: {
               name: `Dezzapego ${plan.name}`,
@@ -74,6 +85,7 @@ export async function POST(req: Request) {
         paymentId: payment.id,
         planId: plan.id,
         userId: user.id,
+        couponCode: couponResult.coupon ? normalizeCouponCode(body.couponCode) : '',
       },
       subscription_data: {
         metadata: {
@@ -81,6 +93,7 @@ export async function POST(req: Request) {
           paymentId: payment.id,
           planId: plan.id,
           userId: user.id,
+          couponCode: couponResult.coupon ? normalizeCouponCode(body.couponCode) : '',
         },
       },
       success_url: `${siteUrl}/dashboard?plan=success`,

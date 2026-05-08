@@ -1312,6 +1312,29 @@ create table if not exists public.account_plan_payments (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.discount_coupons (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  description text,
+  applies_to text not null default 'all' check (applies_to in ('account_plan', 'featured', 'all')),
+  discount_type text not null default 'percent' check (discount_type in ('percent', 'fixed')),
+  discount_value integer not null check (discount_value >= 0),
+  max_uses integer check (max_uses is null or max_uses > 0),
+  used_count integer not null default 0 check (used_count >= 0),
+  starts_at timestamptz,
+  ends_at timestamptz,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.featured_payments add column if not exists discount_cents integer not null default 0 check (discount_cents >= 0);
+alter table public.featured_payments add column if not exists coupon_id uuid references public.discount_coupons(id) on delete set null;
+alter table public.featured_payments add column if not exists coupon_code text;
+alter table public.account_plan_payments add column if not exists discount_cents integer not null default 0 check (discount_cents >= 0);
+alter table public.account_plan_payments add column if not exists coupon_id uuid references public.discount_coupons(id) on delete set null;
+alter table public.account_plan_payments add column if not exists coupon_code text;
+
 create table if not exists public.user_account_subscriptions (
   user_id uuid primary key references auth.users(id) on delete cascade,
   plan_id uuid not null references public.account_plans(id),
@@ -1351,6 +1374,8 @@ create index if not exists idx_account_plan_payments_status on public.account_pl
 create index if not exists idx_account_plan_payments_provider on public.account_plan_payments(provider);
 create index if not exists idx_account_plan_payments_user_id on public.account_plan_payments(user_id);
 create index if not exists idx_account_plan_payments_external_id on public.account_plan_payments(provider, external_id);
+create index if not exists idx_discount_coupons_code on public.discount_coupons(code);
+create index if not exists idx_discount_coupons_active on public.discount_coupons(active, applies_to);
 create index if not exists idx_user_account_subscriptions_period on public.user_account_subscriptions(status, current_period_end);
 create index if not exists idx_site_visits_created_at on public.site_visits(created_at desc);
 create index if not exists idx_site_visits_path on public.site_visits(path);
@@ -1400,6 +1425,13 @@ select public.create_trigger_if_missing(
   'public', 'account_plan_payments', 'trg_account_plan_payments_updated_at',
   $trg$create trigger trg_account_plan_payments_updated_at
     before update on public.account_plan_payments
+    for each row execute function public.set_updated_at()$trg$
+);
+
+select public.create_trigger_if_missing(
+  'public', 'discount_coupons', 'trg_discount_coupons_updated_at',
+  $trg$create trigger trg_discount_coupons_updated_at
+    before update on public.discount_coupons
     for each row execute function public.set_updated_at()$trg$
 );
 
@@ -1561,6 +1593,7 @@ alter table public.featured_plans enable row level security;
 alter table public.account_plans enable row level security;
 alter table public.featured_payments enable row level security;
 alter table public.account_plan_payments enable row level security;
+alter table public.discount_coupons enable row level security;
 alter table public.user_account_subscriptions enable row level security;
 alter table public.site_visits enable row level security;
 
@@ -1613,6 +1646,12 @@ select public.create_policy_if_missing(
 );
 
 select public.create_policy_if_missing(
+  'public', 'discount_coupons', 'Admins can manage discount coupons',
+  $pol$create policy "Admins can manage discount coupons"
+    on public.discount_coupons for all using (public.is_admin()) with check (public.is_admin())$pol$
+);
+
+select public.create_policy_if_missing(
   'public', 'user_account_subscriptions', 'Users can view own account subscription',
   $pol$create policy "Users can view own account subscription"
     on public.user_account_subscriptions for select using (auth.uid() = user_id or public.is_admin())$pol$
@@ -1636,6 +1675,7 @@ grant insert, update, delete on public.featured_plans to authenticated;
 grant insert, update, delete on public.account_plans to authenticated;
 grant select on public.featured_payments to authenticated;
 grant select on public.account_plan_payments to authenticated;
+grant select, insert, update, delete on public.discount_coupons to authenticated;
 grant select on public.user_account_subscriptions to authenticated;
 grant select on public.site_visits to authenticated;
 
