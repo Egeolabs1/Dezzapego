@@ -278,6 +278,334 @@ as $$
   limit 100;
 $$;
 
+create table if not exists public.seller_transactions (
+  id uuid primary key default gen_random_uuid(),
+  ad_id uuid not null references public.ads(id) on delete cascade,
+  seller_id uuid not null references public.profiles(id) on delete cascade,
+  buyer_id uuid not null references public.profiles(id) on delete cascade,
+  status text not null default 'completed' check (status in ('completed', 'canceled')),
+  completed_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint seller_transactions_no_self_transaction check (seller_id <> buyer_id),
+  constraint seller_transactions_unique_ad_buyer unique (ad_id, buyer_id)
+);
+
+comment on table public.seller_transactions is
+  'Transações concluídas registradas pelo vendedor para liberar avaliação do comprador.';
+
+create index if not exists idx_seller_transactions_seller
+  on public.seller_transactions(seller_id, completed_at desc);
+create index if not exists idx_seller_transactions_buyer
+  on public.seller_transactions(buyer_id, completed_at desc);
+create index if not exists idx_seller_transactions_ad
+  on public.seller_transactions(ad_id);
+
+create table if not exists public.ad_contact_interests (
+  id uuid primary key default gen_random_uuid(),
+  ad_id uuid not null references public.ads(id) on delete cascade,
+  seller_id uuid not null references public.profiles(id) on delete cascade,
+  buyer_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint ad_contact_interests_no_self_interest check (seller_id <> buyer_id),
+  constraint ad_contact_interests_unique unique (ad_id, buyer_id)
+);
+
+comment on table public.ad_contact_interests is
+  'Usuários logados que abriram contato com o vendedor em um anúncio.';
+
+create index if not exists idx_ad_contact_interests_ad
+  on public.ad_contact_interests(ad_id, created_at desc);
+create index if not exists idx_ad_contact_interests_seller
+  on public.ad_contact_interests(seller_id, created_at desc);
+create index if not exists idx_ad_contact_interests_buyer
+  on public.ad_contact_interests(buyer_id, created_at desc);
+
+create or replace function public.record_ad_contact_interest(p_ad_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_seller_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'not authenticated';
+  end if;
+
+  select a.user_id into v_seller_id
+  from public.ads a
+  where a.id = p_ad_id
+    and coalesce(a.status, 'active') = 'active';
+
+  if v_seller_id is null then
+    raise exception 'ad not found';
+  end if;
+
+  if v_seller_id = auth.uid() then
+    return;
+  end if;
+
+  insert into public.ad_contact_interests (ad_id, seller_id, buyer_id)
+  values (p_ad_id, v_seller_id, auth.uid())
+  on conflict (ad_id, buyer_id) do update set updated_at = now();
+end;
+$$;
+
+create or replace function public.get_ad_contact_interests(p_ad_id uuid)
+returns table (
+  buyer_id uuid,
+  buyer_name text,
+  buyer_email text,
+  contacted_at timestamptz
+)
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select
+    p.id as buyer_id,
+    p.full_name as buyer_name,
+    p.email as buyer_email,
+    i.updated_at as contacted_at
+  from public.ad_contact_interests i
+  join public.profiles p on p.id = i.buyer_id
+  join public.ads a on a.id = i.ad_id
+  where i.ad_id = p_ad_id
+    and (auth.uid() = a.user_id or public.is_admin())
+  order by i.updated_at desc;
+$$;
+
+revoke execute on function public.record_ad_contact_interest(uuid) from public;
+grant execute on function public.record_ad_contact_interest(uuid) to authenticated;
+revoke execute on function public.get_ad_contact_interests(uuid) from public;
+grant execute on function public.get_ad_contact_interests(uuid) to authenticated;
+
+create or replace function public.complete_ad_transaction(p_ad_id uuid, p_buyer_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_seller_id uuid;
+  v_transaction_id uuid;
+begin
+  select a.user_id into v_seller_id
+  from public.ads a
+  where a.id = p_ad_id;
+
+  if v_seller_id is null then
+    raise exception 'ad not found';
+  end if;
+
+  if auth.uid() is distinct from v_seller_id and not public.is_admin() then
+    raise exception 'not allowed';
+  end if;
+
+  if p_buyer_id = v_seller_id then
+    raise exception 'seller cannot be buyer';
+  end if;
+
+  if not exists (
+    select 1
+    from public.ad_contact_interests i
+    where i.ad_id = p_ad_id
+      and i.seller_id = v_seller_id
+      and i.buyer_id = p_buyer_id
+  ) then
+    raise exception 'buyer did not contact seller for this ad';
+  end if;
+
+  insert into public.seller_transactions (ad_id, seller_id, buyer_id, status, completed_at)
+  values (p_ad_id, v_seller_id, p_buyer_id, 'completed', now())
+  on conflict (ad_id, buyer_id) do update set
+    status = 'completed',
+    completed_at = now(),
+    updated_at = now()
+  returning id into v_transaction_id;
+
+  update public.ads
+  set status = 'sold',
+      updated_at = now()
+  where id = p_ad_id;
+
+  return v_transaction_id;
+end;
+$$;
+
+revoke execute on function public.complete_ad_transaction(uuid, uuid) from public;
+grant execute on function public.complete_ad_transaction(uuid, uuid) to authenticated;
+
+create table if not exists public.seller_reviews (
+  id uuid primary key default gen_random_uuid(),
+  transaction_id uuid references public.seller_transactions(id) on delete set null,
+  seller_id uuid not null references public.profiles(id) on delete cascade,
+  reviewer_id uuid not null references public.profiles(id) on delete cascade,
+  reviewer_name text,
+  rating integer not null check (rating between 1 and 5),
+  comment text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint seller_reviews_no_self_review check (seller_id <> reviewer_id),
+  constraint seller_reviews_unique_reviewer unique (seller_id, reviewer_id)
+);
+
+alter table public.seller_reviews
+  add column if not exists transaction_id uuid references public.seller_transactions(id) on delete set null;
+
+comment on table public.seller_reviews is
+  'Avaliações públicas deixadas por usuários autenticados nos perfis dos anunciantes.';
+
+create index if not exists idx_seller_reviews_seller_created
+  on public.seller_reviews(seller_id, created_at desc);
+create index if not exists idx_seller_reviews_reviewer
+  on public.seller_reviews(reviewer_id);
+create index if not exists idx_seller_reviews_transaction
+  on public.seller_reviews(transaction_id);
+
+create or replace function public.recalculate_seller_rating(p_seller_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform set_config('dezzapego.allow_seller_rating_update', 'on', true);
+
+  update public.profiles
+  set rating = coalesce((
+    select round(avg(sr.rating)::numeric, 2)
+    from public.seller_reviews sr
+    where sr.seller_id = p_seller_id
+  ), 0),
+  updated_at = now()
+  where id = p_seller_id;
+end;
+$$;
+
+create or replace function public.update_seller_rating_from_review()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if tg_op = 'DELETE' then
+    perform public.recalculate_seller_rating(old.seller_id);
+    return old;
+  end if;
+
+  perform public.recalculate_seller_rating(new.seller_id);
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_seller_reviews_rating on public.seller_reviews;
+create trigger trg_seller_reviews_rating
+  after insert or update or delete on public.seller_reviews
+  for each row execute function public.update_seller_rating_from_review();
+
+alter table public.seller_reviews enable row level security;
+alter table public.seller_transactions enable row level security;
+alter table public.ad_contact_interests enable row level security;
+
+drop policy if exists "Users can view related ad contact interests" on public.ad_contact_interests;
+drop policy if exists "Admins can manage ad contact interests" on public.ad_contact_interests;
+
+select public.create_policy_if_missing(
+  'public', 'ad_contact_interests', 'Users can view related ad contact interests',
+  $pol$create policy "Users can view related ad contact interests"
+    on public.ad_contact_interests for select to authenticated
+    using (auth.uid() = seller_id or auth.uid() = buyer_id or public.is_admin())$pol$
+);
+
+select public.create_policy_if_missing(
+  'public', 'ad_contact_interests', 'Admins can manage ad contact interests',
+  $pol$create policy "Admins can manage ad contact interests"
+    on public.ad_contact_interests for all to authenticated
+    using (public.is_admin()) with check (public.is_admin())$pol$
+);
+
+drop policy if exists "Users can view related seller transactions" on public.seller_transactions;
+drop policy if exists "Admins can manage seller transactions" on public.seller_transactions;
+
+select public.create_policy_if_missing(
+  'public', 'seller_transactions', 'Users can view related seller transactions',
+  $pol$create policy "Users can view related seller transactions"
+    on public.seller_transactions for select to authenticated
+    using (auth.uid() = seller_id or auth.uid() = buyer_id or public.is_admin())$pol$
+);
+
+select public.create_policy_if_missing(
+  'public', 'seller_transactions', 'Admins can manage seller transactions',
+  $pol$create policy "Admins can manage seller transactions"
+    on public.seller_transactions for all to authenticated
+    using (public.is_admin()) with check (public.is_admin())$pol$
+);
+
+drop policy if exists "Anyone can view seller reviews" on public.seller_reviews;
+drop policy if exists "Users can create own seller reviews" on public.seller_reviews;
+drop policy if exists "Users can update own seller reviews" on public.seller_reviews;
+drop policy if exists "Users can delete own seller reviews" on public.seller_reviews;
+
+select public.create_policy_if_missing(
+  'public', 'seller_reviews', 'Anyone can view seller reviews',
+  $pol$create policy "Anyone can view seller reviews"
+    on public.seller_reviews for select using (true)$pol$
+);
+
+select public.create_policy_if_missing(
+  'public', 'seller_reviews', 'Users can create own seller reviews',
+  $pol$create policy "Users can create own seller reviews"
+    on public.seller_reviews for insert to authenticated
+    with check (
+      auth.uid() = reviewer_id
+      and reviewer_id <> seller_id
+      and exists (
+        select 1
+        from public.seller_transactions st
+        where st.id = transaction_id
+          and st.seller_id = seller_id
+          and st.buyer_id = reviewer_id
+          and st.status = 'completed'
+      )
+    )$pol$
+);
+
+select public.create_policy_if_missing(
+  'public', 'seller_reviews', 'Users can update own seller reviews',
+  $pol$create policy "Users can update own seller reviews"
+    on public.seller_reviews for update to authenticated
+    using (auth.uid() = reviewer_id)
+    with check (
+      auth.uid() = reviewer_id
+      and reviewer_id <> seller_id
+      and exists (
+        select 1
+        from public.seller_transactions st
+        where st.id = transaction_id
+          and st.seller_id = seller_id
+          and st.buyer_id = reviewer_id
+          and st.status = 'completed'
+      )
+    )$pol$
+);
+
+select public.create_policy_if_missing(
+  'public', 'seller_reviews', 'Users can delete own seller reviews',
+  $pol$create policy "Users can delete own seller reviews"
+    on public.seller_reviews for delete to authenticated using (auth.uid() = reviewer_id)$pol$
+);
+
+grant select on public.seller_reviews to anon, authenticated;
+grant insert, update, delete on public.seller_reviews to authenticated;
+grant select on public.seller_transactions to authenticated;
+grant select on public.ad_contact_interests to authenticated;
+
 create or replace function public.profile_identity_exists(p_phone text, p_cpf_cnpj text)
 returns boolean
 language sql
@@ -325,6 +653,19 @@ begin
       and new.verified = false
       and new.verification_docs is not null
       and new.verification_rejection_reason is null then
+      return new;
+    end if;
+  end if;
+
+  if current_setting('dezzapego.allow_seller_rating_update', true) = 'on' then
+    if old.role is not distinct from new.role
+      and old.is_admin is not distinct from new.is_admin
+      and old.verified is not distinct from new.verified
+      and old.verification_status is not distinct from new.verification_status
+      and old.verification_docs is not distinct from new.verification_docs
+      and old.verification_rejection_reason is not distinct from new.verification_rejection_reason
+      and old.is_suspended is not distinct from new.is_suspended
+      and old.suspended_reason is not distinct from new.suspended_reason then
       return new;
     end if;
   end if;

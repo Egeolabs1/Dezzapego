@@ -154,9 +154,11 @@ export default function AdDetails() {
                 return;
             }
 
-            const message = `Olá, vim pelo Dezzapego! Tenho interesse no seu anúncio "${ad.title}". Ainda está disponível?`;
-            const encodedMessage = encodeURIComponent(message);
-            window.open(`https://wa.me/55${phone}?text=${encodedMessage}`, '_blank');
+            void Promise.resolve(supabase.rpc('record_ad_contact_interest', { p_ad_id: ad.id })).finally(() => {
+                const message = `Olá, vim pelo Dezzapego! Tenho interesse no seu anúncio "${ad.title}". Ainda está disponível?`;
+                const encodedMessage = encodeURIComponent(message);
+                window.open(`https://wa.me/55${phone}?text=${encodedMessage}`, '_blank');
+            });
         });
     };
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Header } from '../components/Header';
-import { Loader2, Plus, Trash2, Edit, Star, CreditCard, QrCode, X, LayoutGrid, Clock, XCircle } from 'lucide-react';
+import { Loader2, Plus, Trash2, Edit, Star, CreditCard, QrCode, X, LayoutGrid, Clock, XCircle, CheckCircle } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Ad } from '../../types';
 import { formatPrice } from '../../lib/formatters';
@@ -16,6 +16,13 @@ import {
     formatCents,
 } from '../../lib/featuredPayments';
 
+type ContactInterest = {
+    buyer_id: string;
+    buyer_name: string | null;
+    buyer_email: string | null;
+    contacted_at: string;
+};
+
 export default function MyAds() {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -28,6 +35,11 @@ export default function MyAds() {
     const [provider, setProvider] = useState<FeaturedProvider>('stripe');
     const [creatingPayment, setCreatingPayment] = useState(false);
     const [pixResult, setPixResult] = useState<{ qrCode?: string; qrImageUrl?: string; expiresAt?: string } | null>(null);
+    const [soldAd, setSoldAd] = useState<Ad | null>(null);
+    const [contactInterests, setContactInterests] = useState<ContactInterest[]>([]);
+    const [selectedBuyerId, setSelectedBuyerId] = useState('');
+    const [loadingInterests, setLoadingInterests] = useState(false);
+    const [completingSale, setCompletingSale] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -89,6 +101,62 @@ export default function MyAds() {
             toast.success('Anúncio excluído com sucesso!');
         } catch (error) {
             toast.error('Erro ao excluir anúncio.');
+        }
+    };
+
+    const openSoldModal = async (ad: Ad, e: React.MouseEvent) => {
+        e.preventDefault();
+        setSoldAd(ad);
+        setContactInterests([]);
+        setSelectedBuyerId('');
+        setLoadingInterests(true);
+
+        try {
+            const { data, error } = await supabase.rpc('get_ad_contact_interests', {
+                p_ad_id: ad.id,
+            });
+
+            if (error) throw error;
+            const interests = (data || []) as ContactInterest[];
+            setContactInterests(interests);
+            setSelectedBuyerId(interests[0]?.buyer_id || '');
+        } catch (error) {
+            toast.error('Erro ao carregar compradores que entraram em contato.');
+        } finally {
+            setLoadingInterests(false);
+        }
+    };
+
+    const completeSale = async () => {
+        if (!soldAd || !selectedBuyerId) {
+            toast.error('Escolha um comprador para concluir a transação.');
+            return;
+        }
+
+        setCompletingSale(true);
+
+        try {
+            const { error } = await supabase.rpc('complete_ad_transaction', {
+                p_ad_id: soldAd.id,
+                p_buyer_id: selectedBuyerId,
+            });
+
+            if (error) throw error;
+
+            setAds((prev) => prev.map((item) => item.id === soldAd.id ? { ...item, status: 'sold' } as Ad : item));
+            setSoldAd(null);
+            toast.success('Transação concluída. O comprador agora pode avaliar você.');
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            if (/seller cannot be buyer/i.test(message)) {
+                toast.error('Você não pode registrar venda para sua própria conta.');
+            } else if (/buyer did not contact/i.test(message)) {
+                toast.error('Esse comprador ainda não entrou em contato por este anúncio.');
+            } else {
+                toast.error('Erro ao concluir a transação.');
+            }
+        } finally {
+            setCompletingSale(false);
         }
     };
 
@@ -256,6 +324,11 @@ export default function MyAds() {
                                                 ✕ Rejeitado pela moderação
                                             </div>
                                         )}
+                                        {adStatus === 'sold' && (
+                                            <div className="absolute bottom-0 left-0 right-0 bg-emerald-600/90 text-white text-center py-1 text-xs font-semibold">
+                                                Vendido
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Content */}
@@ -283,13 +356,22 @@ export default function MyAds() {
                                             </span>
                                             <div className="flex gap-2">
                                                 {adStatus === 'active' && (
-                                                    <button
-                                                        onClick={(e) => openFeaturedModal(ad, e)}
-                                                        className="p-1.5 text-yellow-600 hover:bg-yellow-50 rounded-md transition-colors"
-                                                        title="Destacar anúncio"
-                                                    >
-                                                        <Star className="w-4 h-4" />
-                                                    </button>
+                                                    <>
+                                                        <button
+                                                            onClick={(e) => openFeaturedModal(ad, e)}
+                                                            className="p-1.5 text-yellow-600 hover:bg-yellow-50 rounded-md transition-colors"
+                                                            title="Destacar anúncio"
+                                                        >
+                                                            <Star className="w-4 h-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => openSoldModal(ad, e)}
+                                                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
+                                                            title="Marcar como vendido"
+                                                        >
+                                                            <CheckCircle className="w-4 h-4" />
+                                                        </button>
+                                                    </>
                                                 )}
                                                 <button
                                                     onClick={(e) => { e.preventDefault(); navigate(`/editar/${ad.id}`); }}
@@ -409,6 +491,60 @@ export default function MyAds() {
                         >
                             {creatingPayment && <Loader2 className="w-4 h-4 animate-spin" />}
                             {provider === 'stripe' ? 'Ir para pagamento Stripe' : 'Gerar PIX'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {soldAd && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 relative">
+                        <button
+                            onClick={() => setSoldAd(null)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                            title="Fechar"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <h2 className="text-xl font-bold text-gray-900">Concluir transação</h2>
+                        <p className="mt-1 text-sm text-gray-600">
+                            Escolha o comprador que entrou em contato pelo anúncio "{soldAd.title}".
+                        </p>
+
+                        <div className="mt-5">
+                            {loadingInterests ? (
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Carregando compradores...
+                                </div>
+                            ) : contactInterests.length === 0 ? (
+                                <div className="rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800">
+                                    Nenhum comprador logado abriu contato por este anúncio ainda.
+                                </div>
+                            ) : (
+                                <select
+                                    value={selectedBuyerId}
+                                    onChange={(event) => setSelectedBuyerId(event.target.value)}
+                                    className="w-full rounded-xl border border-gray-200 bg-white p-3 text-sm"
+                                    title="Selecionar comprador"
+                                >
+                                    {contactInterests.map((interest) => (
+                                        <option key={interest.buyer_id} value={interest.buyer_id}>
+                                            {interest.buyer_name || interest.buyer_email || 'Comprador'} - contato em {new Date(interest.contacted_at).toLocaleDateString('pt-BR')}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+                        </div>
+
+                        <button
+                            onClick={completeSale}
+                            disabled={completingSale || loadingInterests || contactInterests.length === 0}
+                            className="mt-6 w-full flex items-center justify-center gap-2 bg-emerald-600 text-white rounded-xl py-3 font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                        >
+                            {completingSale && <Loader2 className="w-4 h-4 animate-spin" />}
+                            Confirmar venda
                         </button>
                     </div>
                 </div>
