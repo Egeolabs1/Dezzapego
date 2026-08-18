@@ -533,9 +533,16 @@ export default function UserDashboard() {
                                                 type="text"
                                                 value={cpfCnpj}
                                                 onChange={(e) => setCpfCnpj(formatCpfCnpj(e.target.value))}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                disabled={digitsOnly(cpfCnpj).length > 0}
+                                                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                                    digitsOnly(cpfCnpj).length > 0 ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
+                                                }`}
                                                 placeholder="000.000.000-00"
+                                                title={digitsOnly(cpfCnpj).length > 0 ? 'CPF/CNPJ já preenchido não pode ser alterado' : ''}
                                             />
+                                            {digitsOnly(cpfCnpj).length > 0 && (
+                                                <p className="text-xs text-gray-400">CPF/CNPJ já preenchido não pode ser alterado.</p>
+                                            )}
                                         </div>
 
                                         {/* Location */}
