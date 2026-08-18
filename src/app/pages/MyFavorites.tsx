@@ -1,7 +1,7 @@
 import { Header } from '../components/Header';
 import { useAds } from '../hooks/useAds';
 import { useFavorites } from '../hooks/useFavorites';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { Loader2, Heart, MapPin, Clock } from 'lucide-react';
 import { formatPrice, formatDate } from '../../lib/formatters';
 import SEO from '../../components/SEO';
@@ -39,14 +39,14 @@ export default function MyFavorites() {
                         </div>
                         <h2 className="text-xl font-bold text-gray-900 mb-2">Sem favoritos ainda</h2>
                         <p className="text-gray-500 mb-6">Explore os anúncios e salve seus favoritos para ver aqui.</p>
-                        <Link to="/" className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                        <Link href="/" className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
                             Explorar Anúncios
                         </Link>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {favoriteAds.map(ad => (
-                            <Link to={`/anuncio/${ad.id}`} key={ad.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 overflow-hidden group flex flex-col">
+                            <Link href={`/anuncio/${ad.id}`} key={ad.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 overflow-hidden group flex flex-col">
                                 <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
                                     <img
                                         src={ad.images[0]}

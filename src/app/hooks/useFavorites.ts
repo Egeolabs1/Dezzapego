@@ -44,11 +44,13 @@ export function useFavorites() {
             return;
         }
 
-        // Optimistic UI update
-        const isFavorited = favorites.has(adId);
+        let wasFavorited = false;
+
+        // Optimistic UI update using functional state
         setFavorites(prev => {
+            wasFavorited = prev.has(adId);
             const next = new Set(prev);
-            if (isFavorited) {
+            if (wasFavorited) {
                 next.delete(adId);
             } else {
                 next.add(adId);
@@ -57,8 +59,7 @@ export function useFavorites() {
         });
 
         try {
-            if (isFavorited) {
-                // Remove
+            if (wasFavorited) {
                 const { error } = await supabase
                     .from('favorites')
                     .delete()
@@ -67,7 +68,6 @@ export function useFavorites() {
 
                 if (error) throw error;
             } else {
-                // Add
                 const { error } = await supabase
                     .from('favorites')
                     .insert({ user_id: user.id, ad_id: adId });
@@ -81,7 +81,7 @@ export function useFavorites() {
             // Revert on error
             setFavorites(prev => {
                 const next = new Set(prev);
-                if (isFavorited) {
+                if (wasFavorited) {
                     next.add(adId);
                 } else {
                     next.delete(adId);
@@ -89,7 +89,7 @@ export function useFavorites() {
                 return next;
             });
         }
-    }, [user, favorites]);
+    }, [user]);
 
     return { favorites, toggleFavorite, loading };
 }

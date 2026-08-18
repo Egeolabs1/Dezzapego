@@ -1,8 +1,10 @@
 import { useEffect, useState, FormEvent, useRef, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import {
-    MapPin, Calendar, Share2, MessageCircle,
+    MapPin, Calendar, Share2, MessageCircle, MessageSquare,
     Flag, X, AlertTriangle, ShieldCheck, ChevronRight, Heart, User, Trash2, Pencil, ChevronLeft
 } from 'lucide-react';
 import { Ad, Profile } from '../../types';
@@ -18,6 +20,7 @@ import { toAbsoluteUrl } from '../../lib/seo';
 import { buildAdDetailStructuredGraph, getKeywordsForAd } from '../../lib/categorySeo';
 import { incrementAdViewOnce } from '../../lib/adViews';
 import { loadTurnstile } from '../../lib/turnstile';
+import { useFavorites } from '../hooks/useFavorites';
 import { getCategoryPath } from '../../lib/categoryRoutes';
 import { AdSenseSlot } from '../components/AdSenseSlot';
 import { getRelatedAds, getSellerTrustBadges } from '../../lib/marketplaceQuality';
@@ -25,8 +28,9 @@ import { PUBLIC_ENV } from '../../lib/publicEnv';
 
 export default function AdDetails() {
     const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
+    const router = useRouter();
     const { user } = useAuth();
+    const { favorites, toggleFavorite } = useFavorites();
     const [ad, setAd] = useState<Ad | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -127,23 +131,24 @@ export default function AdDetails() {
             } catch (error) {
                 console.error('Error fetching ad:', error);
                 toast.error('Erro ao carregar anúncio.');
-                navigate('/');
+                router.push('/');
             } finally {
                 setLoading(false);
             }
         }
         fetchAd();
-    }, [id, navigate]);
+    }, [id, router]);
 
-    const handleContact = () => {
+    const handleContact = async () => {
         if (!ad) return;
         if (!user) {
             toast.error('Faça login para contatar o vendedor.');
-            navigate('/login');
+            router.push('/login');
             return;
         }
 
-        supabase.rpc('get_ad_contact_phone', { p_ad_id: ad.id }).then(({ data, error }) => {
+        try {
+            const { data, error } = await supabase.rpc('get_ad_contact_phone', { p_ad_id: ad.id });
             if (error) {
                 toast.error('Não foi possível abrir o contato do vendedor.');
                 return;
@@ -159,7 +164,9 @@ export default function AdDetails() {
                 const encodedMessage = encodeURIComponent(message);
                 window.open(`https://wa.me/55${phone}?text=${encodedMessage}`, '_blank');
             });
-        });
+        } catch {
+            toast.error('Não foi possível abrir o contato do vendedor.');
+        }
     };
 
     const handleShare = async () => {
@@ -169,10 +176,15 @@ export default function AdDetails() {
                 text: `Confira este anúncio no Dezzapego: ${ad?.title}`,
                 url: window.location.href,
             });
-        } catch (error) {
+        } catch {
             navigator.clipboard.writeText(window.location.href);
             toast.success('Link copiado!');
         }
+    };
+
+    const handleWhatsAppShare = () => {
+        const text = encodeURIComponent(`Confira este anúncio no Dezzapego: ${ad?.title}\n${window.location.href}`);
+        window.open(`https://wa.me/?text=${text}`, '_blank');
     };
 
     const goToPrevImage = () => {
@@ -243,7 +255,7 @@ export default function AdDetails() {
             if (error) throw error;
 
             toast.success('Anúncio excluído com sucesso.');
-            navigate('/');
+            router.push('/');
         } catch (error) {
             console.error('Error deleting ad:', error);
             toast.error('Erro ao excluir anúncio.');
@@ -287,15 +299,15 @@ export default function AdDetails() {
             <div className="bg-white border-b border-gray-200">
                 <div className="container mx-auto px-4 py-3">
                     <div className="flex items-center gap-2 text-sm text-gray-500 overflow-x-auto whitespace-nowrap">
-                        <Link to="/" className="hover:text-blue-600 transition-colors">Home</Link>
+                        <Link href="/" className="hover:text-blue-600 transition-colors">Home</Link>
                         <ChevronRight className="w-4 h-4 flex-shrink-0" />
-                        <Link to={getCategoryPath(ad.category)} className="hover:text-blue-600 transition-colors">
+                        <Link href={getCategoryPath(ad.category)} className="hover:text-blue-600 transition-colors">
                             {ad.category}
                         </Link>
                         {ad.subcategory && (
                             <>
                                 <ChevronRight className="w-4 h-4 flex-shrink-0" />
-                                <Link to={getCategoryPath(ad.category, ad.subcategory)} className="hover:text-blue-600 transition-colors">
+                                <Link href={getCategoryPath(ad.category, ad.subcategory)} className="hover:text-blue-600 transition-colors">
                                     {ad.subcategory}
                                 </Link>
                             </>
@@ -476,7 +488,7 @@ export default function AdDetails() {
                                     <p className="text-sm font-semibold text-gray-700 mb-3">Gerenciar Anúncio</p>
                                     <div className="grid grid-cols-2 gap-3">
                                         <button
-                                            onClick={() => navigate(`/editar/${ad.id}`)}
+                                            onClick={() => router.push(`/editar/${ad.id}`)}
                                             className="flex items-center justify-center gap-2 py-2 px-4 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-blue-600 font-medium transition-colors"
                                         >
                                             <Pencil className="w-4 h-4" />
@@ -503,18 +515,32 @@ export default function AdDetails() {
                                 </button>
                             ) : (
                                 <button
-                                    onClick={() => navigate('/login')}
+                                    onClick={() => router.push('/login')}
                                     className="w-full flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl transition-all mb-3"
                                 >
                                     <User className="w-6 h-6" />
-                                    Entre para ver o Telefone
+                                    Faça login grátis para ver o telefone
                                 </button>
                             )}
 
                             <div className="flex gap-2">
-                                <button className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg border border-gray-200 font-medium transition-colors">
-                                    <Heart className="w-5 h-5" />
-                                    Salvar
+                                <button
+                                    onClick={() => toggleFavorite(id)}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border font-medium transition-colors ${
+                                        favorites.has(id)
+                                            ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+                                            : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200'
+                                    }`}
+                                >
+                                    <Heart className={`w-5 h-5 ${favorites.has(id) ? 'fill-red-500' : ''}`} />
+                                    {favorites.has(id) ? 'Salvo' : 'Salvar'}
+                                </button>
+                                <button
+                                    onClick={handleWhatsAppShare}
+                                    className="flex items-center justify-center gap-2 py-2.5 px-3 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg border border-green-200 font-medium transition-colors"
+                                    title="Compartilhar no WhatsApp"
+                                >
+                                    <MessageSquare className="w-5 h-5" />
                                 </button>
                                 <button
                                     onClick={handleShare}
@@ -527,7 +553,7 @@ export default function AdDetails() {
 
                             {/* Seller Info */}
                             <div className="mt-8 pt-6 border-t border-gray-100">
-                                <Link to={`/anunciante/${ad.user_id}`} className="flex items-center gap-4 mb-4 hover:bg-gray-50 p-2 rounded-lg transition-colors group">
+                                <Link href={`/anunciante/${ad.user_id}`} className="flex items-center gap-4 mb-4 hover:bg-gray-50 p-2 rounded-lg transition-colors group">
                                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-lg group-hover:bg-blue-200 transition-colors overflow-hidden">
                                         {profile?.avatar_url ? (
                                             <img
@@ -634,7 +660,7 @@ export default function AdDetails() {
                             {relatedAds.map((item) => (
                                 <Link
                                     key={item.id}
-                                    to={`/anuncio/${item.id}`}
+                                    href={`/anuncio/${item.id}`}
                                     className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
                                 >
                                     <div className="aspect-[4/3] bg-gray-100">

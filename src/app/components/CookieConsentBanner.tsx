@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
     CONSENT_POLICY_VERSION,
     getConsent,
@@ -13,7 +14,7 @@ import {
  * Preferências em localStorage; reabrir via Footer ou evento OPEN_CONSENT_EVENT.
  */
 export function CookieConsentBanner() {
-    const location = useLocation();
+    const pathname = usePathname();
     const [open, setOpen] = useState(false);
     const [settingsMode, setSettingsMode] = useState(false);
     const [analyticsToggle, setAnalyticsToggle] = useState(false);
@@ -36,7 +37,7 @@ export function CookieConsentBanner() {
         return () => window.removeEventListener(OPEN_CONSENT_EVENT, onOpen);
     }, []);
 
-    if (location.pathname.startsWith('/admin')) return null;
+    if (pathname.startsWith('/admin')) return null;
     if (!open) return null;
 
     const acceptEssentials = () => {
@@ -71,7 +72,7 @@ export function CookieConsentBanner() {
                     Usamos cookies e armazenamento local estritamente necessários para o funcionamento do site (sessão,
                     preferências). Com seu consentimento, também registramos páginas visitadas de forma agregada e
                     podemos exibir publicidade personalizada do Google. Consulte a{' '}
-                    <Link to="/privacidade" className="text-blue-600 underline hover:text-blue-800">
+                    <Link href="/privacidade" className="text-blue-600 underline hover:text-blue-800">
                         Política de Privacidade
                     </Link>{' '}
                     (versão {CONSENT_POLICY_VERSION}).

@@ -39,6 +39,7 @@ export function calculateCouponDiscount(coupon: Pick<DiscountCoupon, 'discount_t
 }
 
 export async function validateDiscountCoupon(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     supabase: any,
     code: string | undefined,
     appliesTo: CouponAppliesTo,

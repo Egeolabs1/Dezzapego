@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Download, Share, X } from 'lucide-react';
 
+interface BeforeInstallPromptEvent extends Event {
+    prompt: () => Promise<void>;
+    userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 export function InstallPWA() {
-    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+    const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
     const [showInstallBanner, setShowInstallBanner] = useState(false);
     const [isIOS, setIsIOS] = useState(false);
     const [isStandalone, setIsStandalone] = useState(false);
@@ -10,6 +15,7 @@ export function InstallPWA() {
     useEffect(() => {
         // Check if already installed (standalone mode)
         const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches ||
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (window.navigator as any).standalone ||
             document.referrer.includes('android-app://');
 
@@ -20,25 +26,24 @@ export function InstallPWA() {
         const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
         setIsIOS(isIosDevice);
 
+        // Check if user previously dismissed the banner (any platform)
+        const dismissed = localStorage.getItem('pwa_install_dismissed');
+        if (dismissed) return;
+
         // Capture install prompt event (Android/Desktop)
-        const handleBeforeInstallPrompt = (e: any) => {
+        const handleBeforeInstallPrompt = (e: Event) => {
             e.preventDefault();
-            setDeferredPrompt(e);
-            // Only show if not already installed
-            if (!isStandaloneMode) {
+            setDeferredPrompt(e as BeforeInstallPromptEvent);
+            if (!isStandaloneMode && !localStorage.getItem('pwa_install_dismissed')) {
                 setShowInstallBanner(true);
             }
         };
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-        // Show banner for iOS if not installed
+        // Show banner for iOS if not installed and not dismissed
         if (isIosDevice && !isStandaloneMode) {
-            // Check using local storage if user dismissed it recently to avoid annoyance
-            const dismissed = localStorage.getItem('pwa_ios_dismissed');
-            if (!dismissed) {
-                setShowInstallBanner(true);
-            }
+            setShowInstallBanner(true);
         }
 
         return () => {
@@ -59,9 +64,7 @@ export function InstallPWA() {
 
     const handleDismiss = () => {
         setShowInstallBanner(false);
-        if (isIOS) {
-            localStorage.setItem('pwa_ios_dismissed', 'true');
-        }
+        localStorage.setItem('pwa_install_dismissed', 'true');
     };
 
     if (isStandalone || !showInstallBanner) return null;

@@ -155,7 +155,11 @@ export function readSavedSearches() {
 }
 
 export function writeSavedSearches(searches: SavedSearch[]) {
-  localStorage.setItem(SAVED_SEARCHES_KEY, JSON.stringify(searches.slice(0, 10)));
+  try {
+    localStorage.setItem(SAVED_SEARCHES_KEY, JSON.stringify(searches.slice(0, 10)));
+  } catch {
+    /* ignore QuotaExceededError or SecurityError */
+  }
 }
 
 export function removeSavedSearch(id: string) {

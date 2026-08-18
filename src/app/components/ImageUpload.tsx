@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { convertImageFileToWebp } from '../../lib/imageToWebp';
+import { prepareImageForUpload } from '../../lib/imageToWebp';
 
 interface ImageUploadProps {
     userId: string;
@@ -68,21 +68,16 @@ export function ImageUpload({
 
             await Promise.all(validFiles.map(async (file) => {
                 try {
-                    const webpFile = await convertImageFileToWebp(file);
+                    const result = await prepareImageForUpload(file);
+                    const webpFile = result.file;
 
-                    if (webpFile.size > MAX_FILE_SIZE) {
-                        toast.error(`"${file.name}" continua maior que ${MAX_FILE_SIZE / (1024 * 1024)}MB após otimização.`);
-                        return;
-                    }
-
-                    const fileName = `${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}.webp`;
                     const prefix = uploadSubfolder ? `${userId}/${uploadSubfolder}` : userId;
-                    const filePath = `${prefix}/${fileName}`;
+                    const filePath = `${prefix}/${webpFile.name}`;
 
                     const { error: uploadError } = await supabase.storage
                         .from(storageBucket)
                         .upload(filePath, webpFile, {
-                            contentType: webpFile.type || 'image/webp',
+                            contentType: 'image/webp',
                             upsert: false,
                         });
 
@@ -104,9 +99,9 @@ export function ImageUpload({
             if (successCount > 0) {
                 toast.success(`${successCount} imagem(ns) enviada(s)!`);
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error(error);
-            toast.error(error.message || 'Erro ao enviar imagens.');
+            toast.error(error instanceof Error ? error.message : 'Erro ao enviar imagens.');
         } finally {
             event.target.value = '';
             setUploading(false);

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { Eye, Trash2, CheckCircle, Flag, UserX, Ban } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { formatDate } from '../../../lib/formatters';
 import { useAuth } from '../../contexts/AuthContext';
@@ -9,10 +9,22 @@ import { logAdminAction } from '../../../lib/adminLogger';
 
 export default function AdminReports() {
     const { user } = useAuth();
-    const [reports, setReports] = useState<any[]>([]);
+    type ReportRecord = {
+        id: string;
+        ad_id: string;
+        reporter_id: string;
+        reason: string;
+        status: string;
+        created_at: string;
+        description?: string;
+        reporter_name?: string;
+        reporter_email?: string;
+        ad?: { id: string; title: string; images?: string[]; user_id?: string; category?: string };
+    };
+    const [reports, setReports] = useState<ReportRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [isBlockingModalOpen, setIsBlockingModalOpen] = useState(false);
-    const [selectedReport, setSelectedReport] = useState<any>(null);
+    const [selectedReport, setSelectedReport] = useState<ReportRecord | null>(null);
     const [blockReason, setBlockReason] = useState('');
     const [customReason, setCustomReason] = useState('');
     const [blockAction, setBlockAction] = useState<'ban' | 'block_owner' | null>(null);
@@ -40,7 +52,8 @@ export default function AdminReports() {
                     *,
                     ad:ads(*)
                 `)
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false })
+                .limit(100);
 
             if (error) throw error;
             setReports(data || []);
@@ -238,7 +251,7 @@ export default function AdminReports() {
                                         <td className="p-4">
                                             {report.status === 'pending' && report.ad && (
                                                 <div className="flex flex-wrap items-center justify-end gap-2">
-                                                    <Link to={`/anuncio/${report.ad.id}`} target="_blank">
+                                                    <Link href={`/anuncio/${report.ad.id}`} target="_blank">
                                                         <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors" title="Ver Anúncio">
                                                             <Eye className="w-3.5 h-3.5" />
                                                             Ver

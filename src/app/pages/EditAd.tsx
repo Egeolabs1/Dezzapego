@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ImageUpload } from '../components/ImageUpload';
@@ -75,9 +75,9 @@ type FormState = {
 };
 
 export default function EditAd() {
-    const { id } = useParams<{ id: string }>();
+    const { id } = useParams() as { id: string };
     const { user, loading: authLoading } = useAuth();
-    const navigate = useNavigate();
+    const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [step, setStep] = useState(0);
@@ -103,9 +103,9 @@ export default function EditAd() {
         if (authLoading) return;
         if (!user) {
             toast.error('Você precisa estar logado para editar anúncios.');
-            navigate('/login');
+            router.push('/login');
         }
-    }, [authLoading, user, navigate]);
+    }, [authLoading, user, router]);
 
     useEffect(() => {
         async function fetchAd() {
@@ -119,7 +119,7 @@ export default function EditAd() {
                 const sellerId = seller?.id;
                 if (data.user_id !== user.id && sellerId !== user.id) {
                     toast.error('Você não tem permissão para editar este anúncio.');
-                    navigate('/');
+                    router.push('/');
                     return;
                 }
 
@@ -145,13 +145,13 @@ export default function EditAd() {
                 });
             } catch {
                 toast.error('Erro ao carregar anúncio.');
-                navigate('/meus-anuncios');
+                router.push('/meus-anuncios');
             } finally {
                 setLoading(false);
             }
         }
         fetchAd();
-    }, [authLoading, id, user, navigate]);
+    }, [authLoading, id, user, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -214,7 +214,7 @@ export default function EditAd() {
             if (error) throw error;
 
             toast.success('Anúncio atualizado com sucesso!');
-            navigate('/meus-anuncios');
+            router.push('/meus-anuncios');
         } catch {
             toast.error('Erro ao atualizar anúncio. Tente novamente.');
         } finally {
@@ -373,7 +373,7 @@ export default function EditAd() {
             <SEO title="Editar anúncio" description="Edite seu anúncio no Dezzapego." noIndex />
             <button
                 type="button"
-                onClick={() => navigate('/meus-anuncios')}
+                onClick={() => router.push('/meus-anuncios')}
                 className="flex items-center text-gray-600 hover:text-blue-600 mb-6 transition-colors"
             >
                 <ArrowLeft className="w-4 h-4 mr-2" />

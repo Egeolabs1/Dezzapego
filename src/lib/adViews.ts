@@ -13,21 +13,33 @@ export async function incrementAdViewOnce(adId?: string): Promise<number | null>
         return null;
     }
 
-    const { data, error } = await supabase
+    // Use RPC for atomic increment if available, fallback to read-write
+    const { data, error } = await supabase.rpc('increment_ad_views', { p_ad_id: adId });
+
+    if (!error && data !== null) {
+        if (typeof window !== 'undefined') {
+            sessionStorage.setItem(sessionKey, '1');
+        }
+        return Number(data);
+    }
+
+    // Fallback: read-then-write (less safe but works without RPC)
+    const { data: ViewData, error: viewError } = await supabase
         .from('ads')
         .select('views')
         .eq('id', adId)
         .single();
 
-    if (error || !data) return null;
+    if (viewError || !ViewData) return null;
 
-    const currentViews = Number(data.views || 0);
+    const currentViews = Number(ViewData.views || 0);
     const nextViews = currentViews + 1;
 
     const { error: updateError } = await supabase
         .from('ads')
         .update({ views: nextViews })
-        .eq('id', adId);
+        .eq('id', adId)
+        .eq('views', currentViews); // optimistic lock
 
     if (updateError) return null;
 

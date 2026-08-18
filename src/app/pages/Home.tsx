@@ -2,7 +2,7 @@ import { Suspense, useMemo, useState, useEffect } from 'react';
 
 import { formatPrice } from '../../lib/formatters';
 
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useRouter, useParams, useSearchParams, usePathname } from 'next/navigation';
 import { Header } from '../components/Header';
 import { Hero } from '../components/Hero';
 import { BannerSlot } from '../components/BannerSlot';
@@ -38,9 +38,10 @@ function SectionFallback({ className = '' }: { className?: string }) {
 }
 
 export default function Home() {
-    const [searchParams, setSearchParams] = useSearchParams();
-    const navigate = useNavigate();
-    const { categorySlug, subcategorySlug } = useParams();
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+    const { categorySlug, subcategorySlug } = useParams() as { categorySlug?: string; subcategorySlug?: string };
     const { searchQuery, setSearchQuery } = useFilter();
     const categoryFromRoute = resolveCategoryFromSlug(categorySlug);
     const subcategoryFromRoute = resolveSubcategoryFromSlug(categoryFromRoute, subcategorySlug);
@@ -60,7 +61,7 @@ export default function Home() {
 
     const radius = searchParams.get('radius') ? Number(searchParams.get('radius')) : 0;
 
-    const [detailsFilters, setDetailsFilters] = useState<Record<string, any>>(() => decodeDetailsFilters(searchParams.get('details')));
+    const [detailsFilters, setDetailsFilters] = useState<Record<string, string | number | boolean>>(() => decodeDetailsFilters(searchParams.get('details')) as Record<string, string | number | boolean>);
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
     // Sync context with URL on mount
@@ -140,28 +141,27 @@ export default function Home() {
     ]);
 
     const updateSearchParams = (updates: Record<string, string | null>) => {
-        setSearchParams(prev => {
-            const newParams = new URLSearchParams(prev);
-            Object.entries(updates).forEach(([key, value]) => {
-                if (value === null || value === '') {
-                    newParams.delete(key);
-                } else {
-                    newParams.set(key, value);
-                }
-            });
-            return newParams;
+        const newParams = new URLSearchParams(searchParams.toString());
+        Object.entries(updates).forEach(([key, value]) => {
+            if (value === null || value === '') {
+                newParams.delete(key);
+            } else {
+                newParams.set(key, value);
+            }
         });
+        const qs = newParams.toString();
+        router.push(`${pathname}${qs ? `?${qs}` : ''}`);
     };
 
     const navigateToListing = (category: string, subcategory?: string, resetType = false) => {
-        const newParams = new URLSearchParams(searchParams);
+        const newParams = new URLSearchParams(searchParams.toString());
         newParams.delete('category');
         newParams.delete('subcategory');
         if (resetType) newParams.delete('type');
 
         const qs = newParams.toString();
         const path = category ? getCategoryPath(category, subcategory) : '/';
-        navigate(`${path}${qs ? `?${qs}` : ''}`);
+        router.push(`${path}${qs ? `?${qs}` : ''}`);
     };
 
     const handleCategorySelect = (category: string) => {

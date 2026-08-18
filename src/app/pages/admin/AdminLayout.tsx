@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import {
     LayoutDashboard,
     ShoppingBag,
@@ -30,13 +31,14 @@ type NavItem = {
     badge?: number;
 };
 
-export default function AdminLayout() {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
 
     const { user, loading, signOut } = useAuth();
-    const location = useLocation();
-    const navigate = useNavigate();
+    const pathname = usePathname();
+    const router = useRouter();
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const alerts = useAdminPanelAlerts(Boolean(user), navigate);
+    const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+    const alerts = useAdminPanelAlerts(Boolean(isAdmin), router);
     const navItems: NavItem[] = useMemo(
         () => [
             { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
@@ -59,28 +61,25 @@ export default function AdminLayout() {
         [alerts.unreadMessages, alerts.pendingVerifications],
     );
 
-    // Strict auth check for Admin
     useEffect(() => {
-        if (!loading) {
-            if (!user) {
-                navigate('/login');
-            } else {
-                // Check if user is admin via profile
-                // Ideally this should be a stronger check or handled by not rendering the route
-                // But for client-side redirect:
-                const checkAdmin = async () => {
-                    const { data, error } = await supabase.rpc('is_admin');
-                    if (error || !data) {
-                        toast.error('Acesso não autorizado.');
-                        navigate('/');
-                    }
-                };
-                checkAdmin();
-            }
+        if (loading) return;
+        if (!user) {
+            router.push('/login');
+            return;
         }
-    }, [user, loading, navigate]);
+        const checkAdmin = async () => {
+            const { data, error } = await supabase.rpc('is_admin');
+            if (error || !data) {
+                toast.error('Acesso não autorizado.');
+                router.push('/');
+                return;
+            }
+            setIsAdmin(true);
+        };
+        checkAdmin();
+    }, [user, loading, router]);
 
-    if (loading) {
+    if (loading || isAdmin === null) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-100">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -88,11 +87,11 @@ export default function AdminLayout() {
         );
     }
 
-    if (!user) return null;
+    if (!isAdmin) return null;
 
     const handleSignOut = async () => {
         await signOut();
-        navigate('/login');
+        router.push('/login');
     };
 
     return (
@@ -112,11 +111,11 @@ export default function AdminLayout() {
                     <nav className="flex-1 min-h-0 overflow-y-auto p-4 space-y-1 overscroll-contain">
                         {navItems.map((item) => {
                             const Icon = item.icon;
-                            const isActive = location.pathname === item.path;
+                            const isActive = pathname === item.path;
                             return (
                                 <Link
                                     key={item.path}
-                                    to={item.path}
+                                    href={item.path}
                                     onClick={() => setSidebarOpen(false)}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${isActive
                                         ? 'bg-blue-50 text-blue-600'
@@ -137,7 +136,7 @@ export default function AdminLayout() {
 
                     <div className="shrink-0 p-4 border-t border-gray-100 bg-white">
                         <Link
-                            to="/"
+                            href="/"
                             className="relative z-10 flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors mb-2"
                         >
                             <Home className="w-5 h-5" />
@@ -161,7 +160,7 @@ export default function AdminLayout() {
                     <Logo />
                     <div className="flex items-center gap-2 shrink-0">
                         <Link
-                            to="/"
+                            href="/"
                             className="text-sm font-medium text-blue-600 hover:text-blue-800 px-2 py-1.5 rounded-lg hover:bg-blue-50"
                         >
                             Site
@@ -173,7 +172,7 @@ export default function AdminLayout() {
                 </div>
 
                 <div className="flex-1 overflow-auto p-4 md:p-8">
-                    <Outlet />
+                    {children}
                 </div>
             </main>
 

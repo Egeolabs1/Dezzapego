@@ -105,7 +105,7 @@ export function Filters({
     }).format(price);
   };
 
-  const handleDynamicFilterChange = (field: string, value: any) => {
+  const handleDynamicFilterChange = (field: string, value: string | number | boolean) => {
     onDetailsFilterChange({
       ...detailsFilters,
       [field]: value

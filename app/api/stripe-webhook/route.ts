@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!stripeSecretKey || !webhookSecret) {
-    return jsonResponse({ error: 'Stripe não configurado.' }, { status: 500 });
+    return jsonResponse({ error: 'Serviço de pagamento não configurado.' }, { status: 500 });
   }
 
   try {
@@ -114,13 +114,14 @@ export async function POST(req: Request) {
             status: 'canceled',
             updated_at: new Date().toISOString(),
           })
-          .eq('user_id', payment.user_id);
+          .eq('user_id', payment.user_id)
+          .eq('external_id', subscription.id);
       }
     }
 
     return jsonResponse({ received: true });
   } catch (error) {
     console.error('stripe-webhook error:', error);
-    return jsonResponse({ error: 'Webhook Stripe inválido.' }, { status: 400 });
+    return jsonResponse({ error: 'Erro ao processar webhook.' }, { status: 500 });
   }
 }

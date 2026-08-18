@@ -3,7 +3,8 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Header } from '../components/Header';
 import { Loader2, Plus, Trash2, Edit, Star, CreditCard, QrCode, X, LayoutGrid, Clock, XCircle, CheckCircle } from 'lucide-react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import Link from 'next/link';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Ad } from '../../types';
 import { formatPrice } from '../../lib/formatters';
 import { toast } from 'sonner';
@@ -26,8 +27,9 @@ type ContactInterest = {
 
 export default function MyAds() {
     const { user } = useAuth();
-    const navigate = useNavigate();
-    const [searchParams, setSearchParams] = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const [ads, setAds] = useState<Ad[]>([]);
     const [plans, setPlans] = useState<FeaturedPlan[]>([]);
     const [payments, setPayments] = useState<FeaturedPayment[]>([]);
@@ -87,13 +89,13 @@ export default function MyAds() {
         const result = searchParams.get('featured');
         if (result === 'success') {
             toast.success('Pagamento iniciado. O destaque será ativado após a confirmação.');
-            setSearchParams({}, { replace: true });
+            router.replace(pathname);
         }
         if (result === 'cancel') {
             toast.info('Pagamento cancelado.');
-            setSearchParams({}, { replace: true });
+            router.replace(pathname);
         }
-    }, [searchParams, setSearchParams]);
+    }, [searchParams, router, pathname]);
 
     const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.preventDefault();
@@ -253,7 +255,7 @@ export default function MyAds() {
                 <Header hideLocationFilter />
                 <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
                     <p className="text-gray-600 mb-4 text-center">Você precisa estar logado para ver seus anúncios.</p>
-                    <Link to="/login" className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                    <Link href="/login" className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
                         Ir para o login
                     </Link>
                 </div>
@@ -261,8 +263,8 @@ export default function MyAds() {
         );
     }
 
-    const pendingCount = ads.filter(a => (a as any).status === 'pending').length;
-    const rejectedCount = ads.filter(a => (a as any).status === 'rejected').length;
+    const pendingCount = ads.filter(a => (a as unknown as Record<string, unknown>).status === 'pending').length;
+    const rejectedCount = ads.filter(a => (a as unknown as Record<string, unknown>).status === 'rejected').length;
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -284,13 +286,13 @@ export default function MyAds() {
                     <div className="flex flex-col sm:flex-row gap-3 shrink-0 w-full sm:w-auto">
                         <button
                             type="button"
-                            onClick={() => navigate('/dashboard')}
+                            onClick={() => router.push('/dashboard')}
                             className="flex items-center justify-center px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-colors"
                         >
                             Minha conta
                         </button>
                         <Link
-                            to="/anunciar"
+                            href="/anunciar"
                             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold shadow-sm"
                         >
                             <Plus className="w-5 h-5" />
@@ -320,7 +322,7 @@ export default function MyAds() {
                 ) : ads.length === 0 ? (
                     <div className="text-center py-16 bg-white rounded-2xl border border-gray-200 shadow-sm">
                         <p className="text-lg text-gray-600 mb-4">Você ainda não tem anúncios publicados.</p>
-                        <Link to="/anunciar" className="text-blue-600 font-medium hover:underline">
+                        <Link href="/anunciar" className="text-blue-600 font-medium hover:underline">
                             Comece a vender agora!
                         </Link>
                     </div>
@@ -333,7 +335,7 @@ export default function MyAds() {
 
                             return (
                                 <Link
-                                    to={adStatus === 'active' ? `/anuncio/${ad.id}` : '#'}
+                                    href={adStatus === 'active' ? `/anuncio/${ad.id}` : '#'}
                                     key={ad.id}
                                     className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border overflow-hidden group block ${
                                         adStatus === 'rejected' ? 'border-red-200 opacity-75' :
@@ -418,7 +420,7 @@ export default function MyAds() {
                                                     </>
                                                 )}
                                                 <button
-                                                    onClick={(e) => { e.preventDefault(); navigate(`/editar/${ad.id}`); }}
+                                                    onClick={(e) => { e.preventDefault(); router.push(`/editar/${ad.id}`); }}
                                                     className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                                                     title="Editar"
                                                 >

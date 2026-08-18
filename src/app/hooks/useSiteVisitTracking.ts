@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { hasAnalyticsConsent } from '../../lib/privacyConsent';
 import { trackSiteVisit } from '../../lib/siteVisits';
 
@@ -9,16 +9,18 @@ function trackIfAllowed(path: string) {
 }
 
 export function useSiteVisitTracking() {
-    const location = useLocation();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const search = searchParams.toString() ? `?${searchParams.toString()}` : '';
 
     useEffect(() => {
-        trackIfAllowed(`${location.pathname}${location.search}`);
-    }, [location.pathname, location.search]);
+        trackIfAllowed(`${pathname}${search}`);
+    }, [pathname, search]);
 
     useEffect(() => {
         const onConsent = () =>
-            trackIfAllowed(`${location.pathname}${location.search}`);
+            trackIfAllowed(`${pathname}${search}`);
         window.addEventListener('dezzapego-consent-changed', onConsent);
         return () => window.removeEventListener('dezzapego-consent-changed', onConsent);
-    }, [location.pathname, location.search]);
+    }, [pathname, search]);
 }

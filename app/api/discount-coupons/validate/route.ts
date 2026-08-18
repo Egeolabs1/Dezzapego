@@ -14,6 +14,17 @@ export async function POST(req: Request) {
       return jsonResponse({ error: 'Cupom e tipo de compra são obrigatórios.' }, { status: 400 });
     }
 
+    // Validate appliesTo
+    const validAppliesTo = ['account_plan', 'featured', 'all'];
+    if (!validAppliesTo.includes(body.appliesTo)) {
+      return jsonResponse({ error: 'Tipo de compra inválido.' }, { status: 400 });
+    }
+
+    // Validate UUID format for code
+    if (typeof body.code !== 'string' || body.code.length > 100) {
+      return jsonResponse({ error: 'Cupom inválido.' }, { status: 400 });
+    }
+
     const supabase = getSupabaseAdmin();
     await getAuthenticatedUser(req, supabase);
 
@@ -36,8 +47,6 @@ export async function POST(req: Request) {
         applies_to: result.coupon.applies_to,
         discount_type: result.coupon.discount_type,
         discount_value: result.coupon.discount_value,
-        max_uses: result.coupon.max_uses,
-        used_count: result.coupon.used_count,
         starts_at: result.coupon.starts_at,
         ends_at: result.coupon.ends_at,
         active: result.coupon.active,
@@ -47,6 +56,6 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error('validate discount coupon error:', error);
-    return jsonResponse({ error: 'Erro ao validar cupom.' }, { status: 400 });
+    return jsonResponse({ error: 'Erro ao validar cupom.' }, { status: 500 });
   }
 }

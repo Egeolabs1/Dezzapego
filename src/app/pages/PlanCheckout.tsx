@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { CreditCard, Loader2, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
 import SEO from '../../components/SEO';
@@ -23,8 +24,8 @@ type AccountPlan = {
 
 export default function PlanCheckout() {
     const { user, loading: authLoading } = useAuth();
-    const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const planId = searchParams.get('plan') || '';
     const [plan, setPlan] = useState<AccountPlan | null>(null);
     const [provider, setProvider] = useState<FeaturedProvider>('stripe');
@@ -39,7 +40,7 @@ export default function PlanCheckout() {
         if (authLoading) return;
 
         if (!user) {
-            navigate(`/register${planId ? `?plan=${encodeURIComponent(planId)}` : ''}`, { replace: true });
+            router.replace(`/register${planId ? `?plan=${encodeURIComponent(planId)}` : ''}`);
             return;
         }
 
@@ -65,7 +66,7 @@ export default function PlanCheckout() {
         }
 
         fetchPlan();
-    }, [authLoading, navigate, planId, user]);
+    }, [authLoading, router, planId, user]);
 
     async function handlePayment() {
         if (!plan) return;
@@ -135,7 +136,7 @@ export default function PlanCheckout() {
             <Header hideLocationFilter />
 
             <main className="container mx-auto max-w-4xl px-4 py-10">
-                <Link to="/planos" className="text-sm font-medium text-blue-600 hover:underline">
+                <Link href="/planos" className="text-sm font-medium text-blue-600 hover:underline">
                     Voltar para planos
                 </Link>
 

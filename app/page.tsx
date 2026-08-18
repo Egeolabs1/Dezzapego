@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import App from '@/app/App';
 import {
   buildWebPageStructuredData,
@@ -29,7 +30,9 @@ export default function Page() {
           ),
         }}
       />
-      <App initialPath={path} enableHelmet={false} />
+      <Suspense>
+        <App initialPath={path} enableHelmet={false} />
+      </Suspense>
     </>
   );
 }

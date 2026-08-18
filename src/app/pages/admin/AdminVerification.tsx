@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
 import {
     approveProfileVerification,
@@ -125,7 +125,7 @@ export default function AdminVerification() {
 
             <p className="text-sm text-gray-500">
                 A lista completa de usuários continua em{' '}
-                <Link to="/admin/usuarios" className="text-blue-600 hover:underline font-medium">
+                <Link href="/admin/usuarios" className="text-blue-600 hover:underline font-medium">
                     Gerenciar Usuários
                 </Link>
                 .

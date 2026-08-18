@@ -16,6 +16,7 @@ type Notification = {
 export default function AdminNotifications() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [sending, setSending] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     // Form State
     const [title, setTitle] = useState('');
@@ -27,6 +28,7 @@ export default function AdminNotifications() {
     }, []);
 
     async function fetchNotifications() {
+        setLoading(true);
         try {
             const { data, error } = await supabase
                 .from('notifications')
@@ -39,6 +41,8 @@ export default function AdminNotifications() {
         } catch (error) {
             console.error('Error fetching notifications:', error);
             toast.error('Erro ao carregar notificações');
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -92,6 +96,13 @@ export default function AdminNotifications() {
                 Gerenciar Notificações
             </h1>
 
+            {loading ? (
+                <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 text-gray-500">Carregando...</span>
+                </div>
+            ) : (
+            <>
             {/* Send Form */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -217,6 +228,8 @@ export default function AdminNotifications() {
                     </table>
                 </div>
             </div>
+            </>
+            )}
         </div>
     );
 }

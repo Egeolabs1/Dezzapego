@@ -22,13 +22,19 @@ type PixGoCreatePaymentResponse = {
 export async function POST(req: Request) {
   const pixgoApiKey = process.env.PIXGO_API_KEY;
   if (!pixgoApiKey) {
-    return jsonResponse({ error: 'PIXGO_API_KEY não configurado.' }, { status: 500 });
+    return jsonResponse({ error: 'Serviço de pagamento não configurado.' }, { status: 500 });
   }
 
   try {
     const body = await req.json() as RequestBody;
     if (!body.adId || !body.planId) {
       return jsonResponse({ error: 'Anúncio e plano são obrigatórios.' }, { status: 400 });
+    }
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(body.adId) || !uuidRegex.test(body.planId)) {
+      return jsonResponse({ error: 'ID inválido.' }, { status: 400 });
     }
 
     const supabase = getSupabaseAdmin();
@@ -78,23 +84,32 @@ export async function POST(req: Request) {
 
     if (paymentError) throw paymentError;
 
-    const response = await fetch('https://pixgo.org/api/v1/payment/create', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'X-API-Key': pixgoApiKey,
-      },
-      body: JSON.stringify({
-        amount: couponResult.finalAmountCents / 100,
-        description: `Dezzapego ${plan.name}`,
-        customer_name: profile?.full_name || user.email || 'Cliente Dezzapego',
-        customer_cpf: profile?.cpf_cnpj || undefined,
-        customer_email: profile?.email || user.email || undefined,
-        customer_phone: profile?.phone || undefined,
-        external_id: payment.id,
-        webhook_url: `${getSiteUrl()}/api/pixgo-webhook`,
-      }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    let response: Response;
+    try {
+      response = await fetch('https://pixgo.org/api/v1/payment/create', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'X-API-Key': pixgoApiKey,
+        },
+        body: JSON.stringify({
+          amount: couponResult.finalAmountCents / 100,
+          description: `Dezzapego ${plan.name}`,
+          customer_name: profile?.full_name || user.email || 'Cliente Dezzapego',
+          customer_cpf: profile?.cpf_cnpj || undefined,
+          customer_email: profile?.email || user.email || undefined,
+          customer_phone: profile?.phone || undefined,
+          external_id: payment.id,
+          webhook_url: `${getSiteUrl()}/api/pixgo-webhook`,
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     const pixgo = await response.json() as PixGoCreatePaymentResponse;
     if (!response.ok || !pixgo.success || !pixgo.data) {
@@ -123,6 +138,6 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error('create featured pixgo payment error:', error);
-    return jsonResponse({ error: 'Erro ao gerar pagamento PixGo.' }, { status: 400 });
+    return jsonResponse({ error: 'Erro ao gerar pagamento PixGo.' }, { status: 500 });
   }
 }

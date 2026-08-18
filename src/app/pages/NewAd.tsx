@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ImageUpload } from '../components/ImageUpload';
@@ -75,8 +75,8 @@ const AD_STEPS: StepDef[] = [
 const DRAFT_STORAGE_KEY = 'dezzapego_new_ad_draft_v1';
 
 export default function NewAd() {
-    const { user, profile, refreshProfile } = useAuth();
-    const navigate = useNavigate();
+    const { user, profile, refreshProfile, loading: authLoading } = useAuth();
+    const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [step, setStep] = useState(0);
     const [showPublishRequirements, setShowPublishRequirements] = useState(false);
@@ -102,11 +102,12 @@ export default function NewAd() {
     });
 
     useEffect(() => {
+        if (authLoading) return;
         if (!user) {
             toast.error('Você precisa estar logado para criar um anúncio.');
-            navigate('/login');
+            router.push('/login');
         }
-    }, [user, navigate]);
+    }, [user, router, authLoading]);
 
     const hasPhoneForPublish = (value: string) => digitsOnly(value).length >= 10;
     const hasDocumentForPublish = (value: string) => isValidCpfOrCnpj(value);
@@ -167,7 +168,7 @@ export default function NewAd() {
     const publishAd = async () => {
         if (!user) {
             toast.error('Você precisa estar logado para anunciar.');
-            navigate('/login');
+            router.push('/login');
             return;
         }
 
@@ -249,7 +250,7 @@ export default function NewAd() {
 
             localStorage.removeItem(`${DRAFT_STORAGE_KEY}:${user.id}`);
             toast.success('Anúncio enviado! Ele ficará visível após a aprovação da moderação.');
-            navigate('/meus-anuncios');
+            router.push('/meus-anuncios');
         } catch (error: unknown) {
             const msg = error instanceof Error ? error.message : 'Erro ao criar anúncio. Tente novamente.';
             toast.error(msg);
@@ -262,7 +263,7 @@ export default function NewAd() {
         e.preventDefault();
         if (!user) {
             toast.error('Você precisa estar logado para anunciar.');
-            navigate('/login');
+            router.push('/login');
             return;
         }
         if (!profileHasRequiredData()) {
@@ -458,13 +459,21 @@ export default function NewAd() {
         );
     };
 
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
             <SEO title="Novo anúncio" description="Publique um anúncio no Dezzapego." noIndex />
             <div className="max-w-4xl mx-auto">
                 <button
                     type="button"
-                    onClick={() => navigate('/')}
+                    onClick={() => router.push('/')}
                     className="flex items-center text-gray-500 hover:text-purple-600 mb-8 transition-colors group"
                 >
                     <ArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" />

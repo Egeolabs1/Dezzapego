@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Search, Tag } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 
 interface Suggestion {
     id?: string;
@@ -12,7 +12,7 @@ interface Suggestion {
 export function SearchAutocomplete({ query, onSelect }: { query: string; onSelect: (val: string) => void }) {
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
     const [isVisible, setIsVisible] = useState(false);
-    const navigate = useNavigate();
+    const router = useRouter();
 
     useEffect(() => {
         if (query.length < 2) {
@@ -81,7 +81,7 @@ export function SearchAutocomplete({ query, onSelect }: { query: string; onSelec
                         onClick={() => {
                             setIsVisible(false);
                             if (s.type === 'ad' && s.id) {
-                                navigate(`/anuncio/${s.id}`);
+                                router.push(`/anuncio/${s.id}`);
                             } else {
                                 onSelect(s.title);
                             }

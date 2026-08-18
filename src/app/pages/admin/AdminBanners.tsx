@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../../lib/supabase';
-import { convertImageFileToWebp } from '../../../lib/imageToWebp';
+import { prepareImageForUpload } from '../../../lib/imageToWebp';
 
 type Banner = {
     id: string;
@@ -121,8 +121,9 @@ export default function AdminBanners() {
     }
 
     async function uploadImage(rawFile: File) {
-        const file = await convertImageFileToWebp(rawFile, { maxEdge: 3200 });
-        const fileName = `banner_${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}.webp`;
+        const result = await prepareImageForUpload(rawFile, { maxEdge: 3200, preserveTransparency: true });
+        const file = result.file;
+        const fileName = file.name;
         const uploadOpts = {
             contentType: file.type || 'image/webp',
             upsert: false as const

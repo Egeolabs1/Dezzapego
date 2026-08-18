@@ -27,7 +27,7 @@ type PixGoWebhookPayload = {
 export async function POST(req: Request) {
   const webhookSecret = process.env.PIXGO_WEBHOOK_SECRET;
   if (!webhookSecret) {
-    return jsonResponse({ error: 'PIXGO_WEBHOOK_SECRET não configurado.' }, { status: 500 });
+    return jsonResponse({ error: 'Serviço de pagamento não configurado.' }, { status: 500 });
   }
 
   try {
@@ -52,6 +52,8 @@ export async function POST(req: Request) {
     }
 
     const supabase = getSupabaseAdmin();
+
+    // Check account_plan_payments FIRST
     const { data: accountPayment } = await supabase
       .from('account_plan_payments')
       .select('id')
@@ -82,6 +84,19 @@ export async function POST(req: Request) {
       return jsonResponse({ received: true });
     }
 
+    // Check featured_payments BEFORE updating
+    const { data: featuredPayment } = await supabase
+      .from('featured_payments')
+      .select('id')
+      .eq('id', paymentId)
+      .maybeSingle();
+
+    if (!featuredPayment) {
+      // Payment not found in either table
+      console.warn(`pixgo-webhook: payment ${paymentId} not found in any table`);
+      return jsonResponse({ error: 'Pagamento não encontrado.' }, { status: 404 });
+    }
+
     await supabase
       .from('featured_payments')
       .update({
@@ -105,6 +120,6 @@ export async function POST(req: Request) {
     return jsonResponse({ received: true });
   } catch (error) {
     console.error('pixgo-webhook error:', error);
-    return jsonResponse({ error: 'Erro ao processar webhook PixGo.' }, { status: 400 });
+    return jsonResponse({ error: 'Erro ao processar webhook.' }, { status: 500 });
   }
 }

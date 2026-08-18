@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 
 interface FilterContextType {
     searchQuery: string;
@@ -58,14 +58,16 @@ export function FilterProvider({ children }: { children: ReactNode }) {
         setSelectedCity(city);
     };
 
+    const value = useMemo(() => ({
+        searchQuery,
+        setSearchQuery,
+        selectedState,
+        selectedCity,
+        setLocation,
+    }), [searchQuery, selectedState, selectedCity]);
+
     return (
-        <FilterContext.Provider value={{
-            searchQuery,
-            setSearchQuery,
-            selectedState,
-            selectedCity,
-            setLocation
-        }}>
+        <FilterContext.Provider value={value}>
             {children}
         </FilterContext.Provider>
     );

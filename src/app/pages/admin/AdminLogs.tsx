@@ -1,9 +1,18 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { Shield, Search, User } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function AdminLogs() {
-    const [logs, setLogs] = useState<any[]>([]);
+    type AuditLog = {
+        id: string;
+        admin_email: string;
+        action: string;
+        details: string | null;
+        ip_address: string | null;
+        created_at: string;
+    };
+    const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -21,8 +30,9 @@ export default function AdminLogs() {
 
             if (error) throw error;
             setLogs(data || []);
-        } catch (error) {
-            console.error('Error fetching logs:', error);
+        } catch (err) {
+            console.error('Error fetching logs:', err);
+            toast.error('Erro ao carregar logs.');
         } finally {
             setLoading(false);
         }
@@ -30,7 +40,7 @@ export default function AdminLogs() {
 
     const filteredLogs = logs.filter(log =>
         log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.details.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        log.details?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         log.admin_email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 

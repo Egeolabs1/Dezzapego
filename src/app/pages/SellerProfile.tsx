@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { MapPin, Calendar, MessageCircle, Package, ShieldCheck, Star, User } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Ad, Profile } from '../../types';
 import { formatPrice } from '../../lib/formatters';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import SEO from '../../components/SEO';
 
@@ -29,8 +29,8 @@ type SellerTransaction = {
 };
 
 export default function SellerProfile() {
-    const { userId } = useParams();
-    const navigate = useNavigate();
+    const { userId } = useParams() as { userId: string };
+    const router = useRouter();
     const { user, profile: currentProfile } = useAuth();
     const [ads, setAds] = useState<Ad[]>([]);
     const [profile, setProfile] = useState<Partial<Profile> | null>(null);
@@ -171,7 +171,7 @@ export default function SellerProfile() {
                     <p className="text-gray-500 mb-6">
                         O perfil que você procura não está disponível.
                     </p>
-                    <Link to="/" className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors">
+                    <Link href="/" className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors">
                         Voltar para o início
                     </Link>
                 </div>
@@ -235,7 +235,7 @@ export default function SellerProfile() {
                                 <div className="w-full md:w-auto">
                                     {user && ads[0] ? (
                                         <Link
-                                            to={`/anuncio/${ads[0].id}`}
+                                            href={`/anuncio/${ads[0].id}`}
                                             className="w-full md:w-auto flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-bold transition-all transform hover:scale-105 shadow-md hover:shadow-lg"
                                         >
                                             <MessageCircle className="w-5 h-5" />
@@ -251,7 +251,7 @@ export default function SellerProfile() {
                                         </button>
                                     ) : (
                                         <button
-                                            onClick={() => navigate('/login')}
+                                            onClick={() => router.push('/login')}
                                             className="w-full md:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md"
                                         >
                                             <User className="w-5 h-5" />
@@ -353,7 +353,7 @@ export default function SellerProfile() {
                                 ) : (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                                         {ads.map((ad) => (
-                                            <Link key={ad.id} to={`/anuncio/${ad.id}`} className="block group">
+                                            <Link key={ad.id} href={`/anuncio/${ad.id}`} className="block group">
                                                 <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col">
                                                     {/* Image */}
                                                     <div className="aspect-[4/3] bg-gray-100 relative overflow-hidden">

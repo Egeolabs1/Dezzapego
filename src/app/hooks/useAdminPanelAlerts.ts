@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { NavigateFunction } from 'react-router-dom';
+import type { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 
@@ -11,7 +11,7 @@ export type AdminPanelBadges = {
 };
 
 /** Contagens + toasts quando surgem mensagens não lidas ou novas filas de verificação (painel admin). */
-export function useAdminPanelAlerts(enabled: boolean, navigate: NavigateFunction): AdminPanelBadges {
+export function useAdminPanelAlerts(enabled: boolean, router: ReturnType<typeof useRouter>): AdminPanelBadges {
     const [badges, setBadges] = useState<AdminPanelBadges>({ unreadMessages: 0, pendingVerifications: 0 });
     const prev = useRef<{ unreadMessages: number; pendingVerifications: number } | null>(null);
 
@@ -44,7 +44,7 @@ export function useAdminPanelAlerts(enabled: boolean, navigate: NavigateFunction
                         duration: 12_000,
                         action: {
                             label: 'Abrir',
-                            onClick: () => navigate('/admin/mensagens'),
+                            onClick: () => router.push('/admin/mensagens'),
                         },
                     });
                 }
@@ -54,7 +54,7 @@ export function useAdminPanelAlerts(enabled: boolean, navigate: NavigateFunction
                         duration: 12_000,
                         action: {
                             label: 'Analisar',
-                            onClick: () => navigate('/admin/verificacao'),
+                            onClick: () => router.push('/admin/verificacao'),
                         },
                     });
                 }
@@ -71,7 +71,7 @@ export function useAdminPanelAlerts(enabled: boolean, navigate: NavigateFunction
             cancelled = true;
             window.clearInterval(intervalId);
         };
-    }, [enabled, navigate]);
+    }, [enabled, router]);
 
     return badges;
 }

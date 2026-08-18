@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Header } from '../components/Header';
 import { Check, Star, Zap, Shield } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import SEO from '../../components/SEO';
 import { useAuth } from '../contexts/AuthContext';
@@ -176,7 +176,7 @@ export default function Plans() {
                                 </ul>
 
                                 <Link
-                                    to={getPlanActionLink(plan, Boolean(user), authLoading)}
+                                    href={getPlanActionLink(plan, Boolean(user), authLoading)}
                                     className={`block w-full py-3 px-6 rounded-lg text-center font-medium transition-colors ${plan.highlighted
                                         ? 'bg-blue-600 text-white hover:bg-blue-700'
                                         : 'bg-gray-100 text-gray-900 hover:bg-gray-200'

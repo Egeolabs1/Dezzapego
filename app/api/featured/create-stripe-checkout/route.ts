@@ -11,13 +11,19 @@ type RequestBody = {
 export async function POST(req: Request) {
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
   if (!stripeSecretKey) {
-    return jsonResponse({ error: 'STRIPE_SECRET_KEY não configurado.' }, { status: 500 });
+    return jsonResponse({ error: 'Serviço de pagamento não configurado.' }, { status: 500 });
   }
 
   try {
     const body = await req.json() as RequestBody;
     if (!body.adId || !body.planId) {
       return jsonResponse({ error: 'Anúncio e plano são obrigatórios.' }, { status: 400 });
+    }
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(body.adId) || !uuidRegex.test(body.planId)) {
+      return jsonResponse({ error: 'ID inválido.' }, { status: 400 });
     }
 
     const supabase = getSupabaseAdmin();
@@ -107,6 +113,6 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error('create featured stripe checkout error:', error);
-    return jsonResponse({ error: 'Erro ao iniciar checkout Stripe.' }, { status: 400 });
+    return jsonResponse({ error: 'Erro ao iniciar checkout Stripe.' }, { status: 500 });
   }
 }

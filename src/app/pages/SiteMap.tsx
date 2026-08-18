@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { categoriesData } from '../data/categories';
 import { ChevronRight, Map, Home } from 'lucide-react';
 import { Header } from '../components/Header';
@@ -19,7 +19,7 @@ export default function SiteMap() {
             <div className="bg-white border-b border-gray-200">
                 <div className="container mx-auto px-4 py-8">
                     <div className="flex items-center text-sm text-gray-500 mb-4">
-                        <Link to="/" className="hover:text-amber-600 flex items-center gap-1">
+                        <Link href="/" className="hover:text-amber-600 flex items-center gap-1">
                             <Home className="w-4 h-4" />
                             Home
                         </Link>
@@ -48,7 +48,7 @@ export default function SiteMap() {
                         <ul className="space-y-2">
                             {SEO_GUIDES.map((guide) => (
                                 <li key={guide.slug}>
-                                    <Link to={`/guias/${guide.slug}`} className="text-gray-600 hover:text-amber-600 text-sm flex items-center gap-2">
+                                    <Link href={`/guias/${guide.slug}`} className="text-gray-600 hover:text-amber-600 text-sm flex items-center gap-2">
                                         <ChevronRight className="w-3 h-3 text-gray-300" />
                                         {guide.title}
                                     </Link>
@@ -62,7 +62,7 @@ export default function SiteMap() {
                             {SEO_LOCATIONS.map((location) => (
                                 <li key={`${location.stateSlug}-${location.citySlug}`}>
                                     <Link
-                                        to={`/cidade/${location.stateSlug}/${location.citySlug}`}
+                                        href={`/cidade/${location.stateSlug}/${location.citySlug}`}
                                         className="text-gray-600 hover:text-amber-600 text-sm flex items-center gap-2"
                                     >
                                         <ChevronRight className="w-3 h-3 text-gray-300" />
@@ -87,7 +87,7 @@ export default function SiteMap() {
                                     {category.subcategories.map((subcategory) => (
                                         <li key={subcategory.id}>
                                             <Link
-                                                to={getCategoryPath(category.id, subcategory.id)}
+                                                href={getCategoryPath(category.id, subcategory.id)}
                                                 className="text-gray-600 hover:text-amber-600 text-sm flex items-center gap-2 hover:translate-x-1 transition-all"
                                             >
                                                 <ChevronRight className="w-3 h-3 text-gray-300" />

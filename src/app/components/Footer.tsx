@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { ShieldCheck, Heart, Mail, Cookie } from 'lucide-react';
 import { openConsentPreferences } from '../../lib/privacyConsent';
 
@@ -11,7 +11,7 @@ export function Footer() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
                     {/* Brand */}
                     <div className="col-span-1 md:col-span-1">
-                        <Link to="/" className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4 block">
+                        <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4 block">
                             Dezzapego
                         </Link>
                         <p className="text-gray-500 text-sm mb-4">
@@ -23,13 +23,13 @@ export function Footer() {
                     <div className="col-span-1">
                         <h3 className="font-semibold text-gray-900 mb-4">Plataforma</h3>
                         <ul className="space-y-2 text-sm text-gray-600">
-                            <li><Link to="/" className="hover:text-blue-600 transition-colors">Home</Link></li>
-                            <li><Link to="/anunciar" className="hover:text-blue-600 transition-colors">Anunciar Grátis</Link></li>
-                            <li><Link to="/favoritos" className="hover:text-blue-600 transition-colors">Meus Favoritos</Link></li>
-                            <li><Link to="/planos" className="hover:text-blue-600 transition-colors">Planos e Preços</Link></li>
-                            <li><Link to="/sobre" className="hover:text-blue-600 transition-colors">Sobre o Dezzapego</Link></li>
-                            <li><Link to="/mapa-do-site" className="hover:text-blue-600 transition-colors">Mapa do Site</Link></li>
-                            <li><Link to="/contato" className="hover:text-blue-600 transition-colors">Fale Conosco</Link></li>
+                            <li><Link href="/" className="hover:text-blue-600 transition-colors">Home</Link></li>
+                            <li><Link href="/anunciar" className="hover:text-blue-600 transition-colors">Anunciar Grátis</Link></li>
+                            <li><Link href="/favoritos" className="hover:text-blue-600 transition-colors">Meus Favoritos</Link></li>
+                            <li><Link href="/planos" className="hover:text-blue-600 transition-colors">Planos e Preços</Link></li>
+                            <li><Link href="/sobre" className="hover:text-blue-600 transition-colors">Sobre o Dezzapego</Link></li>
+                            <li><Link href="/mapa-do-site" className="hover:text-blue-600 transition-colors">Mapa do Site</Link></li>
+                            <li><Link href="/contato" className="hover:text-blue-600 transition-colors">Fale Conosco</Link></li>
                         </ul>
                     </div>
 
@@ -38,25 +38,25 @@ export function Footer() {
                         <h3 className="font-semibold text-gray-900 mb-4">Legal</h3>
                         <ul className="space-y-2 text-sm text-gray-600">
                             <li>
-                                <Link to="/termos" className="hover:text-blue-600 transition-colors flex items-center gap-1">
+                                <Link href="/termos" className="hover:text-blue-600 transition-colors flex items-center gap-1">
                                     <ShieldCheck className="w-3 h-3" />
                                     Termos de Uso
                                 </Link>
                             </li>
                             <li>
-                                <Link to="/privacidade" className="hover:text-blue-600 transition-colors flex items-center gap-1">
+                                <Link href="/privacidade" className="hover:text-blue-600 transition-colors flex items-center gap-1">
                                     <ShieldCheck className="w-3 h-3" />
                                     Política de Privacidade
                                 </Link>
                             </li>
                             <li>
-                                <Link to="/dicas-seguranca" className="hover:text-blue-600 transition-colors flex items-center gap-1">
+                                <Link href="/dicas-seguranca" className="hover:text-blue-600 transition-colors flex items-center gap-1">
                                     <ShieldCheck className="w-3 h-3" />
                                     Dicas de Segurança
                                 </Link>
                             </li>
                             <li>
-                                <Link to="/guias/como-vender-com-seguranca" className="hover:text-blue-600 transition-colors flex items-center gap-1">
+                                <Link href="/guias/como-vender-com-seguranca" className="hover:text-blue-600 transition-colors flex items-center gap-1">
                                     <ShieldCheck className="w-3 h-3" />
                                     Guias de compra e venda
                                 </Link>
@@ -79,7 +79,7 @@ export function Footer() {
                         <h3 className="font-semibold text-gray-900 mb-4">Contato</h3>
                         <ul className="space-y-2 text-sm text-gray-600">
                             <li>
-                                <Link to="/contato" className="flex items-center gap-2 hover:text-blue-600 transition-colors">
+                                <Link href="/contato" className="flex items-center gap-2 hover:text-blue-600 transition-colors">
                                     <Mail className="w-4 h-4 text-purple-600" />
                                     <span>Entre em contato</span>
                                 </Link>

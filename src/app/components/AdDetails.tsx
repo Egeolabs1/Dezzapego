@@ -19,7 +19,7 @@ export function AdDetails({ ad, onBack, isFavorite, onToggleFavorite }: AdDetail
     setViewCount(ad.views || 0);
     incrementAdViewOnce(ad.id).then((nextViews) => {
       if (nextViews !== null) setViewCount(nextViews);
-    });
+    }).catch(() => {});
   }, [ad.id, ad.views]);
 
   const formatPrice = (price: number) => {

@@ -7,7 +7,7 @@ export const MAX_TITLE_LENGTH = 100;
 export function formatCurrencyInput(raw: string): string {
     const digits = raw.replace(/\D/g, '');
     if (!digits) return '';
-    const value = Number(digits) / 100;
+    const value = Number(digits);
     return value.toLocaleString('pt-BR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,

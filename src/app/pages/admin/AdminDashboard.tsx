@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { supabase } from '../../../lib/supabase';
 import { Users, ShoppingBag, DollarSign, Activity, TrendingUp, BarChart3, Eye, Flag, Star, CreditCard, Globe2, BadgeCheck } from 'lucide-react';
 import { formatPrice } from '../../../lib/formatters';
@@ -26,7 +26,7 @@ type DashboardStats = {
     expiringFeaturedAds: number;
     topPages: { path: string; visits: number }[];
     topReferrers: { referrer: string; visits: number }[];
-    recentAds: any[];
+    recentAds: { id: string; title: string; status: string; category: string; created_at: string; price: number; images?: string[]; views?: number; featured?: boolean; featured_expires_at?: string; user_id?: string }[];
     categoryData: { name: string; count: number }[];
     trendData: { date: string; ads: number; views: number; visits: number }[];
     topAds: { id: string; title: string; views: number; price: number; image?: string }[];
@@ -64,14 +64,15 @@ const initialStats: DashboardStats = {
 export default function AdminDashboard() {
     const [stats, setStats] = useState<DashboardStats>(initialStats);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        async function fetchStats() {
-            try {
+    async function fetchStats() {
+        try {
                 const { data: ads, error } = await supabase
                     .from('ads')
-                    .select('*')
-                    .order('publishedAt', { ascending: false });
+                    .select('id, title, status, category, created_at, price, images, views, user_id, featured, featured_expires_at')
+                    .order('created_at', { ascending: false })
+                    .limit(200);
 
                 if (error) throw error;
                 const safeAds = ads || [];
@@ -81,9 +82,13 @@ export default function AdminDashboard() {
                         supabase
                             .from('featured_payments')
                             .select('id, status, provider, amount_cents, gross_amount_cents, created_at'),
-                        supabase
-                            .from('site_visits')
-                            .select('id, session_id, path, referrer, created_at'),
+                        (async () => {
+                            const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+                            return supabase
+                                .from('site_visits')
+                                .select('id, session_id, path, referrer, created_at')
+                                .gte('created_at', thirtyDaysAgo);
+                        })(),
                         supabase
                             .from('profiles')
                             .select('id', { count: 'exact', head: true })
@@ -95,15 +100,15 @@ export default function AdminDashboard() {
 
                 const totalValue = safeAds.reduce((acc, ad) => acc + (Number(ad.price) || 0), 0);
                 const totalViews = safeAds.reduce((acc, ad) => acc + (Number(ad.views) || 0), 0);
-                const uniqueSellers = new Set(safeAds.map(ad => ad.seller?.id || ad.user_id).filter(Boolean));
+                const uniqueSellers = new Set(safeAds.map(ad => ad.user_id).filter(Boolean));
                 const featuredAds = safeAds.filter((ad) => {
-                    const expiresAt = ad.featured_expires_at || ad.featuredExpiresAt;
+                    const expiresAt = ad.featured_expires_at;
                     return Boolean(ad.featured) && (!expiresAt || new Date(expiresAt) > new Date());
                 }).length;
                 const sevenDaysFromNow = new Date();
                 sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
                 const expiringFeaturedAds = safeAds.filter((ad) => {
-                    const expiresAt = ad.featured_expires_at || ad.featuredExpiresAt;
+                    const expiresAt = ad.featured_expires_at;
                     if (!ad.featured || !expiresAt) return false;
                     const expiresDate = new Date(expiresAt);
                     return expiresDate > new Date() && expiresDate <= sevenDaysFromNow;
@@ -152,7 +157,7 @@ export default function AdminDashboard() {
                 }).reverse();
 
                 const trendData = last30Days.map((date) => {
-                    const dailyAds = safeAds.filter((ad) => (ad.publishedAt || '').startsWith(date));
+                    const dailyAds = safeAds.filter((ad) => (ad.created_at || '').startsWith(date));
                     const dailyViews = dailyAds.reduce((acc, ad) => acc + (Number(ad.views) || 0), 0);
                     const dailyVisits = safeVisits.filter((visit) => (visit.created_at || '').startsWith(date)).length;
                     return {
@@ -175,10 +180,10 @@ export default function AdminDashboard() {
                     .slice(0, 5);
 
                 const sellerMap = safeAds.reduce((acc: Record<string, { seller: string; ads: number; views: number }>, ad) => {
-                    const sellerKey = ad.seller?.id || ad.user_id || 'unknown';
+                    const sellerKey = ad.user_id || 'unknown';
                     if (!acc[sellerKey]) {
                         acc[sellerKey] = {
-                            seller: ad.seller?.name || 'Sem nome',
+                            seller: ad.user_id?.slice(0, 8) || 'Sem nome',
                             ads: 0,
                             views: 0,
                         };
@@ -223,7 +228,10 @@ export default function AdminDashboard() {
                     expiringFeaturedAds,
                     topPages,
                     topReferrers,
-                    recentAds: safeAds.slice(0, 8),
+                    recentAds: safeAds.slice(0, 8).map(ad => ({
+                        ...ad,
+                        user_id: ad.user_id,
+                    })),
                     categoryData,
                     trendData,
                     topAds,
@@ -231,10 +239,13 @@ export default function AdminDashboard() {
                 });
             } catch (err) {
                 console.error('Error fetching admin stats:', err);
+                setError('Erro ao carregar dados do dashboard.');
             } finally {
                 setLoading(false);
             }
-        }
+    }
+
+    useEffect(() => {
         fetchStats();
     }, []);
 
@@ -243,6 +254,15 @@ export default function AdminDashboard() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
     );
+
+    if (error) {
+        return (
+            <div className="p-8 text-center">
+                <p className="text-red-600 mb-2">{error}</p>
+                <button onClick={() => { setError(null); fetchStats(); }} className="text-blue-600 underline">Tentar novamente</button>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8">
@@ -266,7 +286,7 @@ export default function AdminDashboard() {
                 <StatCard title="Expirados/Reembolsados" value={`${stats.expiredPayments}/${stats.refundedPayments}`} icon={<CreditCard className="w-6 h-6" />} tint="slate" />
                 <StatCard title="Denúncias Pendentes" value={String(stats.pendingReports)} icon={<Flag className="w-6 h-6" />} tint="red" />
                 <Link
-                    to="/admin/verificacao"
+                    href="/admin/verificacao"
                     className="block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
                     <StatCard
@@ -407,7 +427,7 @@ export default function AdminDashboard() {
                                 <img src={ad.images?.[0] || 'https://via.placeholder.com/80x80?text=Sem+Foto'} alt="" className="w-10 h-10 rounded-lg object-cover bg-gray-100" />
                                 <div className="min-w-0">
                                     <p className="font-medium text-gray-900 truncate">{ad.title}</p>
-                                    <p className="text-xs text-gray-500">por {ad.seller?.name || 'Vendedor'} • {Number(ad.views || 0).toLocaleString('pt-BR')} views</p>
+                                    <p className="text-xs text-gray-500">por {String(ad.user_id?.slice(0, 8) || 'Vendedor')} • {Number(ad.views || 0).toLocaleString('pt-BR')} views</p>
                                 </div>
                             </div>
                             <span className="text-sm font-medium text-gray-900">{formatPrice(ad.price)}</span>

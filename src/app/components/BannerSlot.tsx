@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 
 type BannerPlacement = 'home_top' | 'category_top';
@@ -34,7 +34,7 @@ function isVisibleBanner(banner: Banner) {
 export function BannerSlot({ placement, className = '' }: BannerSlotProps) {
     const [banners, setBanners] = useState<Banner[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const navigate = useNavigate();
+    const router = useRouter();
 
     useEffect(() => {
         let ignore = false;
@@ -87,7 +87,7 @@ export function BannerSlot({ placement, className = '' }: BannerSlotProps) {
             window.open(banner.link, '_blank');
             return;
         }
-        navigate(banner.link);
+        router.push(banner.link);
     };
 
     return (

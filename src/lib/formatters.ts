@@ -10,10 +10,15 @@ export const formatDate = (dateStr: string) => {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMinutes / 60);
   const diffDays = Math.floor(diffHours / 24);
 
-  if (diffHours < 24) {
+  if (diffMinutes < 1) {
+    return 'agora';
+  } else if (diffMinutes < 60) {
+    return `Há ${diffMinutes}min`;
+  } else if (diffHours < 24) {
     return `Há ${diffHours}h`;
   } else if (diffDays < 7) {
     return `Há ${diffDays}d`;

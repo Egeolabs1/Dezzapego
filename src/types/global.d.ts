@@ -3,7 +3,13 @@ export {};
 declare global {
   interface Window {
     turnstile?: {
-      render: (container: string | HTMLElement, options: any) => string;
+      render: (container: string | HTMLElement, options: {
+        sitekey: string;
+        callback?: (token: string) => void;
+        'error-callback'?: () => void;
+        theme?: 'light' | 'dark' | 'auto';
+        size?: 'normal' | 'compact';
+      }) => string;
       reset: (widgetId?: string) => void;
       getResponse: (widgetId?: string) => string | undefined;
       remove: (widgetId?: string) => void;

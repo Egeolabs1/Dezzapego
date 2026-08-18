@@ -1,6 +1,10 @@
 @import './tailwind.css';
 @import './theme.css';
 
+html, body {
+  overflow-x: hidden;
+}
+
 @layer utilities {
     .scrollbar-hide {
         -ms-overflow-style: none;

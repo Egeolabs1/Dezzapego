@@ -5,13 +5,14 @@ import { Header } from '../components/Header';
 import { ImageUpload } from '../components/ImageUpload';
 import { Loader2, User, Save, Package, Shield, ExternalLink, ShieldCheck, AlertCircle, Download, Heart } from 'lucide-react';
 import { toast } from 'sonner';
-import { Link, useNavigate } from 'react-router-dom';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import SEO from '../../components/SEO';
 import { digitsOnly, formatCpfCnpj, formatPhone, isValidCpfOrCnpj } from '../../lib/marketplaceQuality';
 
 export default function UserDashboard() {
-    const { user, profile, refreshProfile } = useAuth(); // ADDED profile, refreshProfile
-    const navigate = useNavigate();
+    const { user, profile, refreshProfile, loading: authLoading } = useAuth();
+    const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [savingAvatar, setSavingAvatar] = useState(false);
     const [submittingVerification, setSubmittingVerification] = useState(false);
@@ -40,9 +41,10 @@ export default function UserDashboard() {
     });
 
     useEffect(() => {
+        if (authLoading) return;
         if (!user) {
             hydratedProfileRef.current = { userId: null, usedProfileSnapshot: false };
-            navigate('/login');
+            router.push('/login');
             return;
         }
 
@@ -76,7 +78,7 @@ export default function UserDashboard() {
         }
 
         hydratedProfileRef.current.usedProfileSnapshot = Boolean(profile);
-    }, [user, profile, navigate]);
+    }, [user, profile, router, authLoading]);
 
     useEffect(() => {
         const docs = profile?.verification_docs;
@@ -308,7 +310,7 @@ export default function UserDashboard() {
 
             await supabase.auth.signOut();
             toast.success('Sua conta foi excluída permanentemente.');
-            navigate('/');
+            router.push('/');
         } catch (error) {
             console.error('Error deleting account:', error);
             toast.error('Erro ao excluir conta. Tente novamente ou contate o suporte.');
@@ -317,7 +319,7 @@ export default function UserDashboard() {
         }
     };
 
-    if (!user) return null;
+    if (authLoading || !user) return null;
 
     return (
         <div className="bg-gray-50 min-h-screen">
@@ -386,7 +388,7 @@ export default function UserDashboard() {
                                 Configurações
                             </button>
                             <Link
-                                to="/meus-anuncios"
+                                href="/meus-anuncios"
                                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium border border-gray-200 shadow-sm"
                             >
                                 <Package className="w-5 h-5 shrink-0" />
@@ -394,7 +396,7 @@ export default function UserDashboard() {
                                 <ExternalLink className="w-4 h-4 ml-auto shrink-0 opacity-50" />
                             </Link>
                             <Link
-                                to="/favoritos"
+                                href="/favoritos"
                                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium border border-gray-200 shadow-sm"
                             >
                                 <Heart className="w-5 h-5 shrink-0" />
@@ -760,7 +762,7 @@ export default function UserDashboard() {
                                     </div>
                                     <div className="p-6 space-y-3">
                                         <Link
-                                            to="/meus-anuncios"
+                                            href="/meus-anuncios"
                                             className="block w-full rounded-lg border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
                                         >
                                             Gerenciar meus anúncios
@@ -789,7 +791,7 @@ export default function UserDashboard() {
                                             fluxo, use a opção na zona de perigo — o sistema chama a função{' '}
                                             <code className="text-xs bg-gray-100 px-1 rounded">delete_own_account</code>. Prazos
                                             de backups e retenções legais estão descritos na{' '}
-                                            <Link to="/privacidade" className="text-blue-600 font-medium hover:underline">
+                                            <Link href="/privacidade" className="text-blue-600 font-medium hover:underline">
                                                 Política de Privacidade
                                             </Link>
                                             .

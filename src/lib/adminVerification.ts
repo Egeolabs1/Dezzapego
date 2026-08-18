@@ -11,31 +11,28 @@ export function parseVerificationDocs(raw: unknown): { doc: string[]; selfie: st
     return { doc, selfie };
 }
 
-export async function approveProfileVerification(userId: string): Promise<void> {
-    const { error } = await supabase
-        .from('profiles')
-        .update({
-            verified: true,
-            verification_status: 'verified',
-            verification_rejection_reason: null,
-            updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId);
+async function adminFetch(url: string, body: Record<string, unknown>) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) throw new Error('Não autenticado');
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Falha na operação admin');
+    }
+}
 
-    if (error) throw error;
+export async function approveProfileVerification(userId: string): Promise<void> {
+    await adminFetch('/api/admin/verify', { user_id: userId, action: 'approve' });
 }
 
 export async function rejectProfileVerification(userId: string, reason: string): Promise<void> {
-    const msg = reason.trim() || DEFAULT_VERIFICATION_REJECTION_REASON;
-    const { error } = await supabase
-        .from('profiles')
-        .update({
-            verified: false,
-            verification_status: 'rejected',
-            verification_rejection_reason: msg,
-            updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId);
-
-    if (error) throw error;
+    await adminFetch('/api/admin/verify', { user_id: userId, action: 'reject', reason });
 }

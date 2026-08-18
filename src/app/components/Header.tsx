@@ -4,7 +4,8 @@ import { LocationSelector } from './LocationSelector';
 import { Logo, LogoIcon } from './Logo';
 import { Notifications } from './Notifications';
 import { SearchAutocomplete } from './SearchAutocomplete';
-import { Link, useNavigate } from 'react-router-dom';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
 import { useFilter } from '../contexts/FilterContext';
 
@@ -31,13 +32,13 @@ export function Header({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, profile, signOut } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const isAdmin = profile?.role === 'admin';
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/');
+    router.push('/');
     setUserMenuOpen(false);
     setMobileMenuOpen(false);
   };
@@ -51,7 +52,7 @@ export function Header({
       params.delete('q');
     }
     const qs = params.toString();
-    navigate(qs ? `/?${qs}` : '/');
+    router.push(qs ? `/?${qs}` : '/');
   };
 
   const handleSearchSubmit = (e?: React.FormEvent) => {
@@ -80,7 +81,7 @@ export function Header({
           <button
             onClick={() => {
               setSearchQuery(''); // Optional: Clear search on logo click?
-              navigate('/');
+              router.push('/');
             }}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
@@ -177,7 +178,7 @@ export function Header({
 
             <Notifications />
 
-            <Link to="/favoritos" className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-blue-600 transition-colors">
+            <Link href="/favoritos" className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-blue-600 transition-colors">
               <Heart className="w-5 h-5" />
               <span>Favoritos</span>
             </Link>
@@ -197,7 +198,7 @@ export function Header({
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 border border-gray-100 z-50">
                     <div className="px-4 py-2 border-b border-gray-100">
-                      <Link to="/dashboard" onClick={() => setUserMenuOpen(false)} className="hover:text-blue-600 transition-colors">
+                      <Link href="/dashboard" onClick={() => setUserMenuOpen(false)} className="hover:text-blue-600 transition-colors">
                         <p className="text-sm font-medium text-gray-900">Minha Conta</p>
                       </Link>
                       <p className="text-xs text-gray-500 truncate">{user.email}</p>
@@ -207,7 +208,7 @@ export function Header({
                     {/* Uses optional chaining or defaults as profile structure updates */}
                     {isAdmin && (
                       <Link
-                        to="/admin"
+                        href="/admin"
                         onClick={() => setUserMenuOpen(false)}
                         className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium"
                       >
@@ -216,7 +217,7 @@ export function Header({
                       </Link>
                     )}
                     <Link
-                      to="/meus-anuncios"
+                      href="/meus-anuncios"
                       onClick={() => setUserMenuOpen(false)}
                       className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                     >
@@ -234,7 +235,7 @@ export function Header({
                 )}
               </div>
             ) : (
-              <Link to="/login">
+              <Link href="/login">
                 <button className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-blue-600 transition-colors">
                   <User className="w-5 h-5" />
                   <span>Entrar</span>
@@ -242,7 +243,7 @@ export function Header({
               </Link>
             )}
 
-            <Link to="/anunciar">
+            <Link href="/anunciar">
               <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-shadow">
                 <CirclePlus className="w-5 h-5" />
                 <span>Anunciar Grátis</span>
@@ -264,7 +265,7 @@ export function Header({
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 py-4 space-y-2">
             <Link
-              to="/favoritos"
+              href="/favoritos"
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-2 px-4 py-2 w-full text-left text-gray-700 hover:bg-gray-50 rounded-lg"
             >
@@ -274,7 +275,7 @@ export function Header({
             {user ? (
               <>
                 <Link
-                  to="/dashboard"
+                  href="/dashboard"
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center gap-2 px-4 py-2 w-full text-left text-gray-700 hover:bg-gray-50 rounded-lg"
                 >
@@ -282,7 +283,7 @@ export function Header({
                   <span>Minha Conta</span>
                 </Link>
                 <Link
-                  to="/meus-anuncios"
+                  href="/meus-anuncios"
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center gap-2 px-4 py-2 w-full text-left text-gray-700 hover:bg-gray-50 rounded-lg"
                 >
@@ -291,7 +292,7 @@ export function Header({
                 </Link>
                 {isAdmin && (
                   <Link
-                    to="/admin"
+                    href="/admin"
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-2 px-4 py-2 w-full text-left text-red-600 hover:bg-red-50 rounded-lg"
                   >
@@ -308,14 +309,14 @@ export function Header({
                 </button>
               </>
             ) : (
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
                 <button className="flex items-center gap-2 px-4 py-2 w-full text-left text-gray-700 hover:bg-gray-50 rounded-lg">
                   <User className="w-5 h-5" />
                   <span>Entrar</span>
                 </button>
               </Link>
             )}
-            <Link to="/anunciar" onClick={() => setMobileMenuOpen(false)}>
+            <Link href="/anunciar" onClick={() => setMobileMenuOpen(false)}>
               <button className="flex items-center gap-2 px-4 py-3 w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg justify-center">
                 <CirclePlus className="w-5 h-5" />
                 <span>Anunciar Grátis</span>

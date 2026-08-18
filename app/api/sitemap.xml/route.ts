@@ -3,6 +3,7 @@ import { getAllCategoryListingPaths } from '@/lib/categorySeo';
 import { SEO_GUIDES, SEO_LOCATIONS } from '@/lib/seoContent';
 import { CATEGORIES } from '@/app/data/categories';
 import { slugifyCategoryPart } from '@/lib/categoryRoutes';
+import { getSitemapEntries } from '@/lib/seoLocations';
 
 const STATIC_PATHS = ['/', '/sobre', '/planos', '/contato', '/termos', '/privacidade', '/dicas-seguranca', '/mapa-do-site'];
 
@@ -85,13 +86,17 @@ async function fetchAdsForSitemap(): Promise<AdSitemapRow[]> {
 type SitemapEntry = {
   loc: string;
   lastmod?: string;
+  changefreq?: string;
+  priority?: string;
 };
 
 function buildXml(entries: SitemapEntry[]) {
   const body = entries
     .map((entry) => {
       const lastmod = entry.lastmod ? `\n    <lastmod>${escapeXml(entry.lastmod)}</lastmod>` : '';
-      return `  <url>\n    <loc>${escapeXml(entry.loc)}</loc>${lastmod}\n  </url>`;
+      const changefreq = entry.changefreq ? `\n    <changefreq>${escapeXml(entry.changefreq)}</changefreq>` : '';
+      const priority = entry.priority ? `\n    <priority>${escapeXml(entry.priority)}</priority>` : '';
+      return `  <url>\n    <loc>${escapeXml(entry.loc)}</loc>${lastmod}${changefreq}${priority}\n  </url>`;
     })
     .join('\n');
 
@@ -122,6 +127,22 @@ export async function GET() {
       const categoryLoc = `${loc}/${slugifyCategoryPart(category)}`;
       entries.set(categoryLoc, { loc: categoryLoc, lastmod: nowIso });
     }
+  }
+
+  // SEO location pages from database (/{uf}/{city}/{category}/{brand}/{model})
+  try {
+    const seoLocationEntries = await getSitemapEntries();
+    for (const entry of seoLocationEntries) {
+      const loc = `${siteUrl}/${entry.path}`;
+      entries.set(loc, {
+        loc,
+        lastmod: entry.updated_at || nowIso,
+        changefreq: 'weekly',
+        priority: '0.7',
+      });
+    }
+  } catch {
+    // Silently ignore — location pages are optional
   }
 
   const ads = await fetchAdsForSitemap();

@@ -5,7 +5,7 @@ import type { Ad } from '../../types';
 import { useMemo, useState } from 'react';
 import { formatPrice, formatDate } from '../../lib/formatters';
 import { useAds } from '../hooks/useAds';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { getCategoryFields } from '../data/categorySpecs';
 import { toast } from 'sonner';
 import { readSavedSearches, removeSavedSearch, saveSearch, withDetailsFiltersInUrl, type SavedSearch } from '../../lib/marketplaceQuality';
@@ -49,7 +49,7 @@ export function AdsList({
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(() => readSavedSearches());
   const [showSavedSearches, setShowSavedSearches] = useState(false);
 
-  const { ads, loading } = useAds({
+  const { ads, loading, loadingMore, hasMore, loadMore } = useAds({
     lat: userLocation?.lat,
     lng: userLocation?.lng,
     radius: radius
@@ -59,9 +59,11 @@ export function AdsList({
     // Helper to safely get value from Ad (checking root or details)
     const getAdValue = (ad: Ad, key: string) => {
       // Check root first (legacy/schema columns)
-      if ((ad as any)[key] !== undefined) return (ad as any)[key];
+      const adRecord = ad as unknown as Record<string, unknown>;
+      if (adRecord[key] !== undefined) return adRecord[key];
       // Check details (new JSONB) - assume ad might have details property despite type definition
-      if ((ad as any).details && (ad as any).details[key] !== undefined) return (ad as any).details[key];
+      const details = adRecord.details as Record<string, unknown> | undefined;
+      if (details && details[key] !== undefined) return details[key];
       return undefined;
     };
 
@@ -277,16 +279,20 @@ export function AdsList({
               <ListIcon className="w-5 h-5" />
             </button>
           </div>
-          <div className="relative">
+          <div className="relative group">
             <button
               type="button"
               onClick={saveCurrentSearch}
               className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              title="Salvar busca"
+              title="Salvar esta busca neste dispositivo para acessar rápido depois"
             >
               <BookmarkPlus className="w-4 h-4" />
               <span className="hidden sm:inline">Salvar busca</span>
             </button>
+            <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg text-center z-30">
+              Salva esta busca neste dispositivo. Você pode reabrir os filtros depois.
+              <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45 -mt-1"></div>
+            </div>
 
             {savedSearches.length > 0 && (
               <button
@@ -306,7 +312,7 @@ export function AdsList({
                   {savedSearches.map((item) => (
                     <div key={item.id} className="flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-gray-50">
                       <Link
-                        to={item.url}
+                        href={item.url}
                         className="min-w-0 flex-1"
                         onClick={() => setShowSavedSearches(false)}
                       >
@@ -340,7 +346,7 @@ export function AdsList({
         <div className={viewMode === 'grid' ? "grid grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4" : "flex flex-col gap-4"}>
           {sortedAds.map((ad) => (
             <Link
-              to={`/anuncio/${ad.id}`}
+              href={`/anuncio/${ad.id}`}
               key={ad.id}
               className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 overflow-hidden group flex ${viewMode === 'grid' ? 'flex-col' : 'flex-row'}`}
             >
@@ -411,6 +417,29 @@ export function AdsList({
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {/* Load More Button */}
+      {hasMore && sortedAds.length > 0 && (
+        <div className="mt-8 flex justify-center">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+          >
+            {loadingMore ? (
+              <span className="flex items-center gap-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Carregando...
+              </span>
+            ) : (
+              'Carregar mais'
+            )}
+          </button>
         </div>
       )}
     </div>

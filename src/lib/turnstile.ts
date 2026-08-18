@@ -1,7 +1,7 @@
 let turnstileLoadPromise: Promise<void> | null = null;
 
 export function loadTurnstile() {
-    if (window.turnstile) {
+    if (typeof window !== 'undefined' && window.turnstile) {
         return Promise.resolve();
     }
 
@@ -16,7 +16,10 @@ export function loadTurnstile() {
 
         if (existingScript) {
             existingScript.addEventListener('load', () => resolve(), { once: true });
-            existingScript.addEventListener('error', () => reject(new Error('Failed to load Turnstile')), { once: true });
+            existingScript.addEventListener('error', () => {
+                turnstileLoadPromise = null; // Allow retry
+                reject(new Error('Failed to load Turnstile'));
+            }, { once: true });
             return;
         }
 
@@ -25,7 +28,10 @@ export function loadTurnstile() {
         script.async = true;
         script.defer = true;
         script.addEventListener('load', () => resolve(), { once: true });
-        script.addEventListener('error', () => reject(new Error('Failed to load Turnstile')), { once: true });
+        script.addEventListener('error', () => {
+            turnstileLoadPromise = null; // Allow retry
+            reject(new Error('Failed to load Turnstile'));
+        }, { once: true });
         document.head.appendChild(script);
     });
 

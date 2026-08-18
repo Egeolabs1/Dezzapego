@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 
 type MaintenanceContextType = {
@@ -15,17 +15,21 @@ export function MaintenanceProvider({ children }: { children: React.ReactNode })
 
     useEffect(() => {
         fetchSettings();
+        let debounceTimer: ReturnType<typeof setTimeout>;
 
-        // Realtime subscription
         const channel = supabase
             .channel('system_settings')
             .on('postgres_changes',
                 { event: '*', schema: 'public', table: 'system_settings' },
-                () => fetchSettings()
+                () => {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => fetchSettings(), 500);
+                }
             )
             .subscribe();
 
         return () => {
+            clearTimeout(debounceTimer);
             supabase.removeChannel(channel);
         };
     }, []);
@@ -68,11 +72,11 @@ export function MaintenanceProvider({ children }: { children: React.ReactNode })
         }
     };
 
-    const value = {
+    const value = useMemo(() => ({
         isMaintenanceMode,
         setMaintenanceMode,
-        loading
-    };
+        loading,
+    }), [isMaintenanceMode, loading]);
 
     return <MaintenanceContext.Provider value={value}>{children}</MaintenanceContext.Provider>;
 }

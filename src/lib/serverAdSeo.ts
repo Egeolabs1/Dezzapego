@@ -21,22 +21,25 @@ type AdSeoRow = {
   status?: string | null;
 };
 
+let _serverSupabase: ReturnType<typeof createClient> | null = null;
+
 function getServerSupabase() {
+  if (_serverSupabase) return _serverSupabase;
+
   const supabaseUrl =
     process.env.SUPABASE_URL ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    process.env.VITE_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnon =
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.VITE_SUPABASE_ANON_KEY ||
     process.env.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnon) return null;
 
-  return createClient(supabaseUrl, supabaseAnon, {
+  _serverSupabase = createClient(supabaseUrl, supabaseAnon, {
     auth: { autoRefreshToken: false, persistSession: false },
     global: { headers: { 'x-client-info': 'ad-seo-server' } },
   });
+  return _serverSupabase;
 }
 
 function asStringArray(value: unknown): string[] {

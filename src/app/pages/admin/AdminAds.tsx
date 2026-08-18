@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { formatPrice, formatDate } from '../../../lib/formatters';
 import { Trash2, Edit, Eye, Search, Star, Download, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext';
 import { logAdminAction } from '../../../lib/adminLogger';
@@ -29,7 +29,23 @@ const STATUS_LABEL: Record<AdStatus, string> = {
 
 export default function AdminAds() {
     const { user } = useAuth();
-    const [ads, setAds] = useState<any[]>([]);
+    type AdRecord = {
+        id: string;
+        title: string;
+        description: string;
+        price: number;
+        category: string;
+        subcategory: string;
+        status: string;
+        featured: boolean;
+        images: string[];
+        created_at: string;
+        user_id: string;
+        views: number;
+        location?: { state?: string; city?: string };
+        seller?: { id?: string; name?: string };
+    };
+    const [ads, setAds] = useState<AdRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState<AdStatus>('pending');
@@ -44,8 +60,9 @@ export default function AdminAds() {
         try {
             const { data, error } = await supabase
                 .from('ads')
-                .select('*')
-                .order('created_at', { ascending: false });
+                .select('id, title, description, price, category, subcategory, status, featured, images, created_at, user_id, views, location, seller')
+                .order('created_at', { ascending: false })
+                .range(0, 99);
 
             if (error) throw error;
             const all = data || [];
@@ -92,7 +109,7 @@ export default function AdminAds() {
         }
     }
 
-    async function toggleFeatured(ad: any) {
+    async function toggleFeatured(ad: { id: string; featured: boolean }) {
         const newFeatured = !ad.featured;
         try {
             const { error } = await supabase.from('ads').update({ featured: newFeatured }).eq('id', ad.id);
@@ -242,7 +259,7 @@ export default function AdminAds() {
                                                     {STATUS_LABEL[status]}
                                                 </span>
                                             </td>
-                                            <td className="p-4 text-sm text-gray-500">{formatDate(ad.created_at || ad.publishedAt)}</td>
+                                            <td className="p-4 text-sm text-gray-500">{formatDate(ad.created_at)}</td>
                                             <td className="p-4">
                                                 <div className="flex items-center justify-end gap-1">
                                                     {status === 'pending' && (
@@ -284,12 +301,12 @@ export default function AdminAds() {
                                                             <Star className={`w-4 h-4 ${ad.featured ? 'fill-current' : ''}`} />
                                                         </button>
                                                     )}
-                                                    <Link to={`/anuncio/${ad.id}`} target="_blank">
+                                                    <Link href={`/anuncio/${ad.id}`} target="_blank">
                                                         <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Ver anúncio">
                                                             <Eye className="w-4 h-4" />
                                                         </button>
                                                     </Link>
-                                                    <Link to={`/editar/${ad.id}`}>
+                                                    <Link href={`/editar/${ad.id}`}>
                                                         <button className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg" title="Editar">
                                                             <Edit className="w-4 h-4" />
                                                         </button>

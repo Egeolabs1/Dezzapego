@@ -1,7 +1,7 @@
 'use client';
 
-import { BrowserRouter, Routes, Route, Navigate, useLocation, Router } from 'react-router-dom';
-import { type ReactNode } from 'react';
+import { type ReactNode, useMemo } from 'react';
+import { usePathname } from 'next/navigation';
 import { AuthProvider } from './contexts/AuthContext';
 import { FilterProvider } from './contexts/FilterContext';
 import Home from './pages/Home';
@@ -27,6 +27,19 @@ import Maintenance from './pages/Maintenance';
 import About from './pages/About';
 import GuidePage from './pages/GuidePage';
 import LocationLanding from './pages/LocationLanding';
+import SeoLocationPage from './pages/SeoLocationPage';
+import BusinessPage from './pages/BusinessPage';
+import BusinessForm from './pages/BusinessForm';
+import BusinessDashboard from './pages/BusinessDashboard';
+import RealEstatePage from './pages/RealEstatePage';
+import AgentPage from './pages/AgentPage';
+import RealEstateDashboard from './pages/RealEstateDashboard';
+import VehicleDealerPage from './pages/VehicleDealerPage';
+import VehicleDashboard from './pages/VehicleDashboard';
+import VehicleForm from './pages/VehicleForm';
+import LeadPipeline from './pages/LeadPipeline';
+import TeamManagement from './pages/TeamManagement';
+import CollectionManagement from './pages/CollectionManagement';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminAds from './pages/admin/AdminAds';
@@ -53,32 +66,104 @@ import { HelmetProvider } from 'react-helmet-async';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { SEOProvider } from '../components/SEO';
 
-// Ad type moved to src/types/index.ts
+function MatchRoute({ pathname, initialPath }: { pathname: string; initialPath?: string }) {
+  // Normalize: use the actual browser pathname, or the initialPath for SSR
+  const path = pathname || initialPath || '/';
 
-function UniversalRouter({ children, initialPath = '/' }: { children: ReactNode; initialPath?: string }) {
-  if (typeof window !== 'undefined') {
-    return <BrowserRouter>{children}</BrowserRouter>;
+  // Static pages
+  if (path === '/') return <Home />;
+  if (path === '/login') return <Login />;
+  if (path === '/redefinir-senha') return <ResetPassword />;
+  if (path === '/register') return <Register />;
+  if (path === '/anunciar') return <NewAd />;
+  if (path === '/meus-anuncios') return <MyAds />;
+  if (path === '/dashboard') return <UserDashboard />;
+  if (path === '/favoritos') return <MyFavorites />;
+  if (path === '/termos') return <TermsOfUse />;
+  if (path === '/privacidade') return <PrivacyPolicy />;
+  if (path === '/dicas-seguranca') return <SafetyTips />;
+  if (path === '/contato') return <Contact />;
+  if (path === '/mapa-do-site') return <SiteMap />;
+  if (path === '/conta-suspensa') return <AccountSuspended />;
+  if (path === '/planos') return <Plans />;
+  if (path === '/checkout/plano') return <PlanCheckout />;
+  if (path === '/sobre') return <About />;
+
+  // Business routes
+  if (path === '/business') return <BusinessDashboard />;
+  if (path === '/business/nova') return <BusinessForm />;
+  if (path === '/business/editar') return <BusinessForm />;
+  if (path === '/business/imobiliaria') return <RealEstateDashboard />;
+  if (path === '/business/veiculos') return <VehicleDashboard />;
+  if (path === '/business/veiculos/novo') return <VehicleForm />;
+  if (path === '/business/veiculos/editar') return <VehicleForm />;
+  if (path === '/business/leads') return <LeadPipeline />;
+  if (path === '/business/equipe') return <TeamManagement />;
+  if (path === '/business/colecoes') return <CollectionManagement />;
+
+  // Pattern-matched routes
+  if (path.match(/^\/anuncio\/[^/]+$/)) return <AdDetails />;
+  if (path.match(/^\/anunciante\/[^/]+$/)) return <SellerProfile />;
+  if (path.match(/^\/editar\/[^/]+$/) || path.match(/^\/editar-anuncio\/[^/]+$/)) return <EditAd />;
+  if (path.match(/^\/categoria\/[^/]+(?:\/[^/]+)?$/)) return <Home />;
+  if (path.match(/^\/guias\/[^/]+$/)) return <GuidePage />;
+  if (path.match(/^\/cidade\/[^/]+\/[^/]+(?:\/[^/]+)?$/)) return <LocationLanding />;
+  if (path.match(/^\/empresa\/[^/]+$/)) return <BusinessPage />;
+  if (path.match(/^\/imobiliaria\/[^/]+$/)) return <RealEstatePage />;
+  if (path.match(/^\/corretor\/[^/]+$/)) return <AgentPage />;
+  if (path.match(/^\/loja\/[^/]+$/)) return <VehicleDealerPage />;
+
+  // Admin routes
+  if (path === '/admin' || path === '/admin/') {
+    return <AdminLayout><AdminDashboard /></AdminLayout>;
+  }
+  if (path === '/admin/anuncios') {
+    return <AdminLayout><AdminAds /></AdminLayout>;
+  }
+  if (path === '/admin/pagamentos') {
+    return <AdminLayout><AdminPayments /></AdminLayout>;
+  }
+  if (path === '/admin/usuarios') {
+    return <AdminLayout><AdminUsers /></AdminLayout>;
+  }
+  if (path === '/admin/verificacao') {
+    return <AdminLayout><AdminVerification /></AdminLayout>;
+  }
+  if (path === '/admin/mensagens') {
+    return <AdminLayout><AdminMessages /></AdminLayout>;
+  }
+  if (path === '/admin/denuncias') {
+    return <AdminLayout><AdminReports /></AdminLayout>;
+  }
+  if (path === '/admin/banners') {
+    return <AdminLayout><AdminBanners /></AdminLayout>;
+  }
+  if (path === '/admin/notificacoes') {
+    return <AdminLayout><AdminNotifications /></AdminLayout>;
+  }
+  if (path === '/admin/logs') {
+    return <AdminLayout><AdminLogs /></AdminLayout>;
+  }
+  if (path === '/admin/configuracoes') {
+    return <AdminLayout><AdminSettings /></AdminLayout>;
   }
 
-  const navigator = {
-    createHref: (to: { pathname?: string; search?: string; hash?: string } | string) =>
-      typeof to === 'string' ? to : `${to.pathname || '/'}${to.search || ''}${to.hash || ''}`,
-    push: () => undefined,
-    replace: () => undefined,
-    go: () => undefined,
-    back: () => undefined,
-    forward: () => undefined,
-  };
+  // SEO location pages: /{uf}/{city}/{category}/{brand}/{model}
+  const locationMatch = path.match(/^\/([a-z]{2})(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?$/);
+  if (locationMatch) {
+    const seoPath = [locationMatch[1], locationMatch[2], locationMatch[3], locationMatch[4], locationMatch[5]].filter(Boolean).join('/');
+    return <SeoLocationPage path={seoPath} />;
+  }
 
-  return (
-    <Router location={initialPath} navigator={navigator}>
-      {children}
-    </Router>
-  );
+  // Unknown route — redirect to home
+  if (typeof window !== 'undefined') {
+    window.location.href = '/';
+  }
+  return <Home />;
 }
 
-export function AppContent() {
-  const { pathname } = useLocation();
+export function AppContent({ initialPath }: { initialPath?: string }) {
+  const pathname = usePathname();
   const isAdminRoute = pathname.startsWith('/admin');
   const { isMaintenanceMode, loading: maintenanceLoading } = useMaintenance();
   const { user, profile, loading: authLoading } = useAuth();
@@ -88,16 +173,8 @@ export function AppContent() {
     Boolean(user?.id && profile && profile.is_suspended !== true),
   );
 
-  // Checking logic:
-  // 1. If currently loading, show nothing or spinner
-  // 2. If maintenance mode is ON
-  // 3. AND user is NOT logged in (Admins/Sellers can still access)
-  //    Note: ideally we check for 'admin' role, but checking 'user' allows any logged in user (like owner) to see site
-
   if (!maintenanceLoading && !authLoading && isMaintenanceMode && !user) {
-    // Allow access to login page so admins can actually log in!
-    // We do this by checking the pathname
-    const publicRoutes = ['/login', '/admin', '/contato', '/termos', '/privacidade', '/dicas-seguranca', '/conta-suspensa'];
+    const publicRoutes = ['/login', '/admin', '/contato', '/termos', '/privacidade', '/dicas-seguranca', '/conta-suspensa', '/empresa/'];
     const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
 
     if (!isPublicRoute) {
@@ -105,55 +182,14 @@ export function AppContent() {
     }
   }
 
+  const matchedContent = useMemo(
+    () => <MatchRoute pathname={pathname} initialPath={initialPath} />,
+    [pathname, initialPath],
+  );
+
   return (
-    <div className={isAdminRoute ? '' : 'pb-16 md:pb-0'}>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<Home />} />
-        <Route path="/categoria/:categorySlug" element={<Home />} />
-        <Route path="/categoria/:categorySlug/:subcategorySlug" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/redefinir-senha" element={<ResetPassword />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/anunciar" element={<NewAd />} />
-        <Route path="/meus-anuncios" element={<MyAds />} />
-        <Route path="/anuncio/:id" element={<AdDetails />} />
-        <Route path="/anunciante/:userId" element={<SellerProfile />} />
-        <Route path="/editar/:id" element={<EditAd />} />
-        <Route path="/editar-anuncio/:id" element={<EditAd />} />
-        <Route path="/dashboard" element={<UserDashboard />} />
-        <Route path="/favoritos" element={<MyFavorites />} />
-
-        <Route path="/termos" element={<TermsOfUse />} />
-        <Route path="/privacidade" element={<PrivacyPolicy />} />
-        <Route path="/dicas-seguranca" element={<SafetyTips />} />
-        <Route path="/mapa-do-site" element={<SiteMap />} />
-        <Route path="/contato" element={<Contact />} />
-        <Route path="/conta-suspensa" element={<AccountSuspended />} />
-        <Route path="/planos" element={<Plans />} />
-        <Route path="/checkout/plano" element={<PlanCheckout />} />
-        <Route path="/sobre" element={<About />} />
-        <Route path="/guias/:guideSlug" element={<GuidePage />} />
-        <Route path="/cidade/:stateSlug/:citySlug" element={<LocationLanding />} />
-        <Route path="/cidade/:stateSlug/:citySlug/:categorySlug" element={<LocationLanding />} />
-
-        {/* Admin Routes */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="anuncios" element={<AdminAds />} />
-          <Route path="pagamentos" element={<AdminPayments />} />
-          <Route path="usuarios" element={<AdminUsers />} />
-          <Route path="verificacao" element={<AdminVerification />} />
-          <Route path="mensagens" element={<AdminMessages />} />
-          <Route path="denuncias" element={<AdminReports />} />
-          <Route path="banners" element={<AdminBanners />} />
-          <Route path="notificacoes" element={<AdminNotifications />} />
-          <Route path="logs" element={<AdminLogs />} />
-          <Route path="configuracoes" element={<AdminSettings />} />
-        </Route>
-
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+    <div className={`${isAdminRoute ? '' : 'pb-16 md:pb-0'} overflow-x-hidden`}>
+      {matchedContent}
       {!isAdminRoute && <Footer />}
       {!isAdminRoute && !isMaintenanceMode && <MobileNav />}
       <InstallPWA />
@@ -187,10 +223,10 @@ export function AppProviders({ children, helmetContext, enableHelmet = true }: A
   );
 }
 
-export function AppRoutes() {
+export function AppRoutes({ initialPath }: { initialPath?: string }) {
   return (
     <>
-      <AppContent />
+      <AppContent initialPath={initialPath} />
       <Toaster richColors position="top-right" />
     </>
   );
@@ -204,10 +240,7 @@ type AppProps = {
 export default function App({ initialPath, enableHelmet = true }: AppProps) {
   return (
     <AppProviders enableHelmet={enableHelmet}>
-      <UniversalRouter initialPath={initialPath}>
-        <AppRoutes />
-      </UniversalRouter>
+      <AppRoutes initialPath={initialPath} />
     </AppProviders>
   );
 }
-

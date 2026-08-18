@@ -6,10 +6,11 @@ type AdPreview = {
   images: string[] | null;
 };
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function getSiteUrl() {
   const raw =
     process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.VITE_SITE_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://dezzapego.com');
   return raw.replace(/\/+$/, '');
 }
@@ -68,11 +69,9 @@ function buildHtml(args: {
 async function fetchAd(id: string): Promise<AdPreview | null> {
   const supabaseUrl =
     process.env.SUPABASE_URL ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    process.env.VITE_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnon =
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.VITE_SUPABASE_ANON_KEY ||
     process.env.SUPABASE_ANON_KEY;
   if (!supabaseUrl || !supabaseAnon) return null;
 
@@ -105,7 +104,7 @@ export async function GET(request: Request) {
   let description = 'Imóveis, carros, eletrônicos e mais. Publique anúncios grátis no Dezzapego.';
   let imageUrl = fallbackImage;
 
-  if (adId) {
+  if (adId && UUID_REGEX.test(adId)) {
     const ad = await fetchAd(adId);
     if (ad?.title?.trim()) {
       description = ad.title.trim();
@@ -125,6 +124,7 @@ export async function GET(request: Request) {
     headers: {
       'content-type': 'text/html; charset=utf-8',
       'cache-control': 'public, s-maxage=600, stale-while-revalidate=86400',
+      'x-content-type-options': 'nosniff',
     },
   });
 }

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 import SEO from '../../components/SEO';
 
 export default function ResetPassword() {
-    const navigate = useNavigate();
+    const router = useRouter();
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -45,9 +46,9 @@ export default function ResetPassword() {
 
             toast.success('Senha redefinida com sucesso. Faça login novamente.');
             await supabase.auth.signOut();
-            navigate('/login');
-        } catch (error: any) {
-            toast.error(error.message || 'Erro ao redefinir a senha.');
+            router.push('/login');
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'Erro ao redefinir a senha.');
         } finally {
             setLoading(false);
         }
@@ -71,7 +72,7 @@ export default function ResetPassword() {
                         Solicite um novo e-mail de recuperação na tela de login e abra o link mais recente enviado.
                     </p>
                     <Link
-                        to="/login"
+                        href="/login"
                         className="inline-flex items-center justify-center w-full py-2 px-4 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
                     >
                         Voltar para login

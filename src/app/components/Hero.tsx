@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, Shield, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 
 type Banner = {
   id: string;
@@ -32,7 +32,7 @@ function isVisibleBanner(banner: Banner) {
 export function Hero() {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const navigate = useNavigate();
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchBanners() {
@@ -77,7 +77,7 @@ export function Hero() {
       if (currentBanner.link.startsWith('http')) {
         window.open(currentBanner.link, '_blank');
       } else {
-        navigate(currentBanner.link);
+        router.push(currentBanner.link);
       }
     }
   };

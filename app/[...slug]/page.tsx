@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 import App from '@/app/App';
 import { CATEGORIES } from '@/app/data/categories';
 import { getCategoryPath, resolveCategoryFromSlug, resolveSubcategoryFromSlug, slugifyCategoryPart } from '@/lib/categoryRoutes';
@@ -77,7 +79,7 @@ function baseMetadata(path: string, title: string, description: string, noIndex 
   };
 }
 
-function metadataForPath(path: string): Metadata {
+async function metadataForPath(path: string): Promise<Metadata> {
   const homeSeo = getDefaultHomeSeoConstants();
   if (path === '/') {
     return baseMetadata('/', homeSeo.title, homeSeo.description);
@@ -165,7 +167,124 @@ function metadataForPath(path: string): Metadata {
   if (noIndexMetadata[path]) {
     return baseMetadata(path, noIndexMetadata[path].title, noIndexMetadata[path].description, true);
   }
+
+  // SEO location pages: /{uf}/{city}/{category}/{brand}/{model}
+  const ufLocationMatch = path.match(/^\/([a-z]{2})(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?$/);
+  if (ufLocationMatch) {
+    try {
+      const { fetchSeoLocationPage } = await import('@/lib/seoLocationSeo');
+      const pageData = await fetchSeoLocationPage(path);
+
+      if (!pageData || !pageData.is_active) {
+        return baseMetadata(path, 'Página não encontrada', 'Esta página não existe no Dezzapego.', true);
+      }
+
+      const hasContent = pageData.intro_text || pageData.h1;
+      if (!hasContent) {
+        return baseMetadata(path, pageData.title || 'Página', pageData.description || '', true);
+      }
+
+      return baseMetadata(path, pageData.title, pageData.description);
+    } catch {
+      // If DB query fails, still return valid metadata (don't break the page)
+      return baseMetadata(path, 'Dezzapego', 'Classificados e anúncios no Dezzapego.');
+    }
+  }
+
   return baseMetadata(path, homeSeo.title, homeSeo.description, noIndex);
+}
+
+function isKnownSeoPath(path: string) {
+  if (path === '/') return true;
+
+  if ([
+    '/sobre',
+    '/planos',
+    '/contato',
+    '/termos',
+    '/privacidade',
+    '/dicas-seguranca',
+    '/mapa-do-site',
+    '/login',
+    '/redefinir-senha',
+    '/register',
+    '/anunciar',
+    '/meus-anuncios',
+    '/dashboard',
+    '/favoritos',
+    '/conta-suspensa',
+  ].includes(path)) {
+    return true;
+  }
+
+  if (/^\/admin(?:\/.*)?$/.test(path)) {
+    return true;
+  }
+
+  if (/^\/anunciante\/[^/]+$/.test(path)) {
+    return true;
+  }
+
+  if (/^\/anuncio\/[^/]+$/.test(path)) {
+    return true;
+  }
+
+  if (/^\/checkout\/plano$/.test(path)) {
+    return true;
+  }
+
+  if (/^\/editar(?:-anuncio)?\/[^/]+$/.test(path)) {
+    return true;
+  }
+
+  if (/^\/empresa\/[^/]+$/.test(path)) {
+    return true;
+  }
+
+  if (/^\/business(?:\/.*)?$/.test(path)) {
+    return true;
+  }
+
+  if (/^\/imobiliaria\/[^/]+$/.test(path)) {
+    return true;
+  }
+
+  if (/^\/corretor\/[^/]+$/.test(path)) {
+    return true;
+  }
+
+  if (/^\/loja\/[^/]+$/.test(path)) {
+    return true;
+  }
+
+  if (SEO_GUIDES.some((item) => `/guias/${item.slug}` === path)) {
+    return true;
+  }
+
+  const categoryMatch = path.match(/^\/categoria\/([^/]+)(?:\/([^/]+))?$/);
+  if (categoryMatch) {
+    const category = resolveCategoryFromSlug(categoryMatch[1]);
+    if (!category) return false;
+    if (!categoryMatch[2]) return true;
+    return Boolean(resolveSubcategoryFromSlug(category, categoryMatch[2]));
+  }
+
+  const locationMatch = path.match(/^\/cidade\/([^/]+)\/([^/]+)(?:\/([^/]+))?$/);
+  if (locationMatch) {
+    const location = SEO_LOCATIONS.find(
+      (item) => item.stateSlug === locationMatch[1] && item.citySlug === locationMatch[2],
+    );
+    if (!location) return false;
+    if (!locationMatch[3]) return true;
+    return Boolean(resolveCategoryFromSlug(locationMatch[3]));
+  }
+
+  // SEO location pages: /{uf}/{city}/{category}/{brand}/{model}
+  if (/^\/[a-z]{2}(?:\/[^/]+)*(?:\/[^/]+)*$/.test(path)) {
+    return true;
+  }
+
+  return false;
 }
 
 function JsonLdForPath({ path }: { path: string }) {
@@ -251,7 +370,7 @@ function JsonLdForPath({ path }: { path: string }) {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolvedParams = await params;
-  return metadataForPath(toPath(resolvedParams.slug));
+  return await metadataForPath(toPath(resolvedParams.slug));
 }
 
 export function generateStaticParams() {
@@ -286,11 +405,16 @@ export function generateStaticParams() {
 export default async function Page({ params }: PageProps) {
   const resolvedParams = await params;
   const path = toPath(resolvedParams.slug);
+  if (!isKnownSeoPath(path)) {
+    notFound();
+  }
 
   return (
     <>
       <JsonLdForPath path={path} />
-      <App initialPath={path} enableHelmet={false} />
+      <Suspense>
+        <App initialPath={path} enableHelmet={false} />
+      </Suspense>
     </>
   );
 }

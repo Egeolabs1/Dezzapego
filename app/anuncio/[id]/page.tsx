@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 import App from '@/app/App';
 import { buildAdJsonLd, buildAdMetadata, fetchAdForSeo } from '@/lib/serverAdSeo';
 
@@ -15,17 +17,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function Page({ params }: PageProps) {
   const { id } = await params;
   const ad = await fetchAdForSeo(id);
+  if (!ad) {
+    notFound();
+  }
   const path = `/anuncio/${id}`;
 
   return (
     <>
-      {ad ? (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(buildAdJsonLd(ad, id)) }}
-        />
-      ) : null}
-      <App initialPath={path} enableHelmet={false} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(buildAdJsonLd(ad, id)) }}
+      />
+      <Suspense>
+        <App initialPath={path} enableHelmet={false} />
+      </Suspense>
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { Header } from '../components/Header';
 import SEO from '../../components/SEO';
 import { buildWebPageStructuredData } from '../../lib/categorySeo';
@@ -52,10 +52,10 @@ export default function About() {
                         canais de contato, denúncias e orientações para que cada negociação seja feita com mais informação.
                     </p>
                     <div className="mt-5 flex flex-wrap gap-3">
-                        <Link to="/dicas-seguranca" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                        <Link href="/dicas-seguranca" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
                             Ver dicas de segurança
                         </Link>
-                        <Link to="/contato" className="rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50">
+                        <Link href="/contato" className="rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50">
                             Fale conosco
                         </Link>
                     </div>

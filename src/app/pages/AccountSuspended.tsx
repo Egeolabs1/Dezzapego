@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { Header } from '../components/Header';
 import { AlertTriangle } from 'lucide-react';
 import SEO from '../../components/SEO';
@@ -41,13 +41,13 @@ export default function AccountSuspended() {
                         Se acredita que houve um erro, fale com o suporte pela página de contato.
                     </p>
                     <Link
-                        to="/contato"
+                        href="/contato"
                         className="mt-6 inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
                     >
                         Ir para contato
                     </Link>
                     <p className="mt-8 text-center text-sm text-gray-500">
-                        <Link to="/" className="text-blue-600 hover:underline">
+                        <Link href="/" className="text-blue-600 hover:underline">
                             Voltar à página inicial
                         </Link>
                     </p>

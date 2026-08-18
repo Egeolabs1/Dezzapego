@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { supabase } from './supabase';
 import { fetchClientPublicIp } from './clientIp';
 import type { Profile } from '../types';
@@ -70,11 +70,13 @@ export async function flushProfileAccessOnly(userId: string): Promise<void> {
 
 /** Em mudanças de rota grava último acesso (mesmo throttle que o AuthContext). */
 export function useProfileIpOnNavigation(userId: string | undefined | null, enabled: boolean) {
-    const location = useLocation();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const search = searchParams.toString() ? `?${searchParams.toString()}` : '';
     useEffect(() => {
         if (!userId || !enabled) return;
         void flushProfileAccessOnly(userId);
-    }, [enabled, userId, location.pathname, location.search]);
+    }, [enabled, userId, pathname, search]);
 }
 
 /** Após criar conta com sessão: IP de cadastro + primeiro acesso. */
@@ -91,8 +93,8 @@ export async function recordSignupIpAndFirstAccess(opts: {
         if (ip) {
             await supabase.rpc('record_my_signup_meta', { p_ip: ip });
         }
-    } catch (e) {
-        console.warn('[profileIpLog] record signup post-register', e);
+    } catch {
+        // Non-critical
     }
 
     try {
@@ -100,7 +102,7 @@ export async function recordSignupIpAndFirstAccess(opts: {
         if (opts.userId) {
             markAccessLoggedNow(opts.userId);
         }
-    } catch (e) {
-        console.warn('[profileIpLog] first access post-register', e);
+    } catch {
+        // Non-critical
     }
 }

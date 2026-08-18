@@ -1,4 +1,6 @@
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { useEffect } from 'react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
 import { Header } from '../components/Header';
 import SEO from '../../components/SEO';
 import { categoriesData } from '../data/categories';
@@ -8,12 +10,21 @@ import { getCategoryPath, resolveCategoryFromSlug } from '../../lib/categoryRout
 import { toAbsoluteUrl } from '../../lib/seo';
 
 export default function LocationLanding() {
-    const { stateSlug, citySlug, categorySlug } = useParams();
+    const { stateSlug, citySlug, categorySlug } = useParams() as { stateSlug: string; citySlug: string; categorySlug?: string };
+    const router = useRouter();
     const location = getSeoLocation(stateSlug, citySlug);
     const category = resolveCategoryFromSlug(categorySlug);
 
-    if (!location) return <Navigate to="/" replace />;
-    if (categorySlug && !category) return <Navigate to={`/cidade/${stateSlug}/${citySlug}`} replace />;
+    useEffect(() => {
+        if (!location) {
+            router.replace('/');
+        } else if (categorySlug && !category) {
+            router.replace(`/cidade/${stateSlug}/${citySlug}`);
+        }
+    }, [location, categorySlug, category, stateSlug, citySlug, router]);
+
+    if (!location) return null;
+    if (categorySlug && !category) return null;
 
     const path = category
         ? `/cidade/${location.stateSlug}/${location.citySlug}/${categorySlug}`
@@ -55,7 +66,7 @@ export default function LocationLanding() {
                     <h1 className="mt-2 text-3xl font-bold text-gray-900 md:text-4xl">{title}</h1>
                     <p className="mt-4 max-w-3xl text-lg leading-relaxed text-gray-600">{description}</p>
                     <Link
-                        to={`/${listingSearch ? `?${listingSearch}` : ''}`}
+                        href={`/${listingSearch ? `?${listingSearch}` : ''}`}
                         className="mt-5 inline-flex rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
                     >
                         Ver anúncios filtrados
@@ -70,7 +81,7 @@ export default function LocationLanding() {
                         {categoriesData.map((item) => (
                             <Link
                                 key={item.id}
-                                to={`/cidade/${location.stateSlug}/${location.citySlug}/${getCategoryPath(item.id).replace('/categoria/', '')}`}
+                                href={`/cidade/${location.stateSlug}/${location.citySlug}/${getCategoryPath(item.id).replace('/categoria/', '')}`}
                                 className="rounded-lg border border-gray-100 p-4 text-sm font-semibold text-gray-800 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                             >
                                 {item.name} em {location.city}

@@ -426,7 +426,7 @@ export function buildAdDetailStructuredGraph(
             '@type': 'Offer',
             url: adPageUrl,
             priceCurrency: 'BRL',
-            price: ad.price,
+            price: String(ad.price),
             availability: 'https://schema.org/InStock',
             areaServed: {
                 '@type': 'Place',

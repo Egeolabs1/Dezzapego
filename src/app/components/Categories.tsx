@@ -1,5 +1,5 @@
 import { categoriesData } from '../data/categories';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { getCategoryPath } from '../../lib/categoryRoutes';
 
 type CategoriesProps = {
@@ -23,7 +23,7 @@ export function Categories({
   const isRealEstate = selectedCategory === 'imoveis';
 
   return (
-    <section className="bg-white border-b border-gray-200">
+    <section className="bg-white border-b border-gray-200 overflow-hidden">
       {/* Main Categories */}
       <div className="py-4 md:py-6 border-b border-gray-100">
         <div className="container mx-auto px-4">
@@ -47,7 +47,7 @@ export function Categories({
               return (
                 <Link
                   key={category.id}
-                  to={isSelected ? '/' : getCategoryPath(category.id)}
+                  href={isSelected ? '/' : getCategoryPath(category.id)}
                   onClick={(event) => {
                     event.preventDefault();
                     onCategorySelect(isSelected ? '' : category.id);
@@ -133,7 +133,7 @@ export function Categories({
                 return (
                   <Link
                     key={subcategory.id}
-                    to={getCategoryPath(selectedCategory, isSelected ? undefined : subcategory.id)}
+                    href={getCategoryPath(selectedCategory, isSelected ? undefined : subcategory.id)}
                     onClick={(event) => {
                       event.preventDefault();
                       onSubcategorySelect?.(isSelected ? '' : subcategory.id);

@@ -41,28 +41,30 @@ export function jsonResponse(body: unknown, init?: ResponseInit) {
 export function getSiteUrl() {
   const raw =
     process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.VITE_SITE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://dezzapego.com');
   return raw.replace(/\/+$/, '');
 }
 
+let _supabaseAdmin: SupabaseClient | null = null;
+
 export function getSupabaseAdmin(): SupabaseClient {
+  if (_supabaseAdmin) return _supabaseAdmin;
   const supabaseUrl =
     process.env.SUPABASE_URL ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    process.env.VITE_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('SUPABASE_URL/VITE_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios.');
+    throw new Error('SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios.');
   }
 
-  return createClient(supabaseUrl, serviceRoleKey, {
+  _supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
   });
+  return _supabaseAdmin;
 }
 
 export async function getAuthenticatedUser(req: Request, supabase: SupabaseClient): Promise<User> {
@@ -99,15 +101,32 @@ export async function userOwnsAd(supabase: SupabaseClient, adId: string, userId:
 }
 
 export async function activateFeaturedAd(supabase: SupabaseClient, paymentId: string) {
+  // Atomic: only transition from non-paid to paid
   const { data: payment, error: paymentError } = await supabase
     .from('featured_payments')
-    .select('*, featured_plans(duration_days)')
+    .update({
+      status: 'paid',
+      paid_at: new Date().toISOString(),
+    })
     .eq('id', paymentId)
+    .neq('status', 'paid')
+    .select('*, featured_plans(duration_days)')
     .maybeSingle();
 
   if (paymentError) throw paymentError;
-  if (!payment) throw new Error(`Pagamento não encontrado: ${paymentId}`);
-  const shouldCountCoupon = payment.status !== 'paid' && payment.coupon_id;
+  if (!payment) {
+    // Already paid or doesn't exist - check if it exists at all
+    const { data: existing } = await supabase
+      .from('featured_payments')
+      .select('id, status')
+      .eq('id', paymentId)
+      .maybeSingle();
+    if (!existing) throw new Error(`Pagamento não encontrado: ${paymentId}`);
+    // Already paid - idempotent success
+    return { payment: existing, expiresAt: null };
+  }
+
+  const shouldCountCoupon = payment.coupon_id;
 
   const plan = payment.featured_plans as { duration_days?: number } | null;
   const durationDays = Number(plan?.duration_days || 0);
@@ -128,16 +147,10 @@ export async function activateFeaturedAd(supabase: SupabaseClient, paymentId: st
   const expiresAt = new Date(startsAt);
   expiresAt.setDate(expiresAt.getDate() + durationDays);
 
-  const { error: updatePaymentError } = await supabase
+  await supabase
     .from('featured_payments')
-    .update({
-      status: 'paid',
-      paid_at: now.toISOString(),
-      expires_at: expiresAt.toISOString(),
-    })
+    .update({ expires_at: expiresAt.toISOString() })
     .eq('id', paymentId);
-
-  if (updatePaymentError) throw updatePaymentError;
 
   const { error: updateAdError } = await supabase
     .from('ads')
@@ -154,18 +167,45 @@ export async function activateFeaturedAd(supabase: SupabaseClient, paymentId: st
 }
 
 export async function activateAccountPlan(supabase: SupabaseClient, paymentId: string) {
+  // Atomic: only transition from non-paid to paid
   const { data: payment, error: paymentError } = await supabase
     .from('account_plan_payments')
-    .select('*, account_plans(*)')
+    .update({
+      status: 'paid',
+      paid_at: new Date().toISOString(),
+    })
     .eq('id', paymentId)
+    .neq('status', 'paid')
+    .select('*, account_plans(*)')
     .maybeSingle();
 
   if (paymentError) throw paymentError;
-  if (!payment) throw new Error(`Pagamento de plano não encontrado: ${paymentId}`);
-  const shouldCountCoupon = payment.status !== 'paid' && payment.coupon_id;
+  if (!payment) {
+    const { data: existing } = await supabase
+      .from('account_plan_payments')
+      .select('id, status')
+      .eq('id', paymentId)
+      .maybeSingle();
+    if (!existing) throw new Error(`Pagamento de plano não encontrado: ${paymentId}`);
+    return { payment: existing, expiresAt: null };
+  }
+
+  const shouldCountCoupon = payment.coupon_id;
 
   const now = new Date();
-  const currentExpiration = payment.expires_at ? new Date(payment.expires_at) : null;
+  const { data: currentSubscription, error: subscriptionLookupError } = await supabase
+    .from('user_account_subscriptions')
+    .select('current_period_end')
+    .eq('user_id', payment.user_id)
+    .maybeSingle();
+
+  if (subscriptionLookupError) throw subscriptionLookupError;
+
+  const currentExpiration = currentSubscription?.current_period_end
+    ? new Date(currentSubscription.current_period_end)
+    : payment.expires_at
+      ? new Date(payment.expires_at)
+      : null;
   const startsAt = currentExpiration && currentExpiration > now ? currentExpiration : now;
   const expiresAt = new Date(startsAt);
   expiresAt.setMonth(expiresAt.getMonth() + 1);
@@ -176,16 +216,10 @@ export async function activateAccountPlan(supabase: SupabaseClient, paymentId: s
     monthly_featured_ads?: number | null;
   } | null;
 
-  const { error: updatePaymentError } = await supabase
+  await supabase
     .from('account_plan_payments')
-    .update({
-      status: 'paid',
-      paid_at: now.toISOString(),
-      expires_at: expiresAt.toISOString(),
-    })
+    .update({ expires_at: expiresAt.toISOString() })
     .eq('id', paymentId);
-
-  if (updatePaymentError) throw updatePaymentError;
 
   const { error: subscriptionError } = await supabase
     .from('user_account_subscriptions')
@@ -209,21 +243,42 @@ export async function activateAccountPlan(supabase: SupabaseClient, paymentId: s
 }
 
 async function incrementCouponUsage(supabase: SupabaseClient, couponId: string) {
-  const { data: coupon, error: couponError } = await supabase
-    .from('discount_coupons')
-    .select('used_count')
-    .eq('id', couponId)
-    .maybeSingle();
+  // Atomic increment to prevent race conditions
+  const { error } = await supabase.rpc('increment_coupon_usage', {
+    p_coupon_id: couponId,
+  });
 
-  if (couponError) throw couponError;
-  if (!coupon) return;
+  // Fallback to non-RPC if RPC doesn't exist
+  if (error) {
+    const { data: coupon, error: couponError } = await supabase
+      .from('discount_coupons')
+      .select('used_count')
+      .eq('id', couponId)
+      .maybeSingle();
 
-  const { error } = await supabase
-    .from('discount_coupons')
-    .update({ used_count: Number(coupon.used_count || 0) + 1 })
-    .eq('id', couponId);
+    if (couponError || !coupon) return;
 
-  if (error) throw error;
+    const { error: updateError } = await supabase
+      .from('discount_coupons')
+      .update({ used_count: Number(coupon.used_count || 0) + 1 })
+      .eq('id', couponId)
+      .eq('used_count', coupon.used_count); // optimistic lock
+
+    if (updateError) {
+      // If optimistic lock failed (concurrent update), try once more
+      const { data: reloaded } = await supabase
+        .from('discount_coupons')
+        .select('used_count')
+        .eq('id', couponId)
+        .maybeSingle();
+      if (reloaded) {
+        await supabase
+          .from('discount_coupons')
+          .update({ used_count: Number(reloaded.used_count || 0) + 1 })
+          .eq('id', couponId);
+      }
+    }
+  }
 }
 
 export async function markPaymentStatus(supabase: SupabaseClient, paymentId: string, status: FeaturedPaymentStatus, payload?: unknown) {

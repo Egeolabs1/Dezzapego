@@ -24,18 +24,24 @@ export default function AdminMessages() {
 
     const fetchMessages = async () => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('contacts')
-            .select('*')
-            .order('created_at', { ascending: false });
+        try {
+            const { data, error } = await supabase
+                .from('contacts')
+                .select('*')
+                .order('created_at', { ascending: false });
 
-        if (error) {
+            if (error) {
+                toast.error('Erro ao carregar mensagens.');
+                console.error(error);
+            } else {
+                setMessages(data || []);
+            }
+        } catch (err) {
+            console.error('Error fetching messages:', err);
             toast.error('Erro ao carregar mensagens.');
-            console.error(error);
-        } else {
-            setMessages(data || []);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const handleMarkAsRead = async (id: string, currentStatus: boolean) => {

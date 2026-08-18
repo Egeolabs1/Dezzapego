@@ -1,10 +1,10 @@
 import { ArrowLeft, ShieldCheck, AlertTriangle, Eye, CreditCard, MapPin, MessageCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { Header } from '../components/Header';
 import SEO from '../../components/SEO';
 
 export default function SafetyTips() {
-    const navigate = useNavigate();
+    const router = useRouter();
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -16,7 +16,7 @@ export default function SafetyTips() {
 
             <div className="container mx-auto px-4 py-8 max-w-4xl">
                 <button
-                    onClick={() => navigate('/')}
+                    onClick={() => router.push('/')}
                     className="flex items-center text-gray-600 hover:text-blue-600 mb-6 transition-colors"
                 >
                     <ArrowLeft className="w-5 h-5 mr-2" />
@@ -135,7 +135,7 @@ export default function SafetyTips() {
                                     Se você identificar um anúncio falso ou comportamento suspeito, denuncie imediatamente através do botão "Denunciar" presente em todos os anúncios.
                                 </p>
                                 <button
-                                    onClick={() => navigate('/contato')} // Assuming we might have this or just generic action
+                                    onClick={() => router.push('/contato')}
                                     className="text-blue-600 font-medium hover:underline"
                                 >
                                     Fale com nosso suporte

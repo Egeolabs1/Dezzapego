@@ -1,11 +1,11 @@
 import { ArrowLeft, Lock, Shield, Mail } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { Header } from '../components/Header';
 import SEO from '../../components/SEO';
 import { CONSENT_POLICY_VERSION } from '../../lib/privacyConsent';
 
 export default function PrivacyPolicy() {
-    const navigate = useNavigate();
+    const router = useRouter();
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -14,7 +14,7 @@ export default function PrivacyPolicy() {
 
             <div className="container mx-auto px-4 py-8 max-w-4xl">
                 <button
-                    onClick={() => navigate('/')}
+                    onClick={() => router.push('/')}
                     className="flex items-center text-gray-600 hover:text-blue-600 mb-6 transition-colors"
                 >
                     <ArrowLeft className="w-5 h-5 mr-2" />
