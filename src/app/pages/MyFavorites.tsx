@@ -2,7 +2,7 @@ import { Header } from '../components/Header';
 import { useAds } from '../hooks/useAds';
 import { useFavorites } from '../hooks/useFavorites';
 import Link from 'next/link';
-import { Loader2, Heart, MapPin, Clock } from 'lucide-react';
+import { Loader2, Heart, ImageIcon, MapPin, Clock } from 'lucide-react';
 import { formatPrice, formatDate } from '../../lib/formatters';
 import SEO from '../../components/SEO';
 
@@ -48,11 +48,17 @@ export default function MyFavorites() {
                         {favoriteAds.map(ad => (
                             <Link href={`/anuncio/${ad.id}`} key={ad.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 overflow-hidden group flex flex-col">
                                 <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
-                                    <img
-                                        src={ad.images[0]}
-                                        alt={ad.title}
-                                        className="w-full h-full object-contain bg-white p-1"
-                                    />
+                                    {ad.images[0] ? (
+                                        <img
+                                            src={ad.images[0]}
+                                            alt={ad.title}
+                                            className="w-full h-full object-contain bg-white p-1"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                                            <ImageIcon className="w-10 h-10 text-gray-300" />
+                                        </div>
+                                    )}
                                     <button
                                         className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-lg hover:bg-red-50 text-red-500 transition-colors z-10"
                                         onClick={(e) => {

@@ -1,4 +1,4 @@
-import { BookmarkPlus, Heart, LayoutGrid, List as ListIcon, Trash2 } from 'lucide-react';
+import { BookmarkPlus, Heart, ImageIcon, LayoutGrid, List as ListIcon, Trash2 } from 'lucide-react';
 import { AdCardSkeleton } from './ui/skeleton';
 
 import type { Ad } from '../../types';
@@ -352,12 +352,18 @@ export function AdsList({
             >
               {/* Image Container */}
               <div className={`relative bg-gray-100 overflow-hidden ${viewMode === 'grid' ? 'aspect-[4/3] w-full' : 'w-32 sm:w-48 md:w-64 shrink-0'}`}>
-                <img
-                  src={ad.images[0]}
-                  alt={ad.title}
-                  className="w-full h-full object-contain bg-white p-1"
-                  loading="lazy"
-                />
+                {ad.images[0] ? (
+                  <img
+                    src={ad.images[0]}
+                    alt={ad.title}
+                    className="w-full h-full object-contain bg-white p-1"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                    <ImageIcon className="w-10 h-10 text-gray-300" />
+                  </div>
+                )}
                 <div className={`absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${viewMode === 'grid' ? 'translate-x-4 group-hover:translate-x-0' : ''}`}>
                   <button
                     className="p-1.5 md:p-2 bg-white rounded-full shadow-lg hover:bg-blue-50 text-gray-600 hover:text-blue-600 transition-colors"

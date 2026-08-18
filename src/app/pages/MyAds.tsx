@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Header } from '../components/Header';
-import { Loader2, Plus, Trash2, Edit, Star, CreditCard, QrCode, X, LayoutGrid, Clock, XCircle, CheckCircle } from 'lucide-react';
+import { Loader2, Plus, Trash2, Edit, Star, CreditCard, QrCode, X, LayoutGrid, Clock, XCircle, CheckCircle, ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Ad } from '../../types';
@@ -346,11 +346,17 @@ export default function MyAds() {
                                 >
                                     {/* Image */}
                                     <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
-                                        <img
-                                            src={ad.images[0]}
-                                            alt={ad.title}
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                        />
+                                        {ad.images[0] ? (
+                                            <img
+                                                src={ad.images[0]}
+                                                alt={ad.title}
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                                                <ImageIcon className="w-10 h-10 text-gray-300" />
+                                            </div>
+                                        )}
                                         <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-medium text-gray-700 shadow-sm">
                                             {ad.category}
                                         </div>
