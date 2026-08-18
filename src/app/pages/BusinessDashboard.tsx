@@ -43,6 +43,16 @@ export default function BusinessDashboard() {
 
       setBusiness(biz as Business);
 
+      // Redirect to specialized dashboard based on business type
+      if (biz.type === 'real_estate') {
+        router.push('/business/imobiliaria');
+        return;
+      }
+      if (biz.type === 'vehicle_dealer') {
+        router.push('/business/veiculos');
+        return;
+      }
+
       // Load plan features
       try {
         const features = await getPlanFeatures(biz.id);

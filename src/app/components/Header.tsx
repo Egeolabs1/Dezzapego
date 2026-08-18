@@ -1,4 +1,4 @@
-import { Search, Heart, User, CirclePlus, Menu, LogOut, ChevronDown, ShieldCheck } from 'lucide-react';
+import { Search, Heart, User, CirclePlus, Menu, LogOut, ChevronDown, ShieldCheck, Building2 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { LocationSelector } from './LocationSelector';
 import { Logo, LogoIcon } from './Logo';
@@ -221,8 +221,16 @@ export function Header({
                       onClick={() => setUserMenuOpen(false)}
                       className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                     >
-                      <Heart className="w-4 h-4" /> {/* Reusing Heart icon for now, or use List/Grid */}
+                      <Heart className="w-4 h-4" />
                       <span>Meus Anúncios</span>
+                    </Link>
+                    <Link
+                      href="/business"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <Building2 className="w-4 h-4" />
+                      <span>Minha Empresa</span>
                     </Link>
                     <button
                       onClick={handleSignOut}
@@ -289,6 +297,14 @@ export function Header({
                 >
                   <Heart className="w-5 h-5" />
                   <span>Meus Anúncios</span>
+                </Link>
+                <Link
+                  href="/business"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2 w-full text-left text-gray-700 hover:bg-gray-50 rounded-lg"
+                >
+                  <Building2 className="w-5 h-5" />
+                  <span>Minha Empresa</span>
                 </Link>
                 {isAdmin && (
                   <Link
