@@ -5,13 +5,36 @@ export const MIN_DESCRIPTION_LENGTH = 80;
 export const MAX_TITLE_LENGTH = 100;
 
 export function formatCurrencyInput(raw: string): string {
-    const digits = raw.replace(/\D/g, '');
-    if (!digits) return '';
-    const value = Number(digits);
-    return value.toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
+    if (!raw) return '';
+
+    // Separar parte inteira e decimal usando o separador pt-BR
+    const commaIdx = raw.lastIndexOf(',');
+    let intPart: string;
+    let decPart: string;
+
+    if (commaIdx !== -1) {
+        intPart = raw.substring(0, commaIdx).replace(/\D/g, '');
+        decPart = raw.substring(commaIdx + 1).replace(/\D/g, '').slice(0, 2);
+    } else {
+        intPart = raw.replace(/\D/g, '');
+        decPart = '';
+    }
+
+    if (!intPart && !decPart) return '';
+
+    // Formatar parte inteira com separador de milhar (.)
+    const reversed = intPart.split('').reverse().join('');
+    const grouped = reversed.replace(/(.{3})/g, '$1.').split('.').filter(Boolean).reverse().join('.');
+    const formattedInt = grouped || '0';
+
+    // Se o usuário digitou a vírgula, preservar o estado incompleto
+    if (commaIdx !== -1 || raw.endsWith(',')) {
+        const paddedDec = decPart.padEnd(2, '0');
+        return `${formattedInt},${paddedDec}`;
+    }
+
+    // Caso contrário, sempre mostrar ,00
+    return `${formattedInt},00`;
 }
 
 export function formatCurrencyFromNumber(value: number): string {
