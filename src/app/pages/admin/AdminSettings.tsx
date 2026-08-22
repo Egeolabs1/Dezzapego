@@ -24,10 +24,13 @@ export default function AdminSettings() {
     const [localMaintenance, setLocalMaintenance] = useState(isMaintenanceMode);
     const [requireAdApproval, setRequireAdApproval] = useState(true);
     const [globalAnnouncement, setGlobalAnnouncement] = useState<GlobalAnnouncementSettings>(DEFAULT_GLOBAL_ANNOUNCEMENT);
+    const [announcementDirty, setAnnouncementDirty] = useState(false);
     const [saving, setSaving] = useState(false);
 
     useEffect(() => setLocalMaintenance(isMaintenanceMode), [isMaintenanceMode]);
-    useEffect(() => setGlobalAnnouncement(announcement), [announcement]);
+    useEffect(() => {
+        if (!announcementDirty) setGlobalAnnouncement(announcement);
+    }, [announcement, announcementDirty]);
 
     useEffect(() => {
         let cancelled = false;
@@ -40,6 +43,7 @@ export default function AdminSettings() {
     }, []);
 
     const updateAnnouncement = (updates: Partial<GlobalAnnouncementSettings>) => {
+        setAnnouncementDirty(true);
         setGlobalAnnouncement((current) => ({ ...current, ...updates }));
     };
 
@@ -58,6 +62,7 @@ export default function AdminSettings() {
                 setMaintenanceMode(localMaintenance),
                 saveAnnouncement({ ...globalAnnouncement, message: globalAnnouncement.message.trim() }),
             ]);
+            setAnnouncementDirty(false);
             toast.success('Configurações salvas com sucesso.');
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Erro ao salvar as configurações.');
