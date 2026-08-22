@@ -2,6 +2,7 @@
 export const CONSENT_POLICY_VERSION = '3';
 
 export const CONSENT_STORAGE_KEY = 'dezzapego_privacy_consent_v1';
+export const CONSENT_CHANGED_EVENT = 'dezzapego-consent-changed';
 
 export type ConsentState = {
     necessary: true;
@@ -50,7 +51,7 @@ export function setConsent(consent: boolean | { analytics: boolean; adsPersonali
         policyVersion: CONSENT_POLICY_VERSION,
     };
     window.localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify(state));
-    window.dispatchEvent(new CustomEvent('dezzapego-consent-changed'));
+    window.dispatchEvent(new CustomEvent(CONSENT_CHANGED_EVENT));
 }
 
 export function hasConsentRecorded(): boolean {

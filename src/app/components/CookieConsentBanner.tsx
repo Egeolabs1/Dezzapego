@@ -60,7 +60,7 @@ export function CookieConsentBanner() {
 
     return (
         <div
-            className="fixed inset-x-0 bottom-0 z-[100] border-t border-gray-200 bg-white/95 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm md:bottom-0 md:pb-[env(safe-area-inset-bottom)]"
+            className="fixed inset-x-0 bottom-[64px] z-[100] border-t border-gray-200 bg-white/95 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm md:bottom-0 md:pb-[env(safe-area-inset-bottom)]"
             role="dialog"
             aria-label="Preferências de privacidade e cookies"
         >

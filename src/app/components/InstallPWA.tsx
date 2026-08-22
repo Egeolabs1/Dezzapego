@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Download, Share, X } from 'lucide-react';
+import { CONSENT_CHANGED_EVENT, hasConsentRecorded } from '../../lib/privacyConsent';
 
 interface BeforeInstallPromptEvent extends Event {
     prompt: () => Promise<void>;
@@ -11,6 +12,7 @@ export function InstallPWA() {
     const [showInstallBanner, setShowInstallBanner] = useState(false);
     const [isIOS, setIsIOS] = useState(false);
     const [isStandalone, setIsStandalone] = useState(false);
+    const [consentVersion, setConsentVersion] = useState(0);
 
     useEffect(() => {
         // Check if already installed (standalone mode)
@@ -26,30 +28,33 @@ export function InstallPWA() {
         const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
         setIsIOS(isIosDevice);
 
-        // Check if user previously dismissed the banner (any platform)
-        const dismissed = localStorage.getItem('pwa_install_dismissed');
-        if (dismissed) return;
-
         // Capture install prompt event (Android/Desktop)
         const handleBeforeInstallPrompt = (e: Event) => {
             e.preventDefault();
             setDeferredPrompt(e as BeforeInstallPromptEvent);
-            if (!isStandaloneMode && !localStorage.getItem('pwa_install_dismissed')) {
-                setShowInstallBanner(true);
-            }
         };
+        const handleConsentChanged = () => setConsentVersion((value) => value + 1);
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-        // Show banner for iOS if not installed and not dismissed
-        if (isIosDevice && !isStandaloneMode) {
-            setShowInstallBanner(true);
-        }
+        window.addEventListener(CONSENT_CHANGED_EVENT, handleConsentChanged);
 
         return () => {
             window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+            window.removeEventListener(CONSENT_CHANGED_EVENT, handleConsentChanged);
         };
     }, []);
+
+    useEffect(() => {
+        const dismissed = localStorage.getItem('pwa_install_dismissed');
+        const canPrompt = !isStandalone && !dismissed && hasConsentRecorded() && (isIOS || deferredPrompt);
+        if (!canPrompt) {
+            setShowInstallBanner(false);
+            return;
+        }
+
+        const timer = window.setTimeout(() => setShowInstallBanner(true), 12_000);
+        return () => window.clearTimeout(timer);
+    }, [consentVersion, deferredPrompt, isIOS, isStandalone]);
 
     const handleInstallClick = async () => {
         if (deferredPrompt) {
@@ -70,8 +75,8 @@ export function InstallPWA() {
     if (isStandalone || !showInstallBanner) return null;
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-50 p-4 animate-in slide-in-from-bottom duration-500">
-            <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 p-4 flex flex-col gap-4">
+        <div className="fixed bottom-[64px] left-0 right-0 z-[70] p-4 animate-in slide-in-from-bottom duration-500 md:bottom-0">
+            <div className="max-w-md mx-auto bg-white rounded-lg shadow-xl border border-gray-100 p-4 flex flex-col gap-4">
 
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">

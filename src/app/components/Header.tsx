@@ -34,7 +34,19 @@ export function Header({
   const { user, profile, signOut } = useAuth();
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const isAdmin = profile?.role === 'admin';
+  const mobileSearchRef = useRef<HTMLInputElement>(null);
+  const isAdmin = profile?.is_admin === true || profile?.role === 'admin';
+
+  useEffect(() => {
+    const focusSearch = () => window.requestAnimationFrame(() => mobileSearchRef.current?.focus());
+    const shouldFocus = sessionStorage.getItem('dezzapego_focus_search') === 'true';
+    if (shouldFocus) {
+      sessionStorage.removeItem('dezzapego_focus_search');
+      focusSearch();
+    }
+    window.addEventListener('dezzapego-focus-search', focusSearch);
+    return () => window.removeEventListener('dezzapego-focus-search', focusSearch);
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -99,6 +111,7 @@ export function Header({
             <form onSubmit={handleSearchSubmit} className="relative w-full">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
+                ref={mobileSearchRef}
                 type="text"
                 enterKeyHint="search"
                 value={searchQuery}

@@ -827,7 +827,7 @@ export default function AdDetails() {
                 </div>
             )}
             {/* Mobile Sticky Contact Button */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-200 z-40">
+            <div className="md:hidden fixed bottom-[64px] left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-200 z-40">
                 <button
                     onClick={handleContact}
                     className="w-full flex items-center justify-center gap-3 bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg active:scale-95 transition-all"

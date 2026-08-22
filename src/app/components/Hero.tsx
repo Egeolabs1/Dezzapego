@@ -19,8 +19,8 @@ type Banner = {
   end_at?: string | null;
 };
 
-const DEFAULT_TITLE = 'Desapegue e Ganhe Dinheiro';
-const DEFAULT_SUBTITLE = 'O maior site de desapego do Brasil. Venda o que nao usa mais e encontre produtos incriveis com precos especiais.';
+const DEFAULT_TITLE = 'Desapegue e encontre boas ofertas';
+const DEFAULT_SUBTITLE = 'Compre e venda imóveis, veículos, eletrônicos, móveis e muito mais perto de você.';
 
 function isVisibleBanner(banner: Banner) {
   const now = Date.now();
@@ -130,20 +130,16 @@ export function Hero() {
               <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <TrendingUp className="w-6 h-6" />
               </div>
-              <h3 className="mb-2 font-semibold">Milhões de Usuários</h3>
-              <p className="text-sm text-blue-50">
-                Alcance em todo o Brasil
-              </p>
+              <h3 className="mb-2 font-semibold">Alcance nacional</h3>
+              <p className="text-sm text-blue-50">Anuncie para pessoas em todo o Brasil</p>
             </div>
 
             <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 border border-white/20 shadow-lg transition-transform hover:-translate-y-1">
               <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <Shield className="w-6 h-6" />
               </div>
-              <h3 className="mb-2 font-semibold">Compra Segura</h3>
-              <p className="text-sm text-blue-50">
-                Proteção e verificação de vendedores
-              </p>
+              <h3 className="mb-2 font-semibold">Negocie com cuidado</h3>
+              <p className="text-sm text-blue-50">Confira perfis e siga as dicas de segurança</p>
             </div>
 
             <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 border border-white/20 shadow-lg transition-transform hover:-translate-y-1">

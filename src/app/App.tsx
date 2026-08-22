@@ -177,7 +177,7 @@ export function AppContent({ initialPath }: { initialPath?: string }) {
 
   const isAdmin = profile?.is_admin === true || profile?.role === 'admin';
 
-  if (!maintenanceLoading && !authLoading && isMaintenanceMode && !isAdmin) {
+  if (!maintenanceLoading && !authLoading && isMaintenanceMode && !isAdmin && pathname !== '/login') {
     return <Maintenance />;
   }
 
