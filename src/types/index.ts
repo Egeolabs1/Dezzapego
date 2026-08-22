@@ -77,6 +77,7 @@ export type Profile = {
     verification_rejection_reason?: string | null;
     created_at: string;
     role?: 'user' | 'admin'; // NEW
+    is_admin?: boolean | null;
     /** Conta suspensa: bloqueia novas ações em anúncios (RLS) e força logout no app */
     is_suspended?: boolean | null;
     /** Motivo exibido ao usuário após suspensão (opcional) */

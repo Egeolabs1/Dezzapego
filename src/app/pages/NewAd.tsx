@@ -240,7 +240,7 @@ export default function NewAd() {
                 details: buildNormalizedDetails(formData.category, formData.subcategory, formData.details),
             };
 
-            const { data, error } = await supabase.from('ads').insert(payload).select();
+            const { data, error } = await supabase.from('ads').insert(payload).select('id, status');
 
             if (error) throw error;
 
@@ -249,7 +249,11 @@ export default function NewAd() {
             }
 
             localStorage.removeItem(`${DRAFT_STORAGE_KEY}:${user.id}`);
-            toast.success('Anúncio enviado! Ele ficará visível após a aprovação da moderação.');
+            toast.success(
+                data[0].status === 'active'
+                    ? 'Anúncio publicado e já está visível.'
+                    : 'Anúncio enviado! Ele ficará visível após a aprovação da moderação.',
+            );
             router.push('/meus-anuncios');
         } catch (error: unknown) {
             const msg = error instanceof Error ? error.message : 'Erro ao criar anúncio. Tente novamente.';

@@ -874,7 +874,7 @@ do $ads_status_check$
 begin
   alter table public.ads drop constraint if exists ads_status_check;
   alter table public.ads add constraint ads_status_check
-    check (status in ('active', 'paused', 'sold', 'expired', 'deleted'));
+    check (status in ('pending', 'active', 'paused', 'sold', 'expired', 'deleted', 'rejected'));
 end $ads_status_check$;
 
 alter table public.ads
@@ -1121,6 +1121,40 @@ drop policy if exists "Enable insert/update for authenticated users only" on pub
 insert into public.system_settings (key, value)
 values ('maintenance_mode', 'false'::jsonb)
 on conflict (key) do nothing;
+
+insert into public.system_settings (key, value)
+values ('require_ad_approval', 'true'::jsonb)
+on conflict (key) do nothing;
+
+insert into public.system_settings (key, value)
+values ('global_announcement', '{"enabled": false, "message": "", "scroll": false, "speed": 24, "backgroundColor": "#1d4ed8", "textColor": "#ffffff"}'::jsonb)
+on conflict (key) do nothing;
+
+create or replace function public.apply_ad_moderation_status()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_require_approval boolean := true;
+begin
+  select coalesce((value #>> '{}')::boolean, true)
+    into v_require_approval
+  from public.system_settings
+  where key = 'require_ad_approval';
+
+  new.status := case when v_require_approval then 'pending' else 'active' end;
+  return new;
+end;
+$$;
+
+select public.create_trigger_if_missing(
+  'public', 'ads', 'trg_ads_apply_moderation_status',
+  $trg$create trigger trg_ads_apply_moderation_status
+    before insert on public.ads
+    for each row execute function public.apply_ad_moderation_status()$trg$
+);
 
 
 -- ---------------------------------------------------------------------------

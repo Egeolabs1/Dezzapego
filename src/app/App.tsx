@@ -59,6 +59,8 @@ import { Footer } from './components/Footer';
 import { CookieConsentBanner } from './components/CookieConsentBanner';
 import { AdSenseLoader } from './components/AdSenseLoader';
 import { useMaintenance, MaintenanceProvider } from './contexts/MaintenanceContext';
+import { GlobalAnnouncementProvider } from './contexts/GlobalAnnouncementContext';
+import { GlobalAnnouncementBanner } from './components/GlobalAnnouncementBanner';
 import { useAuth } from './contexts/AuthContext';
 import { useSiteVisitTracking } from './hooks/useSiteVisitTracking';
 import { useProfileIpOnNavigation } from '../lib/profileIpLog';
@@ -173,13 +175,10 @@ export function AppContent({ initialPath }: { initialPath?: string }) {
     Boolean(user?.id && profile && profile.is_suspended !== true),
   );
 
-  if (!maintenanceLoading && !authLoading && isMaintenanceMode && !user) {
-    const publicRoutes = ['/login', '/admin', '/contato', '/termos', '/privacidade', '/dicas-seguranca', '/conta-suspensa', '/empresa/'];
-    const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+  const isAdmin = profile?.is_admin === true || profile?.role === 'admin';
 
-    if (!isPublicRoute) {
-      return <Maintenance />;
-    }
+  if (!maintenanceLoading && !authLoading && isMaintenanceMode && !isAdmin) {
+    return <Maintenance />;
   }
 
   const matchedContent = useMemo(
@@ -189,6 +188,7 @@ export function AppContent({ initialPath }: { initialPath?: string }) {
 
   return (
     <div className={`${isAdminRoute ? '' : 'pb-16 md:pb-0'} overflow-x-hidden`}>
+      <GlobalAnnouncementBanner />
       {matchedContent}
       {!isAdminRoute && <Footer />}
       {!isAdminRoute && !isMaintenanceMode && <MobileNav />}
@@ -212,9 +212,11 @@ export function AppProviders({ children, helmetContext, enableHelmet = true }: A
         <SEOProvider enabled={enableHelmet}>
           <AuthProvider>
             <FilterProvider>
-              <MaintenanceProvider>
+            <MaintenanceProvider>
+              <GlobalAnnouncementProvider>
                 {children}
-              </MaintenanceProvider>
+              </GlobalAnnouncementProvider>
+            </MaintenanceProvider>
             </FilterProvider>
           </AuthProvider>
         </SEOProvider>

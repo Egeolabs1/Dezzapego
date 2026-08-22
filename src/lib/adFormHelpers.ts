@@ -22,19 +22,17 @@ export function formatCurrencyInput(raw: string): string {
 
     if (!intPart && !decPart) return '';
 
-    // Formatar parte inteira com separador de milhar (.)
-    const reversed = intPart.split('').reverse().join('');
-    const grouped = reversed.replace(/(.{3})/g, '$1.').split('.').filter(Boolean).reverse().join('.');
-    const formattedInt = grouped || '0';
+    // Formatar parte inteira com separador de milhar (.) sem inverter os dígitos.
+    const formattedInt = (intPart || '0').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
-    // Se o usuário digitou a vírgula, preservar o estado incompleto
-    if (commaIdx !== -1 || raw.endsWith(',')) {
-        const paddedDec = decPart.padEnd(2, '0');
-        return `${formattedInt},${paddedDec}`;
+    // Só mostra a parte decimal quando o usuário a informou. Inserir ",00" a
+    // cada tecla faz o cursor ficar preso depois da vírgula e transforma 2500
+    // em 2,00 durante a digitação.
+    if (commaIdx !== -1) {
+        return `${formattedInt},${decPart}`;
     }
 
-    // Caso contrário, sempre mostrar ,00
-    return `${formattedInt},00`;
+    return formattedInt;
 }
 
 export function formatCurrencyFromNumber(value: number): string {

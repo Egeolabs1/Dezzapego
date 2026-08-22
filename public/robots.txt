@@ -10,6 +10,9 @@ Disallow: /meus-anuncios/
 Disallow: /favoritos
 Disallow: /favoritos/
 Disallow: /checkout/
+Disallow: /business/
+Disallow: /editar/
+Disallow: /editar-anuncio/
 Disallow: /redefinir-senha
 Disallow: /conta-suspensa
 Disallow: /api/

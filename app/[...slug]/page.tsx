@@ -242,7 +242,12 @@ async function metadataForPath(path: string): Promise<Metadata> {
     '/favoritos',
     '/conta-suspensa',
   ];
-  const noIndex = noIndexPaths.some((item) => path === item || path.startsWith('/admin') || path.startsWith('/checkout'));
+  const isPrivateRoute =
+    path.startsWith('/admin') ||
+    path.startsWith('/checkout') ||
+    path.startsWith('/business') ||
+    /^\/editar(?:-anuncio)?\/[^/]+$/.test(path);
+  const noIndex = noIndexPaths.includes(path) || isPrivateRoute;
   const noIndexMetadata: Record<string, { title: string; description: string }> = {
     '/login': {
       title: 'Entrar na Conta',
@@ -281,6 +286,10 @@ async function metadataForPath(path: string): Promise<Metadata> {
     return baseMetadata(path, noIndexMetadata[path].title, noIndexMetadata[path].description, true);
   }
 
+  if (isPrivateRoute) {
+    return baseMetadata(path, 'Área restrita', 'Esta página é destinada a usuários autenticados.', true);
+  }
+
   // SEO location pages: /{uf}/{city}/{category}/{brand}/{model}
   const ufLocationMatch = path.match(/^\/([a-z]{2})(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?$/);
   if (ufLocationMatch) {
@@ -299,7 +308,8 @@ async function metadataForPath(path: string): Promise<Metadata> {
 
       return baseMetadata(path, pageData.title, pageData.description);
     } catch {
-      return baseMetadata(path, 'Dezzapego', 'Classificados e anúncios no Dezzapego.');
+      // A indisponibilidade do conteúdo local não pode transformar uma URL vazia em página indexável.
+      return baseMetadata(path, 'Página indisponível', 'Esta página não está disponível no momento.', true);
     }
   }
 

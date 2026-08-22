@@ -71,6 +71,18 @@ test.describe('SEO Metadata and Structured Data', () => {
     expect(text).toContain('Disallow: /dashboard');
     expect(text).toContain('Disallow: /meus-anuncios');
     expect(text).toContain('Disallow: /favoritos');
+    expect(text).toContain('Disallow: /business/');
+    expect(text).toContain('Disallow: /editar/');
+    expect(text).toContain('Disallow: /editar-anuncio/');
     expect(text).toContain('Sitemap: https://dezzapego.com/sitemap.xml');
+  });
+
+  test('Rotas autenticadas dinâmicas não são indexáveis', async ({ request }) => {
+    for (const path of ['/business', '/business/nova', '/editar/anuncio-exemplo', '/editar-anuncio/anuncio-exemplo']) {
+      const response = await request.get(path);
+      expect(response.status()).toBe(200);
+      const html = await response.text();
+      expect(html).toMatch(/<meta[^>]*name="robots"[^>]*content="noindex, nofollow"/i);
+    }
   });
 });

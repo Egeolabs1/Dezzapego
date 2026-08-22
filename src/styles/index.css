@@ -5,6 +5,24 @@ html, body {
   overflow-x: hidden;
 }
 
+@keyframes global-announcement-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+
+.global-announcement__ticker {
+    display: flex;
+    width: max-content;
+    animation: global-announcement-scroll linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .global-announcement__ticker {
+        animation: none;
+        width: 100%;
+    }
+}
+
 @layer utilities {
     .scrollbar-hide {
         -ms-overflow-style: none;
