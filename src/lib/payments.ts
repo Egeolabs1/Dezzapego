@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { enqueuePaymentStatusEmail } from './emailReminders';
 
 export type FeaturedProvider = 'stripe' | 'pixgo';
 export type FeaturedPaymentStatus = 'pending' | 'paid' | 'expired' | 'refunded' | 'failed';
@@ -162,6 +163,7 @@ export async function activateFeaturedAd(supabase: SupabaseClient, paymentId: st
 
   if (updateAdError) throw updateAdError;
   if (shouldCountCoupon) await incrementCouponUsage(supabase, payment.coupon_id);
+  await enqueuePaymentStatusEmail(supabase, { userId: payment.user_id, paymentId, status: 'paid', description: 'o destaque do anúncio' });
 
   return { payment, expiresAt: expiresAt.toISOString() };
 }
@@ -238,6 +240,7 @@ export async function activateAccountPlan(supabase: SupabaseClient, paymentId: s
 
   if (subscriptionError) throw subscriptionError;
   if (shouldCountCoupon) await incrementCouponUsage(supabase, payment.coupon_id);
+  await enqueuePaymentStatusEmail(supabase, { userId: payment.user_id, paymentId, status: 'paid', description: 'a assinatura do plano' });
 
   return { payment, expiresAt: expiresAt.toISOString() };
 }
@@ -293,6 +296,10 @@ export async function markPaymentStatus(supabase: SupabaseClient, paymentId: str
     .eq('id', paymentId);
 
   if (error) throw error;
+  if (status === 'expired' || status === 'refunded') {
+    const { data: payment } = await supabase.from('featured_payments').select('user_id').eq('id', paymentId).maybeSingle();
+    if (payment?.user_id) await enqueuePaymentStatusEmail(supabase, { userId: payment.user_id, paymentId, status, description: 'o destaque do anúncio' });
+  }
 }
 
 export async function markAccountPlanPaymentStatus(
@@ -310,6 +317,10 @@ export async function markAccountPlanPaymentStatus(
     .eq('id', paymentId);
 
   if (error) throw error;
+  if (status === 'expired' || status === 'refunded') {
+    const { data: payment } = await supabase.from('account_plan_payments').select('user_id').eq('id', paymentId).maybeSingle();
+    if (payment?.user_id) await enqueuePaymentStatusEmail(supabase, { userId: payment.user_id, paymentId, status, description: 'a assinatura do plano' });
+  }
 }
 
 export function verifyHmacSha256Signature(rawBody: string, timestamp: string | null, signature: string | null, secret: string) {

@@ -44,6 +44,8 @@ import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminAds from './pages/admin/AdminAds';
 import AdminPayments from './pages/admin/AdminPayments';
+import Messages from './pages/Messages';
+import Payments from './pages/Payments';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminVerification from './pages/admin/AdminVerification';
 import AdminMessages from './pages/admin/AdminMessages';
@@ -81,6 +83,8 @@ function MatchRoute({ pathname, initialPath }: { pathname: string; initialPath?:
   if (path === '/meus-anuncios') return <MyAds />;
   if (path === '/dashboard') return <UserDashboard />;
   if (path === '/favoritos') return <MyFavorites />;
+  if (path === '/mensagens') return <Messages />;
+  if (path === '/pagamentos') return <Payments />;
   if (path === '/termos') return <TermsOfUse />;
   if (path === '/privacidade') return <PrivacyPolicy />;
   if (path === '/dicas-seguranca') return <SafetyTips />;

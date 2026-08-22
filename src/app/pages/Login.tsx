@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import SEO from '../../components/SEO';
+import { consumeAuthNext, getSafeNextPath, rememberAuthNext } from '../../lib/authIntent';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -15,6 +16,8 @@ export default function Login() {
     const [resetLoading, setResetLoading] = useState(false);
     const [resetSent, setResetSent] = useState(false);
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const nextPath = getSafeNextPath(searchParams.get('next'), '/');
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -29,7 +32,8 @@ export default function Login() {
             if (error) throw error;
 
             toast.success('Login realizado com sucesso!');
-            router.push('/');
+            const destination = consumeAuthNext(nextPath);
+            router.push(destination);
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'Erro ao realizar login.');
         } finally {
@@ -65,7 +69,7 @@ export default function Login() {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: `${window.location.origin}/`,
+                    redirectTo: `${window.location.origin}/login?next=${encodeURIComponent(nextPath)}`,
                     queryParams: {
                         prompt: 'select_account',
                     },
@@ -78,6 +82,10 @@ export default function Login() {
         }
     };
 
+    useEffect(() => {
+        if (nextPath !== '/') rememberAuthNext(nextPath);
+    }, [nextPath]);
+
     return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] bg-gray-50 px-4">
             <SEO title="Entrar" description="Acesse sua conta no Dezzapego" noIndex />
@@ -85,7 +93,7 @@ export default function Login() {
                 <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">Entrar no Dezzapego</h1>
 
                 <Link
-                    href="/register"
+                    href={nextPath === '/' ? '/register' : `/register?next=${encodeURIComponent(nextPath)}`}
                     className="flex items-center justify-center gap-2 w-full mb-6 py-3 rounded-lg border-2 border-dashed border-blue-300 text-blue-600 font-semibold hover:bg-blue-50 hover:border-blue-400 transition-all text-sm"
                 >
                     Novo por aqui? Crie sua conta

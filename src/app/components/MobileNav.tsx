@@ -1,4 +1,4 @@
-import { Home, Search, PlusCircle, User, Heart } from 'lucide-react';
+import { Home, Search, PlusCircle, User, Heart, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,6 +30,9 @@ export function MobileNav() {
                     <Heart className="w-6 h-6" />
                     <span className="text-[10px] font-medium">Favoritos</span>
                 </Link>
+                <Link href="/mensagens" className={`flex flex-col items-center gap-1 ${isActive('/mensagens') ? 'text-blue-600' : 'text-gray-500'}`}>
+                    <MessageCircle className="h-5 w-5" /><span className="text-[10px]">Mensagens</span>
+                </Link>
 
                 <Link href="/anunciar">
                     <div className="flex flex-col items-center -mt-6">
@@ -49,7 +52,7 @@ export function MobileNav() {
                     <Link href="/dashboard" className={`flex flex-col items-center gap-1 ${isActive('/dashboard') ? 'text-blue-600' : 'text-gray-500'}`}>
                         <div className="w-6 h-6 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
                             {user.user_metadata.avatar_url ? (
-                                <img src={user.user_metadata.avatar_url} alt="User" className="w-full h-full object-cover" />
+                                <img src={user.user_metadata.avatar_url} alt="Foto de perfil" className="w-full h-full object-cover" />
                             ) : (
                                 <span className="text-xs font-bold text-gray-600">{user.email?.charAt(0).toUpperCase()}</span>
                             )}

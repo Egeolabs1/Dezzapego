@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -9,6 +9,8 @@ import SEO from '../../components/SEO';
 import { FieldError } from '../components/FieldError';
 import { recordSignupIpAndFirstAccess } from '../../lib/profileIpLog';
 import { digitsOnly, formatCpfCnpj, formatPhone, isValidCpfOrCnpj } from '../../lib/marketplaceQuality';
+import { buildAuthPath, getSafeNextPath, rememberAuthNext } from '../../lib/authIntent';
+import { trackFunnelEvent } from '../../lib/siteVisits';
 
 type AccountType = 'personal' | 'professional';
 
@@ -49,6 +51,12 @@ export default function Register() {
     const [docTouched, setDocTouched] = useState(false);
 
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const nextPath = getSafeNextPath(searchParams.get('next'), searchParams.get('plan') ? `/checkout/plano?plan=${encodeURIComponent(searchParams.get('plan') || '')}` : '/anunciar');
+
+    useEffect(() => {
+        if (nextPath) rememberAuthNext(nextPath);
+    }, [nextPath]);
 
     const errors = useMemo(() => {
         const e: Record<string, string> = {};
@@ -61,7 +69,7 @@ export default function Register() {
             if (responsible.length < 2) e.responsibleName = 'Informe o nome do responsável pela conta.';
         }
         const ph = digitsOnly(phone);
-        if (touched || phone) {
+        if (phone) {
             if (ph.length < PHONE_DIGITS_MIN) e.phone = 'Informe um telefone com DDD (mínimo 10 dígitos).';
         }
         const em = email.trim();
@@ -77,7 +85,7 @@ export default function Register() {
             if (password !== confirmPassword) e.confirmPassword = 'As senhas não coincidem.';
         }
         const doc = document.trim();
-        if (touched || doc) {
+        if (doc) {
             if (!isValidCpfOrCnpj(doc)) {
                 e.document = 'Informe um CPF ou CNPJ válido.';
             }
@@ -97,12 +105,12 @@ export default function Register() {
         const e: string[] = [];
         if (name.trim().length < 2) e.push('nome');
         if (accountType === 'professional' && responsibleName.trim().length < 2) e.push('responsável');
-        if (digitsOnly(phone).length < PHONE_DIGITS_MIN) e.push('telefone');
+        if (phone && digitsOnly(phone).length < PHONE_DIGITS_MIN) e.push('telefone');
         if (!isValidEmail(email)) e.push('email');
         if (!passwordMeetsPolicy(password)) e.push('senha');
         if (password !== confirmPassword) e.push('confirmação');
         if (!termsAccepted) e.push('termos');
-        if (!isValidCpfOrCnpj(document)) e.push('cpf/cnpj');
+        if (document && !isValidCpfOrCnpj(document)) e.push('cpf/cnpj');
         if (e.length) {
             toast.error('Corrija os campos destacados antes de continuar.');
             return false;
@@ -112,16 +120,17 @@ export default function Register() {
 
     const handleRegister = async (ev: React.FormEvent) => {
         ev.preventDefault();
+        void trackFunnelEvent('register_started');
         if (!validateAll()) return;
 
         setLoading(true);
         try {
             const meta: Record<string, string> = {
                 full_name: name.trim(),
-                phone: digitsOnly(phone),
-                cpf_cnpj: digitsOnly(document),
                 account_type: accountType,
             };
+            if (phone) meta.phone = digitsOnly(phone);
+            if (document) meta.cpf_cnpj = digitsOnly(document);
             if (accountType === 'professional') {
                 meta.business_name = name.trim();
                 meta.responsible_name = responsibleName.trim();
@@ -129,15 +138,17 @@ export default function Register() {
 
             const normalizedPhone = digitsOnly(phone);
             const normalizedDocument = digitsOnly(document);
-            const { data: duplicatedProfile, error: duplicatedProfileError } = await supabase.rpc('profile_identity_exists', {
-                p_phone: normalizedPhone,
-                p_cpf_cnpj: normalizedDocument,
-            });
+            if (normalizedPhone || normalizedDocument) {
+                const { data: duplicatedProfile, error: duplicatedProfileError } = await supabase.rpc('profile_identity_exists', {
+                    p_phone: normalizedPhone || null,
+                    p_cpf_cnpj: normalizedDocument || null,
+                });
 
-            if (duplicatedProfileError) throw duplicatedProfileError;
-            if (duplicatedProfile) {
-                toast.error('Já existe uma conta usando este CPF/CNPJ ou telefone. Tente entrar ou recupere a senha.');
-                return;
+                if (duplicatedProfileError) throw duplicatedProfileError;
+                if (duplicatedProfile) {
+                    toast.error('Já existe uma conta usando este CPF/CNPJ ou telefone. Tente entrar ou recupere a senha.');
+                    return;
+                }
             }
 
             const { data, error } = await supabase.auth.signUp({
@@ -150,7 +161,7 @@ export default function Register() {
 
             if (data.user && !data.session) {
                 toast.success('Conta criada! Verifique seu e-mail para confirmar o cadastro antes de entrar.');
-                router.replace('/login');
+                router.replace(buildAuthPath('/login', nextPath));
                 return;
             }
 
@@ -159,7 +170,8 @@ export default function Register() {
             }
 
             toast.success('Cadastro realizado! Se necessário, confirme o e-mail para ativar totalmente sua conta.');
-            router.replace('/anunciar');
+            void trackFunnelEvent('register_completed');
+            router.replace(nextPath);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Erro ao realizar cadastro.';
             if (/already registered|already exists|duplicate|23505/i.test(msg)) {
@@ -183,7 +195,7 @@ export default function Register() {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: `${window.location.origin}/anunciar`,
+                    redirectTo: `${window.location.origin}${nextPath}`,
                     queryParams: {
                         prompt: 'select_account',
                     },
@@ -272,7 +284,7 @@ export default function Register() {
 
                     <div className="space-y-1">
                         <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                            Telefone / WhatsApp
+                            Telefone / WhatsApp <span className="font-normal text-gray-500">(opcional)</span>
                         </label>
                         <input
                             id="phone"
@@ -291,7 +303,7 @@ export default function Register() {
 
                     <div className="space-y-1">
                         <label htmlFor="document" className="block text-sm font-medium text-gray-700">
-                            CPF ou CNPJ
+                            CPF ou CNPJ <span className="font-normal text-gray-500">(opcional)</span>
                         </label>
                         <div className="relative">
                             <input
@@ -316,6 +328,7 @@ export default function Register() {
                             <p className="text-xs text-red-500">CPF ou CNPJ inválido. Verifique os números.</p>
                         )}
                         <FieldError message={errors.document} />
+                        <p className="text-xs text-gray-500">Você poderá completar esses dados antes de publicar ou receber pagamentos.</p>
                         <p className="text-xs text-gray-500">Usamos para segurança da conta e prevenção de duplicidade.</p>
                     </div>
 

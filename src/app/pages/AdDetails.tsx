@@ -25,6 +25,8 @@ import { getCategoryPath } from '../../lib/categoryRoutes';
 import { AdSenseSlot } from '../components/AdSenseSlot';
 import { getRelatedAds, getSellerTrustBadges } from '../../lib/marketplaceQuality';
 import { PUBLIC_ENV } from '../../lib/publicEnv';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { buildAuthPath } from '../../lib/authIntent';
 
 export default function AdDetails() {
     const { id } = useParams<{ id: string }>();
@@ -35,6 +37,8 @@ export default function AdDetails() {
     const [loading, setLoading] = useState(true);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [showImageFullscreen, setShowImageFullscreen] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [priceAlertEnabled, setPriceAlertEnabled] = useState(false);
 
     // Report Modal State
     const [showReportModal, setShowReportModal] = useState(false);
@@ -143,7 +147,7 @@ export default function AdDetails() {
         if (!ad) return;
         if (!user) {
             toast.error('Faça login para contatar o vendedor.');
-            router.push('/login');
+            router.push(buildAuthPath('/login', `/anuncio/${ad.id}`));
             return;
         }
 
@@ -160,12 +164,25 @@ export default function AdDetails() {
             }
 
             void Promise.resolve(supabase.rpc('record_ad_contact_interest', { p_ad_id: ad.id })).finally(() => {
+                void supabase.from('marketplace_conversations').upsert({ ad_id: ad.id, buyer_id: user.id, seller_id: ad.user_id, last_message_at: new Date().toISOString() }, { onConflict: 'ad_id,buyer_id' });
                 const message = `Olá, vim pelo Dezzapego! Tenho interesse no seu anúncio "${ad.title}". Ainda está disponível?`;
                 const encodedMessage = encodeURIComponent(message);
                 window.open(`https://wa.me/55${phone}?text=${encodedMessage}`, '_blank');
             });
         } catch {
             toast.error('Não foi possível abrir o contato do vendedor.');
+        }
+    };
+
+    const togglePriceAlert = async () => {
+        if (!user || !ad) { toast.error('Entre para receber alertas de preço.'); return; }
+        if (priceAlertEnabled) {
+            await supabase.from('price_alerts').delete().eq('user_id', user.id).eq('ad_id', ad.id);
+            setPriceAlertEnabled(false); toast.success('Alerta de preço removido.');
+        } else {
+            const { error } = await supabase.from('price_alerts').upsert({ user_id: user.id, ad_id: ad.id, target_price: ad.price }, { onConflict: 'user_id,ad_id' });
+            if (error) { toast.error('Não foi possível ativar o alerta.'); return; }
+            setPriceAlertEnabled(true); toast.success('Você será avisado quando o preço mudar.');
         }
     };
 
@@ -239,10 +256,6 @@ export default function AdDetails() {
 
     const handleDelete = async () => {
         if (!ad || !user) return;
-
-        if (!window.confirm('Tem certeza que deseja excluir este anúncio? Esta ação não pode ser desfeita.')) {
-            return;
-        }
 
         setLoading(true);
         try {
@@ -495,7 +508,7 @@ export default function AdDetails() {
                                             Editar
                                         </button>
                                         <button
-                                            onClick={handleDelete}
+                                            onClick={() => setShowDeleteConfirm(true)}
                                             className="flex items-center justify-center gap-2 py-2 px-4 bg-white text-red-600 border border-red-200 rounded-lg hover:bg-red-50 font-medium transition-colors"
                                         >
                                             <Trash2 className="w-4 h-4" />
@@ -534,6 +547,9 @@ export default function AdDetails() {
                                 >
                                     <Heart className={`w-5 h-5 ${favorites.has(id) ? 'fill-red-500' : ''}`} />
                                     {favorites.has(id) ? 'Salvo' : 'Salvar'}
+                                </button>
+                                <button onClick={() => void togglePriceAlert()} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border font-medium transition-colors ${priceAlertEnabled ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'}`}>
+                                    {priceAlertEnabled ? 'Alerta ativo' : 'Avisar queda de preço'}
                                 </button>
                                 <button
                                     onClick={handleWhatsAppShare}
@@ -826,6 +842,18 @@ export default function AdDetails() {
                     )}
                 </div>
             )}
+            <ConfirmDialog
+                open={showDeleteConfirm}
+                title="Excluir anúncio"
+                description="Esta ação não pode ser desfeita. O anúncio será removido permanentemente."
+                confirmLabel="Excluir anúncio"
+                busy={loading}
+                onCancel={() => setShowDeleteConfirm(false)}
+                onConfirm={() => {
+                    setShowDeleteConfirm(false);
+                    void handleDelete();
+                }}
+            />
             {/* Mobile Sticky Contact Button */}
             <div className="md:hidden fixed bottom-[64px] left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-200 z-40">
                 <button

@@ -17,6 +17,9 @@ import {
     FeaturedProvider,
     formatCents,
 } from '../../lib/featuredPayments';
+import { paymentStatusMessage } from '../../lib/paymentStatus';
+import { usePaymentStatusPoll } from '../hooks/usePaymentStatusPoll';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 type ContactInterest = {
     buyer_id: string;
@@ -38,6 +41,7 @@ export default function MyAds() {
     const [provider, setProvider] = useState<FeaturedProvider>('stripe');
     const [creatingPayment, setCreatingPayment] = useState(false);
     const [pixResult, setPixResult] = useState<{ qrCode?: string; qrImageUrl?: string; expiresAt?: string } | null>(null);
+    const [pixPaymentId, setPixPaymentId] = useState<string | null>(null);
     const [couponCode, setCouponCode] = useState('');
     const [coupon, setCoupon] = useState<DiscountCoupon | null>(null);
     const [checkingCoupon, setCheckingCoupon] = useState(false);
@@ -47,6 +51,9 @@ export default function MyAds() {
     const [loadingInterests, setLoadingInterests] = useState(false);
     const [completingSale, setCompletingSale] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [deleteTarget, setDeleteTarget] = useState<Ad | null>(null);
+    const [deleting, setDeleting] = useState(false);
+    const pixPayment = usePaymentStatusPoll('featured_payments', pixPaymentId);
 
     useEffect(() => {
         const userId = user?.id;
@@ -86,6 +93,18 @@ export default function MyAds() {
     }, [user, selectedPlanId]);
 
     useEffect(() => {
+        const publicationStatus = searchParams.get('published');
+        if (publicationStatus === 'active') {
+            toast.success('Anúncio publicado e já está visível para os compradores.');
+            router.replace(pathname);
+            return;
+        }
+        if (publicationStatus === 'pending') {
+            toast.info('Anúncio enviado para aprovação. Você poderá acompanhá-lo nesta lista.');
+            router.replace(pathname);
+            return;
+        }
+
         const result = searchParams.get('featured');
         if (result === 'success') {
             toast.success('Pagamento iniciado. O destaque será ativado após a confirmação.');
@@ -97,16 +116,24 @@ export default function MyAds() {
         }
     }, [searchParams, router, pathname]);
 
-    const handleDelete = async (id: string, e: React.MouseEvent) => {
+    const handleDelete = (ad: Ad, e: React.MouseEvent) => {
         e.preventDefault();
-        if (!confirm('Deseja realmente excluir este anúncio?')) return;
+        setDeleteTarget(ad);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteTarget) return;
+        setDeleting(true);
         try {
-            const { error } = await supabase.from('ads').delete().eq('id', id);
+            const { error } = await supabase.from('ads').delete().eq('id', deleteTarget.id);
             if (error) throw error;
-            setAds(prev => prev.filter(ad => ad.id !== id));
+            setAds(prev => prev.filter(ad => ad.id !== deleteTarget.id));
+            setDeleteTarget(null);
             toast.success('Anúncio excluído com sucesso!');
         } catch (error) {
             toast.error('Erro ao excluir anúncio.');
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -170,6 +197,7 @@ export default function MyAds() {
         e.preventDefault();
         setSelectedAd(ad);
         setPixResult(null);
+        setPixPaymentId(null);
         setCoupon(null);
         setCouponCode('');
         if (!selectedPlanId && plans[0]) setSelectedPlanId(plans[0].id);
@@ -183,6 +211,7 @@ export default function MyAds() {
             if (result.checkoutUrl) { window.location.href = result.checkoutUrl; return; }
             if (result.pix) {
                 setPixResult(result.pix);
+                setPixPaymentId(result.paymentId);
                 toast.success('PIX gerado. O destaque será ativado após a confirmação do pagamento.');
             }
             const { data } = await supabase
@@ -311,7 +340,7 @@ export default function MyAds() {
                 {rejectedCount > 0 && (
                     <div className="mb-6 flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-800">
                         <XCircle className="w-4 h-4 flex-shrink-0" />
-                        <span><strong>{rejectedCount} anúncio{rejectedCount > 1 ? 's' : ''}</strong> foi rejeitado. Entre em contato com o suporte para mais informações.</span>
+                                        <span><strong>{rejectedCount} anúncio{rejectedCount > 1 ? 's' : ''}</strong> foi rejeitado. Abra o anúncio no painel para consultar o motivo e corrigir os dados.</span>
                     </div>
                 )}
 
@@ -433,7 +462,7 @@ export default function MyAds() {
                                                     <Edit className="w-4 h-4" />
                                                 </button>
                                                 <button
-                                                    onClick={(e) => handleDelete(ad.id, e)}
+                                                    onClick={(e) => handleDelete(ad, e)}
                                                     className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
                                                     title="Excluir"
                                                 >
@@ -583,8 +612,17 @@ export default function MyAds() {
                                     />
                                 )}
                                 <p className="text-xs text-green-700 mt-2">
-                                    Após a confirmação do PixGo, o anúncio será destacado automaticamente.
+                                    {pixPayment ? paymentStatusMessage(pixPayment.status, 'destaque') : 'Aguardando a confirmação do pagamento.'}
                                 </p>
+                                {pixPayment?.status === 'paid' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedAd(null)}
+                                        className="mt-3 w-full rounded-lg bg-green-600 px-3 py-2 text-sm font-bold text-white hover:bg-green-700"
+                                    >
+                                        Destaque confirmado
+                                    </button>
+                                )}
                             </div>
                         )}
 
@@ -653,6 +691,15 @@ export default function MyAds() {
                     </div>
                 </div>
             )}
+            <ConfirmDialog
+                open={Boolean(deleteTarget)}
+                title="Excluir anúncio"
+                description={`O anúncio "${deleteTarget?.title || ''}" será removido permanentemente.`}
+                confirmLabel="Excluir anúncio"
+                busy={deleting}
+                onCancel={() => setDeleteTarget(null)}
+                onConfirm={confirmDelete}
+            />
         </div>
     );
 }

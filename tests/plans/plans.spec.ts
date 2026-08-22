@@ -1,6 +1,19 @@
 import { test, expect } from '@playwright/test';
+import { loginUser, TEST_USERS } from '../fixtures/auth';
 
 test.describe('Planos e Feature Flags', () => {
+  test('usuário autenticado vai ao checkout, não ao cadastro, para plano pago', async ({ page }) => {
+    await loginUser(page, TEST_USERS.userC.email, TEST_USERS.userC.password);
+    await page.goto('/planos');
+    await page.waitForLoadState('networkidle');
+
+    const paidPlanLink = page.locator('a[href^="/checkout/plano?"]').first();
+    await expect(paidPlanLink).toBeVisible({ timeout: 10_000 });
+    await paidPlanLink.click();
+    await expect(page).toHaveURL(/\/checkout\/plano\?plan=/);
+    await expect(page.locator('text=Pagamento')).toBeVisible();
+  });
+
   test('Plano Free tem limites corretos', async ({ page }) => {
     await page.goto('/planos');
     await page.waitForTimeout(3000);

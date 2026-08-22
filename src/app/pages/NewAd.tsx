@@ -11,6 +11,9 @@ import SEO from '../../components/SEO';
 import { AdCategoryFields } from '../components/AdCategoryFields';
 import { AdFormStepper, type StepDef } from '../components/AdFormStepper';
 import { AdFormReview } from '../components/AdFormReview';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { buildAuthPath } from '../../lib/authIntent';
+import { trackFunnelEvent } from '../../lib/siteVisits';
 import {
     buildNormalizedDetails,
     formatCurrencyInput,
@@ -73,6 +76,7 @@ const AD_STEPS: StepDef[] = [
 ];
 
 const DRAFT_STORAGE_KEY = 'dezzapego_new_ad_draft_v1';
+const DRAFT_STEP_KEY = 'dezzapego_new_ad_step_v1';
 
 export default function NewAd() {
     const { user, profile, refreshProfile, loading: authLoading } = useAuth();
@@ -80,6 +84,7 @@ export default function NewAd() {
     const [loading, setLoading] = useState(false);
     const [step, setStep] = useState(0);
     const [showPublishRequirements, setShowPublishRequirements] = useState(false);
+    const [showSuspiciousConfirm, setShowSuspiciousConfirm] = useState(false);
     const [requiredPhone, setRequiredPhone] = useState('');
     const [requiredDocument, setRequiredDocument] = useState('');
     const [draftRestored, setDraftRestored] = useState(false);
@@ -105,7 +110,7 @@ export default function NewAd() {
         if (authLoading) return;
         if (!user) {
             toast.error('Você precisa estar logado para criar um anúncio.');
-            router.push('/login');
+            router.push(buildAuthPath('/login', '/anunciar'));
         }
     }, [user, router, authLoading]);
 
@@ -121,18 +126,27 @@ export default function NewAd() {
 
     useEffect(() => {
         if (!user || draftRestored) return;
-        try {
-            const raw = localStorage.getItem(`${DRAFT_STORAGE_KEY}:${user.id}`);
-            if (raw) {
-                const parsed = JSON.parse(raw) as typeof formData;
-                setFormData((prev) => ({ ...prev, ...parsed, images: parsed.images || [] }));
-                toast.info('Rascunho recuperado.');
-            }
-        } catch {
-            localStorage.removeItem(`${DRAFT_STORAGE_KEY}:${user.id}`);
-        } finally {
-            setDraftRestored(true);
-        }
+        let cancelled = false;
+        void (async () => {
+            let parsed: typeof formData | null = null;
+            let savedStep = 0;
+            try {
+                const { data: serverDraft } = await supabase.from('ad_drafts').select('step, form_data').eq('user_id', user.id).maybeSingle();
+                if (serverDraft?.form_data) {
+                    parsed = serverDraft.form_data as typeof formData;
+                    savedStep = Number(serverDraft.step || 0);
+                } else {
+                    const raw = localStorage.getItem(`${DRAFT_STORAGE_KEY}:${user.id}`);
+                    if (raw) parsed = JSON.parse(raw) as typeof formData;
+                    savedStep = Number(localStorage.getItem(`${DRAFT_STEP_KEY}:${user.id}`));
+                }
+                if (cancelled) return;
+                if (parsed) { setFormData((prev) => ({ ...prev, ...parsed, images: parsed?.images || [] })); toast.info('Rascunho recuperado.'); }
+                if (Number.isInteger(savedStep) && savedStep >= 0 && savedStep < AD_STEPS.length) setStep(savedStep);
+            } catch { /* local draft remains available if the network is unavailable */ }
+            if (!cancelled) setDraftRestored(true);
+        })();
+        return () => { cancelled = true; };
     }, [draftRestored, formData, user]);
 
     useEffect(() => {
@@ -147,7 +161,20 @@ export default function NewAd() {
             Object.keys(formData.details).length > 0;
         if (!hasDraftContent) return;
         localStorage.setItem(`${DRAFT_STORAGE_KEY}:${user.id}`, JSON.stringify(formData));
-    }, [draftRestored, formData, user]);
+        localStorage.setItem(`${DRAFT_STEP_KEY}:${user.id}`, String(step));
+        const timer = window.setTimeout(() => {
+            void supabase.from('ad_drafts').upsert({ user_id: user.id, step, form_data: formData, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+        }, 500);
+        return () => window.clearTimeout(timer);
+    }, [draftRestored, formData, step, user]);
+
+    useEffect(() => {
+        if (!user || !draftRestored) return;
+        const hasChanges = Boolean(formData.title || formData.description || formData.category || formData.images.length || Object.keys(formData.details).length);
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => { if (hasChanges && !loading) { event.preventDefault(); event.returnValue = ''; } };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [draftRestored, formData, loading, user]);
 
     const qualityTips = useMemo(
         () =>
@@ -165,10 +192,10 @@ export default function NewAd() {
         [formData.title, formData.description, formData.price],
     );
 
-    const publishAd = async () => {
+    const publishAd = async (confirmedSuspiciousContent = false) => {
         if (!user) {
             toast.error('Você precisa estar logado para anunciar.');
-            router.push('/login');
+            router.push(buildAuthPath('/login', '/anunciar'));
             return;
         }
 
@@ -200,17 +227,14 @@ export default function NewAd() {
             return;
         }
 
-        if (suspiciousSignals.length > 0) {
-            const proceed = window.confirm(
-                `Seu anúncio tem pontos que podem reduzir a confiança:\n\n${suspiciousSignals.join('\n')}\n\nDeseja publicar mesmo assim?`,
-            );
-            if (!proceed) {
-                setStep(1);
-                return;
-            }
+        if (suspiciousSignals.length > 0 && !confirmedSuspiciousContent) {
+            setShowSuspiciousConfirm(true);
+            setStep(1);
+            return;
         }
 
         setLoading(true);
+        void trackFunnelEvent('ad_publish_started');
 
         try {
             const numericPrice = parseCurrencyInput(formData.price);
@@ -249,12 +273,16 @@ export default function NewAd() {
             }
 
             localStorage.removeItem(`${DRAFT_STORAGE_KEY}:${user.id}`);
+            localStorage.removeItem(`${DRAFT_STEP_KEY}:${user.id}`);
+            await supabase.from('ad_drafts').delete().eq('user_id', user.id);
+            const publicationStatus = data[0].status === 'active' ? 'active' : 'pending';
             toast.success(
                 data[0].status === 'active'
                     ? 'Anúncio publicado e já está visível.'
                     : 'Anúncio enviado! Ele ficará visível após a aprovação da moderação.',
             );
-            router.push('/meus-anuncios');
+            void trackFunnelEvent(publicationStatus === 'active' ? 'ad_publish_completed' : 'ad_publish_pending');
+            router.push(`/meus-anuncios?published=${publicationStatus}&ad=${encodeURIComponent(data[0].id)}`);
         } catch (error: unknown) {
             const msg = error instanceof Error ? error.message : 'Erro ao criar anúncio. Tente novamente.';
             toast.error(msg);
@@ -267,7 +295,7 @@ export default function NewAd() {
         e.preventDefault();
         if (!user) {
             toast.error('Você precisa estar logado para anunciar.');
-            router.push('/login');
+            router.push(buildAuthPath('/login', '/anunciar'));
             return;
         }
         if (!profileHasRequiredData()) {
@@ -491,7 +519,7 @@ export default function NewAd() {
                     </div>
 
                     <form onSubmit={handleSubmit} className="p-8">
-                        <AdFormStepper steps={AD_STEPS} currentIndex={step} onStepClick={(i) => setStep(i)} />
+                        <div className="mb-3 flex items-center justify-between text-xs font-semibold text-gray-500"><span>Etapa {step + 1} de {AD_STEPS.length}</span><span>{Math.round(((step + 1) / AD_STEPS.length) * 100)}% concluído</span></div><div className="mb-4 h-2 overflow-hidden rounded-full bg-gray-100"><div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${((step + 1) / AD_STEPS.length) * 100}%` }} /></div><AdFormStepper steps={AD_STEPS} currentIndex={step} onStepClick={(i) => setStep(i)} />
                         {draftRestored && (
                             <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
                                 Rascunho salvo automaticamente neste dispositivo.
@@ -910,6 +938,18 @@ export default function NewAd() {
                     </div>
                 </div>
             )}
+            <ConfirmDialog
+                open={showSuspiciousConfirm}
+                title="Revisar antes de publicar"
+                description={`Este anúncio pode reduzir a confiança dos compradores: ${suspiciousSignals.join(' ')}. Deseja publicar mesmo assim?`}
+                confirmLabel="Publicar mesmo assim"
+                busy={loading}
+                onCancel={() => setShowSuspiciousConfirm(false)}
+                onConfirm={() => {
+                    setShowSuspiciousConfirm(false);
+                    void publishAd(true);
+                }}
+            />
         </div>
     );
 }

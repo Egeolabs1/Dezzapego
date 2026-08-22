@@ -1,5 +1,6 @@
 {
     "framework": "nextjs",
+    "crons": [{ "path": "/api/cron/email-reminders", "schedule": "*/15 * * * *" }],
     "headers": [
         {
             "source": "/(.*)",

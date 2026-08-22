@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CreditCard, Loader2, QrCode } from 'lucide-react';
+import { CheckCircle2, CreditCard, Loader2, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
 import SEO from '../../components/SEO';
 import { createAccountPlanPayment } from '../../lib/accountPlanPayments';
@@ -10,6 +10,10 @@ import { FeaturedProvider, formatCents } from '../../lib/featuredPayments';
 import { supabase } from '../../lib/supabase';
 import { Header } from '../components/Header';
 import { useAuth } from '../contexts/AuthContext';
+import { usePaymentStatusPoll } from '../hooks/usePaymentStatusPoll';
+import { paymentStatusMessage } from '../../lib/paymentStatus';
+import { buildAuthPath } from '../../lib/authIntent';
+import { trackFunnelEvent } from '../../lib/siteVisits';
 
 type AccountPlan = {
     id: string;
@@ -32,15 +36,18 @@ export default function PlanCheckout() {
     const [loading, setLoading] = useState(true);
     const [creatingPayment, setCreatingPayment] = useState(false);
     const [pixResult, setPixResult] = useState<{ qrCode?: string; qrImageUrl?: string; expiresAt?: string } | null>(null);
+    const [pixPaymentId, setPixPaymentId] = useState<string | null>(null);
     const [couponCode, setCouponCode] = useState('');
     const [coupon, setCoupon] = useState<DiscountCoupon | null>(null);
     const [checkingCoupon, setCheckingCoupon] = useState(false);
+    const pixPayment = usePaymentStatusPoll('account_plan_payments', pixPaymentId);
 
     useEffect(() => {
         if (authLoading) return;
 
         if (!user) {
-            router.replace(`/register${planId ? `?plan=${encodeURIComponent(planId)}` : ''}`);
+            const next = `/checkout/plano?plan=${encodeURIComponent(planId)}`;
+            router.replace(buildAuthPath('/register', next));
             return;
         }
 
@@ -72,7 +79,9 @@ export default function PlanCheckout() {
         if (!plan) return;
 
         setCreatingPayment(true);
+        void trackFunnelEvent(`payment_started_${provider}`);
         setPixResult(null);
+        setPixPaymentId(null);
 
         try {
             const result = await createAccountPlanPayment(plan.id, provider, coupon?.code || couponCode);
@@ -82,7 +91,9 @@ export default function PlanCheckout() {
             }
             if (result.pix) {
                 setPixResult(result.pix);
+                setPixPaymentId(result.paymentId);
                 toast.success('PIX gerado. O plano será ativado após a confirmação do pagamento.');
+                void trackFunnelEvent('pix_generated_plan');
             }
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Erro ao iniciar pagamento.');
@@ -250,8 +261,14 @@ export default function PlanCheckout() {
                                     <textarea readOnly value={pixResult.qrCode} className="h-24 w-full rounded-lg border border-emerald-200 bg-white p-2 text-xs" />
                                 ) : null}
                                 <p className="text-xs text-emerald-800">
-                                    Após a confirmação do PixGo, seu plano será ativado automaticamente.
+                                    {pixPayment ? paymentStatusMessage(pixPayment.status, 'plano') : 'Aguardando a confirmação do pagamento.'}
                                 </p>
+                                {pixPayment?.status === 'paid' ? (
+                                    <Link href="/dashboard" className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700">
+                                        <CheckCircle2 className="h-4 w-4" />
+                                        Ver minha conta
+                                    </Link>
+                                ) : null}
                             </div>
                         )}
                     </aside>

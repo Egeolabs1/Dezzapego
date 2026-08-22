@@ -1,8 +1,10 @@
-import { Search, Heart, User, CirclePlus, Menu, LogOut, ChevronDown, ShieldCheck, Building2 } from 'lucide-react';
+import { Search, Heart, User, CirclePlus, Menu, LogOut, ChevronDown, ShieldCheck, Building2, Download } from 'lucide-react';
+import { OPEN_PWA_INSTALL_EVENT } from './InstallPWA';
 import { useState, useRef, useEffect } from 'react';
 import { LocationSelector } from './LocationSelector';
 import { Logo, LogoIcon } from './Logo';
 import { Notifications } from './Notifications';
+import { MessageBadge } from './MessageBadge';
 import { SearchAutocomplete } from './SearchAutocomplete';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -190,6 +192,7 @@ export function Header({
             )}
 
             <Notifications />
+            <MessageBadge />
 
             <Link href="/favoritos" className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-blue-600 transition-colors">
               <Heart className="w-5 h-5" />
@@ -276,7 +279,9 @@ export function Header({
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2 text-gray-700"
-            aria-label="Abrir menu"
+            aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation-menu"
           >
             <Menu className="w-6 h-6" />
           </button>
@@ -284,7 +289,7 @@ export function Header({
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 py-4 space-y-2">
+          <div id="mobile-navigation-menu" className="md:hidden border-t border-gray-200 py-4 space-y-2">
             <Link
               href="/favoritos"
               onClick={() => setMobileMenuOpen(false)}
@@ -351,6 +356,18 @@ export function Header({
                 <span>Anunciar Grátis</span>
               </button>
             </Link>
+            <Link href="/mensagens" className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-blue-600 transition-colors">Mensagens</Link>
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new Event(OPEN_PWA_INSTALL_EVENT));
+                setMobileMenuOpen(false);
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-4 py-2 text-left text-gray-700 hover:bg-gray-50"
+            >
+              <Download className="w-5 h-5" />
+              <span>Instalar aplicativo</span>
+            </button>
           </div>
         )}
       </div>

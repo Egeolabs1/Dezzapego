@@ -279,6 +279,15 @@ export default function Home() {
                 />
             </div>
             <div className="max-w-[1600px] mx-auto px-2 md:px-4 py-4 md:py-8">
+                <section aria-label="Atalhos de busca" className="mb-4 flex flex-wrap items-center gap-2">
+                    <span className="mr-1 text-sm font-semibold text-gray-700">Atalhos:</span>
+                    <button type="button" onClick={() => updateSearchParams({ sortBy: 'recentes' })} className={`rounded-md border px-3 py-1.5 text-sm font-medium ${sortBy === 'recentes' ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300'}`}>Mais recentes</button>
+                    <button type="button" onClick={() => updateSearchParams({ minPrice: null, maxPrice: '500' })} className={`rounded-md border px-3 py-1.5 text-sm font-medium ${maxPrice === 500 && minPrice === 0 ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300'}`}>Até R$ 500</button>
+                    <button type="button" onClick={() => updateSearchParams({ advertiserType: 'profissional' })} className={`rounded-md border px-3 py-1.5 text-sm font-medium ${advertiserType === 'profissional' ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300'}`}>Lojas e empresas</button>
+                    {(sortBy !== 'relevancia' || minPrice > 0 || maxPrice < 10000000 || advertiserType !== 'ambos') && (
+                        <button type="button" onClick={() => updateSearchParams({ sortBy: null, minPrice: null, maxPrice: null, advertiserType: null })} className="px-2 py-1.5 text-sm font-medium text-blue-700 hover:underline">Limpar atalhos</button>
+                    )}
+                </section>
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
                     <aside className="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-24 self-start">
                         <Filters

@@ -3,12 +3,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Header } from '../components/Header';
 import { ImageUpload } from '../components/ImageUpload';
-import { Loader2, User, Save, Package, Shield, ExternalLink, ShieldCheck, AlertCircle, Download, Heart } from 'lucide-react';
+import { Loader2, User, Save, Package, Shield, ExternalLink, ShieldCheck, AlertCircle, Download, Heart, MessageCircle, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import SEO from '../../components/SEO';
 import { digitsOnly, formatCpfCnpj, formatPhone, isValidCpfOrCnpj } from '../../lib/marketplaceQuality';
+import { PendingActions } from '../components/PendingActions';
 
 export default function UserDashboard() {
     const { user, profile, refreshProfile, loading: authLoading } = useAuth();
@@ -29,6 +30,7 @@ export default function UserDashboard() {
     const [verifyDocUrls, setVerifyDocUrls] = useState<string[]>([]);
     const [verifySelfieUrls, setVerifySelfieUrls] = useState<string[]>([]);
     const [activeTab, setActiveTab] = useState<'profile' | 'verification' | 'settings'>('profile');
+    const [emailRemindersEnabled, setEmailRemindersEnabled] = useState(true);
     // Use profile status or default
     const verificationStatus = profile?.verification_status || 'none';
     const verificationBadgeText = verificationStatus === 'pending' ? 'Em análise' : verificationStatus === 'rejected' ? 'Recusada' : null;
@@ -68,6 +70,7 @@ export default function UserDashboard() {
         setWebsite(profile?.website || user.user_metadata?.website || '');
         setInstagram(profile?.instagram || user.user_metadata?.instagram || '');
         setCpfCnpj(formatCpfCnpj(profile?.cpf_cnpj || user.user_metadata?.cpf_cnpj || ''));
+        setEmailRemindersEnabled((profile as unknown as { email_reminders_enabled?: boolean } | null)?.email_reminders_enabled !== false);
 
         if (profile?.avatar_url) {
             setAvatar([profile.avatar_url]);
@@ -79,6 +82,19 @@ export default function UserDashboard() {
 
         hydratedProfileRef.current.usedProfileSnapshot = Boolean(profile);
     }, [user, profile, router, authLoading]);
+
+    async function handleEmailPreferenceChange(enabled: boolean) {
+        if (!user) return;
+        setEmailRemindersEnabled(enabled);
+        const { error } = await supabase.from('profiles').update({ email_reminders_enabled: enabled }).eq('id', user.id);
+        if (error) {
+            setEmailRemindersEnabled(!enabled);
+            toast.error('Não foi possível atualizar a preferência de e-mail.');
+            return;
+        }
+        toast.success(enabled ? 'Lembretes por e-mail ativados.' : 'Lembretes por e-mail desativados.');
+        await refreshProfile();
+    }
 
     useEffect(() => {
         const docs = profile?.verification_docs;
@@ -327,6 +343,7 @@ export default function UserDashboard() {
             <Header hideLocationFilter />
 
             <div className="container mx-auto px-4 py-8 max-w-7xl">
+                <PendingActions />
                 <header className="mb-8">
                     <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Minha conta</h1>
                     <p className="text-gray-600 mt-1 max-w-2xl">
@@ -401,6 +418,16 @@ export default function UserDashboard() {
                             >
                                 <Heart className="w-5 h-5 shrink-0" />
                                 Favoritos
+                                <ExternalLink className="w-4 h-4 ml-auto shrink-0 opacity-50" />
+                            </Link>
+                            <Link href="/mensagens" className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium border border-gray-200 shadow-sm">
+                                <MessageCircle className="w-5 h-5 shrink-0" />
+                                Mensagens
+                                <ExternalLink className="w-4 h-4 ml-auto shrink-0 opacity-50" />
+                            </Link>
+                            <Link href="/pagamentos" className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium border border-gray-200 shadow-sm">
+                                <CreditCard className="w-5 h-5 shrink-0" />
+                                Pagamentos
                                 <ExternalLink className="w-4 h-4 ml-auto shrink-0 opacity-50" />
                             </Link>
                         </nav>
@@ -775,6 +802,17 @@ export default function UserDashboard() {
                                             Gerenciar meus anúncios
                                         </Link>
                                     </div>
+                                </section>
+
+                                <section className="border border-blue-200 rounded-xl overflow-hidden bg-white shadow-sm" aria-labelledby="email-preferences-title">
+                                    <div className="bg-blue-50 px-6 py-4 border-b border-blue-100 flex items-center gap-2">
+                                        <Shield className="w-5 h-5 text-blue-700 shrink-0" />
+                                        <h3 id="email-preferences-title" className="text-lg font-bold text-blue-900">Lembretes por e-mail</h3>
+                                    </div>
+                                    <label className="flex items-start gap-3 p-6 cursor-pointer">
+                                        <input type="checkbox" checked={emailRemindersEnabled} onChange={(event) => void handleEmailPreferenceChange(event.target.checked)} className="mt-1 h-4 w-4 accent-blue-600" />
+                                        <span className="text-sm text-gray-700"><strong className="block text-gray-900">Receber lembretes importantes</strong><span>Enviaremos avisos sobre pagamentos pendentes, confirmações e expirações. Você pode desativar quando quiser.</span></span>
+                                    </label>
                                 </section>
 
                                 <section

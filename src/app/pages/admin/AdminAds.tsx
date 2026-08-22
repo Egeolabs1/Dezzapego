@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { formatPrice, formatDate } from '../../../lib/formatters';
-import { Trash2, Edit, Eye, Search, Star, Download, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Trash2, Edit, Eye, Search, Star, Download, CheckCircle, XCircle, Clock, CheckSquare } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext';
@@ -42,6 +42,7 @@ export default function AdminAds() {
         created_at: string;
         user_id: string;
         views: number;
+        moderation_rejection_reason?: string | null;
         location?: { state?: string; city?: string };
         seller?: { id?: string; name?: string };
     };
@@ -50,6 +51,7 @@ export default function AdminAds() {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState<AdStatus>('pending');
     const [counts, setCounts] = useState<Record<AdStatus, number>>({ pending: 0, active: 0, rejected: 0 });
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
     useEffect(() => {
         fetchAds();
@@ -60,7 +62,7 @@ export default function AdminAds() {
         try {
             const { data, error } = await supabase
                 .from('ads')
-                .select('id, title, description, price, category, subcategory, status, featured, images, created_at, user_id, views, location, seller')
+                .select('id, title, description, price, category, subcategory, status, featured, images, created_at, user_id, views, location, seller, moderation_rejection_reason')
                 .order('created_at', { ascending: false })
                 .range(0, 99);
 
@@ -79,10 +81,24 @@ export default function AdminAds() {
         }
     }
 
-    async function changeStatus(id: string, newStatus: AdStatus) {
+    async function changeStatus(id: string, newStatus: AdStatus, reason = '') {
         try {
-            const { error } = await supabase.from('ads').update({ status: newStatus }).eq('id', id);
+            const ad = ads.find((item) => item.id === id);
+            const { error } = await supabase.from('ads').update({ status: newStatus, moderation_rejection_reason: newStatus === 'rejected' ? reason : null }).eq('id', id);
             if (error) throw error;
+            if (ad?.user_id) {
+                await supabase.from('notifications').insert({
+                    user_id: ad.user_id,
+                    title: newStatus === 'active' ? 'Anúncio aprovado' : 'Anúncio rejeitado',
+                    message: newStatus === 'active'
+                        ? `Seu anúncio "${ad.title}" já está visível para os compradores.`
+                        : `Seu anúncio "${ad.title}" precisa de ajustes antes de ser publicado. Motivo: ${reason || 'Revise as informações e fotos.'}`,
+                    type: 'ad_moderation',
+                    read: false,
+                });
+                const { data: session } = await supabase.auth.getSession();
+                if (session.session?.access_token) void fetch('/api/admin/notify-ad-status', { method: 'POST', headers: { Authorization: `Bearer ${session.session.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: ad.user_id, adId: ad.id, title: ad.title, status: newStatus }) });
+            }
             await logAdminAction(user?.email, 'UPDATE_AD_STATUS', `Ad ${id} → ${newStatus}`);
             setAds(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
             setCounts(prev => {
@@ -94,6 +110,20 @@ export default function AdminAds() {
         } catch {
             toast.error('Erro ao atualizar status.');
         }
+    }
+
+    async function changeSelectedStatus(newStatus: AdStatus) {
+        if (!selectedIds.length) return;
+        const targets = ads.filter((ad) => selectedIds.includes(ad.id));
+        const reason = newStatus === 'rejected' ? (window.prompt('Informe o motivo da rejeição para os anúncios selecionados:') || '').trim() : '';
+        if (newStatus === 'rejected' && !reason) { toast.error('Informe um motivo para rejeitar.'); return; }
+        const { error } = await supabase.from('ads').update({ status: newStatus, moderation_rejection_reason: newStatus === 'rejected' ? reason : null }).in('id', selectedIds);
+        if (error) { toast.error('Não foi possível atualizar os anúncios selecionados.'); return; }
+        await Promise.all(targets.filter((ad) => ad.user_id).map((ad) => supabase.from('notifications').insert({ user_id: ad.user_id, title: newStatus === 'active' ? 'Anúncio aprovado' : 'Anúncio rejeitado', message: `Seu anúncio "${ad.title}" foi ${newStatus === 'active' ? 'aprovado' : `rejeitado. Motivo: ${reason}`}.`, type: 'ad_moderation', read: false })));
+        setAds((prev) => prev.map((ad) => selectedIds.includes(ad.id) ? { ...ad, status: newStatus } : ad));
+        setSelectedIds([]);
+        await fetchAds();
+        toast.success(`${targets.length} anúncio(s) atualizado(s).`);
     }
 
     async function handleDelete(id: string) {
@@ -207,12 +237,22 @@ export default function AdminAds() {
                 </div>
             )}
 
+            {activeTab === 'pending' && selectedIds.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                    <CheckSquare className="h-4 w-4 text-blue-700" />
+                    <span className="text-sm font-medium text-blue-900">{selectedIds.length} selecionado(s)</span>
+                    <button onClick={() => void changeSelectedStatus('active')} className="rounded-md bg-green-600 px-3 py-1.5 text-xs font-semibold text-white">Aprovar selecionados</button>
+                    <button onClick={() => void changeSelectedStatus('rejected')} className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white">Rejeitar selecionados</button>
+                </div>
+            )}
+
             {/* Table */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase">
+                                <th className="p-4 font-medium"><input aria-label="Selecionar todos os anúncios visíveis" type="checkbox" checked={filteredAds.length > 0 && filteredAds.every((ad) => selectedIds.includes(ad.id))} onChange={(event) => setSelectedIds(event.target.checked ? filteredAds.map((ad) => ad.id) : [])} /></th>
                                 <th className="p-4 font-medium">Produto</th>
                                 <th className="p-4 font-medium">Preço</th>
                                 <th className="p-4 font-medium">Vendedor</th>
@@ -223,9 +263,9 @@ export default function AdminAds() {
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {loading ? (
-                                <tr><td colSpan={6} className="p-8 text-center text-gray-500">Carregando...</td></tr>
+                                <tr><td colSpan={7} className="p-8 text-center text-gray-500">Carregando...</td></tr>
                             ) : filteredAds.length === 0 ? (
-                                <tr><td colSpan={6} className="p-8 text-center text-gray-500">
+                                <tr><td colSpan={7} className="p-8 text-center text-gray-500">
                                     {activeTab === 'pending' ? 'Nenhum anúncio pendente. ✅' : 'Nenhum anúncio encontrado.'}
                                 </td></tr>
                             ) : (
@@ -233,6 +273,7 @@ export default function AdminAds() {
                                     const status = (ad.status || 'active') as AdStatus;
                                     return (
                                         <tr key={ad.id} className={`hover:bg-gray-50 transition-colors ${ad.featured ? 'bg-yellow-50/30' : ''}`}>
+                                            <td className="p-4"><input aria-label={`Selecionar ${ad.title}`} type="checkbox" checked={selectedIds.includes(ad.id)} onChange={(event) => setSelectedIds((prev) => event.target.checked ? [...new Set([...prev, ad.id])] : prev.filter((id) => id !== ad.id))} /></td>
                                             <td className="p-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="relative">
@@ -272,7 +313,7 @@ export default function AdminAds() {
                                                                 <CheckCircle className="w-4 h-4" />
                                                             </button>
                                                             <button
-                                                                onClick={() => changeStatus(ad.id, 'rejected')}
+                                                                onClick={() => { const reason = window.prompt('Informe o motivo da rejeição:')?.trim(); if (reason) void changeStatus(ad.id, 'rejected', reason); }}
                                                                 className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
                                                                 title="Rejeitar anúncio"
                                                             >

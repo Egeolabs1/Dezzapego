@@ -1,5 +1,6 @@
 import { validateDiscountCoupon, normalizeCouponCode } from '@/lib/discountCoupons';
 import { getAuthenticatedUser, getSiteUrl, getSupabaseAdmin, jsonResponse } from '@/lib/payments';
+import { enqueuePaymentReminder } from '@/lib/emailReminders';
 
 type RequestBody = {
   planId?: string;
@@ -83,6 +84,7 @@ export async function POST(req: Request) {
       .single();
 
     if (paymentError) throw paymentError;
+    await enqueuePaymentReminder(supabase, { userId: user.id, email: user.email, paymentId: payment.id, description: `a assinatura do plano ${plan.name}`, amountCents: couponResult.finalAmountCents, provider: 'pix' });
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);

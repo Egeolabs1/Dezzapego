@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { validateDiscountCoupon, normalizeCouponCode } from '@/lib/discountCoupons';
 import { getAuthenticatedUser, getSiteUrl, getSupabaseAdmin, jsonResponse } from '@/lib/payments';
+import { enqueuePaymentReminder } from '@/lib/emailReminders';
 
 type RequestBody = {
   planId?: string;
@@ -65,6 +66,7 @@ export async function POST(req: Request) {
       .single();
 
     if (paymentError) throw paymentError;
+    await enqueuePaymentReminder(supabase, { userId: user.id, email: user.email, paymentId: payment.id, description: `a assinatura do plano ${plan.name}`, amountCents: couponResult.finalAmountCents, provider: 'stripe' });
 
     const siteUrl = getSiteUrl();
     const stripe = new Stripe(stripeSecretKey, { apiVersion: '2026-04-22.dahlia' as any });

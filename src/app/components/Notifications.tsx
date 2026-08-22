@@ -14,7 +14,14 @@ export function Notifications() {
     useEffect(() => {
         if (user) {
             fetchNotifications();
-            // Optional: Set up realtime subscription here later
+            const channel = supabase
+                .channel(`notifications-${user.id}`)
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
+                    setNotifications((prev) => [payload.new, ...prev].slice(0, 20));
+                    setUnreadCount((prev) => prev + 1);
+                })
+                .subscribe();
+            return () => { void supabase.removeChannel(channel); };
         }
     }, [user]);
 
@@ -87,6 +94,8 @@ export function Notifications() {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="relative p-2 text-gray-700 hover:text-blue-600 transition-colors rounded-full hover:bg-gray-100"
+                aria-label={`Notificações${unreadCount > 0 ? `, ${unreadCount} não lidas` : ''}`}
+                aria-expanded={isOpen}
             >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (

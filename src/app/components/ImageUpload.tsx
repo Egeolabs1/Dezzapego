@@ -74,13 +74,16 @@ export function ImageUpload({
                     const prefix = uploadSubfolder ? `${userId}/${uploadSubfolder}` : userId;
                     const filePath = `${prefix}/${webpFile.name}`;
 
-                    const { error: uploadError } = await supabase.storage
-                        .from(storageBucket)
-                        .upload(filePath, webpFile, {
+                    let uploadError: Error | null = null;
+                    for (let attempt = 0; attempt < 3; attempt += 1) {
+                        const result = await supabase.storage.from(storageBucket).upload(filePath, webpFile, {
                             contentType: 'image/webp',
                             upsert: false,
                         });
-
+                        if (!result.error) { uploadError = null; break; }
+                        uploadError = result.error;
+                        if (attempt < 2) await new Promise((resolve) => window.setTimeout(resolve, 500 * (attempt + 1)));
+                    }
                     if (uploadError) throw uploadError;
 
                     const { data } = supabase.storage.from(storageBucket).getPublicUrl(filePath);

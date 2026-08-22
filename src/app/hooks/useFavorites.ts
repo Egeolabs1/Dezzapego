@@ -73,6 +73,10 @@ export function useFavorites() {
                     .insert({ user_id: user.id, ad_id: adId });
 
                 if (error) throw error;
+                const { data: adOwner } = await supabase.from('ads').select('user_id, title').eq('id', adId).maybeSingle();
+                if (adOwner?.user_id && adOwner.user_id !== user.id) {
+                    void supabase.from('notifications').insert({ user_id: adOwner.user_id, title: 'Seu anúncio foi salvo', message: `Alguém adicionou "${adOwner.title || 'seu anúncio'}" aos favoritos.`, type: 'favorite', read: false });
+                }
                 toast.success('Adicionado aos favoritos!');
             }
         } catch (error) {

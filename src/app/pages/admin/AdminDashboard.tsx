@@ -25,6 +25,7 @@ type DashboardStats = {
     refundedPayments: number;
     expiringFeaturedAds: number;
     topPages: { path: string; visits: number }[];
+    funnel: { event: string; count: number }[];
     topReferrers: { referrer: string; visits: number }[];
     recentAds: { id: string; title: string; status: string; category: string; created_at: string; price: number; images?: string[]; views?: number; featured?: boolean; featured_expires_at?: string; user_id?: string }[];
     categoryData: { name: string; count: number }[];
@@ -53,6 +54,7 @@ const initialStats: DashboardStats = {
     refundedPayments: 0,
     expiringFeaturedAds: 0,
     topPages: [],
+    funnel: [],
     topReferrers: [],
     recentAds: [],
     categoryData: [],
@@ -129,7 +131,13 @@ export default function AdminDashboard() {
                 const refundedPayments = safePayments.filter((payment) => payment.status === 'refunded').length;
                 const uniqueVisitors = new Set(safeVisits.map((visit) => visit.session_id).filter(Boolean)).size;
 
-                const topPages = Object.entries(safeVisits.reduce((acc: Record<string, number>, visit) => {
+                const funnel = Object.entries(safeVisits.filter((visit) => String(visit.path || '').startsWith('__event__/')).reduce((acc: Record<string, number>, visit) => {
+                    const event = String(visit.path).replace('__event__/', '');
+                    acc[event] = (acc[event] || 0) + 1;
+                    return acc;
+                }, {})).map(([event, count]) => ({ event, count })).sort((a, b) => b.count - a.count);
+
+                const topPages = Object.entries(safeVisits.filter((visit) => !String(visit.path || '').startsWith('__event__/')).reduce((acc: Record<string, number>, visit) => {
                     const path = visit.path || '/';
                     acc[path] = (acc[path] || 0) + 1;
                     return acc;
@@ -226,7 +234,8 @@ export default function AdminDashboard() {
                     expiredPayments,
                     refundedPayments,
                     expiringFeaturedAds,
-                    topPages,
+                        topPages,
+                        funnel,
                     topReferrers,
                     recentAds: safeAds.slice(0, 8).map(ad => ({
                         ...ad,
@@ -412,6 +421,17 @@ export default function AdminDashboard() {
                         ))}
                         {stats.topReferrers.length === 0 && <div className="p-8 text-center text-gray-500">Sem dados de origem.</div>}
                     </div>
+                </div>
+            </div>
+
+            <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-6 border-b border-gray-100 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-gray-500" />
+                    <div><h2 className="text-lg font-semibold text-gray-800">Funil de conversão</h2><p className="text-sm text-gray-500">Eventos registrados somente com consentimento de analytics.</p></div>
+                </div>
+                <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {stats.funnel.map((item) => <div key={item.event} className="rounded-lg bg-gray-50 p-3"><p className="text-xs font-medium text-gray-500">{item.event.replace(/_/g, ' ')}</p><p className="mt-1 text-2xl font-bold text-gray-900">{item.count.toLocaleString('pt-BR')}</p></div>)}
+                    {stats.funnel.length === 0 && <p className="p-4 text-sm text-gray-500">Ainda não há eventos suficientes para mostrar o funil.</p>}
                 </div>
             </div>
 

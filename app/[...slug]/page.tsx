@@ -240,6 +240,8 @@ async function metadataForPath(path: string): Promise<Metadata> {
     '/meus-anuncios',
     '/dashboard',
     '/favoritos',
+    '/mensagens',
+    '/pagamentos',
     '/conta-suspensa',
   ];
   const isPrivateRoute =
@@ -277,6 +279,11 @@ async function metadataForPath(path: string): Promise<Metadata> {
       title: 'Meus Favoritos',
       description: 'Veja os anúncios salvos nos seus favoritos no Dezzapego.',
     },
+    '/mensagens': {
+      title: 'Minhas Mensagens',
+      description: 'Converse com compradores e anunciantes no Dezzapego.',
+    },
+    '/pagamentos': { title: 'Meus Pagamentos', description: 'Acompanhe seus pagamentos no Dezzapego.' },
     '/conta-suspensa': {
       title: 'Conta Suspensa',
       description: 'Informações sobre suspensão de conta no Dezzapego.',
@@ -334,6 +341,8 @@ function isKnownSeoPath(path: string) {
     '/meus-anuncios',
     '/dashboard',
     '/favoritos',
+    '/mensagens',
+    '/pagamentos',
     '/conta-suspensa',
   ].includes(path)) {
     return true;
@@ -561,6 +570,8 @@ export function generateStaticParams() {
     ['privacidade'],
     ['dicas-seguranca'],
     ['mapa-do-site'],
+    ['mensagens'],
+    ['pagamentos'],
   ];
 
   SEO_GUIDES.forEach((guide) => paths.push(['guias', guide.slug]));

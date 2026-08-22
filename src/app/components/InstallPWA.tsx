@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Download, Share, X } from 'lucide-react';
 import { CONSENT_CHANGED_EVENT, hasConsentRecorded } from '../../lib/privacyConsent';
 
+export const OPEN_PWA_INSTALL_EVENT = 'dezzapego-open-install';
+
 interface BeforeInstallPromptEvent extends Event {
     prompt: () => Promise<void>;
     userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
@@ -45,6 +47,16 @@ export function InstallPWA() {
     }, []);
 
     useEffect(() => {
+        const handleOpenInstall = () => {
+            if (!isStandalone && hasConsentRecorded() && (isIOS || deferredPrompt)) {
+                setShowInstallBanner(true);
+            }
+        };
+        window.addEventListener(OPEN_PWA_INSTALL_EVENT, handleOpenInstall);
+        return () => window.removeEventListener(OPEN_PWA_INSTALL_EVENT, handleOpenInstall);
+    }, [deferredPrompt, isIOS, isStandalone]);
+
+    useEffect(() => {
         const dismissed = localStorage.getItem('pwa_install_dismissed');
         const canPrompt = !isStandalone && !dismissed && hasConsentRecorded() && (isIOS || deferredPrompt);
         if (!canPrompt) {
@@ -75,8 +87,8 @@ export function InstallPWA() {
     if (isStandalone || !showInstallBanner) return null;
 
     return (
-        <div className="fixed bottom-[64px] left-0 right-0 z-[70] p-4 animate-in slide-in-from-bottom duration-500 md:bottom-0">
-            <div className="max-w-md mx-auto bg-white rounded-lg shadow-xl border border-gray-100 p-4 flex flex-col gap-4">
+        <div className="fixed bottom-[72px] left-0 right-0 z-[70] px-3 pb-3 animate-in slide-in-from-bottom duration-500 md:bottom-4 md:left-4 md:right-auto md:w-[22rem] md:p-0" role="dialog" aria-label="Instalar o aplicativo Dezzapego">
+            <div className="mx-auto max-w-sm rounded-lg border border-gray-100 bg-white p-3 shadow-xl md:max-w-none">
 
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
@@ -88,7 +100,7 @@ export function InstallPWA() {
                             <p className="text-sm text-gray-500">Experiência completa e mais rápida</p>
                         </div>
                     </div>
-                    <button onClick={handleDismiss} className="text-gray-400 hover:text-gray-600 p-1" title="Dispensar">
+                    <button onClick={handleDismiss} className="p-1 text-gray-400 hover:text-gray-600" aria-label="Dispensar convite de instalação">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
