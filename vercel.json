@@ -46,7 +46,7 @@
                 {
                     "type": "header",
                     "key": "user-agent",
-                    "value": "(facebookexternalhit|Facebot|WhatsApp|Twitterbot|Slackbot|Discordbot|LinkedInBot|TelegramBot|Googlebot|bingbot)"
+                    "value": "(facebookexternalhit|Facebot|WhatsApp|Twitterbot|Slackbot|Discordbot|LinkedInBot|TelegramBot)"
                 }
             ],
             "destination": "/api/og-ad?id=:id"

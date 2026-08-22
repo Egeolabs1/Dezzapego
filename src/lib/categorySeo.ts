@@ -74,23 +74,25 @@ export const CATEGORY_SEO: Record<string, CategorySeoBlock> = {
     },
 };
 
-const DEFAULT_HOME_TITLE = 'Classificados e anúncios grátis no Brasil';
+const DEFAULT_HOME_TITLE = 'Dezzapego | Compre e Venda Grátis no Brasil — Imóveis, Carros e Mais';
 const DEFAULT_HOME_DESCRIPTION =
-    'Anúncios de imóveis, veículos, eletrônicos, agro e mais. Filtre por cidade, categoria e preço. Publique grátis no Dezzapego.';
+    'Compre e venda de tudo no Dezzapego: imóveis, carros, eletrônicos, móveis, agro e serviços. Encontre ofertas perto de você ou publique seu anúncio 100% grátis.';
 const DEFAULT_HOME_KEYWORDS = [
     'classificados',
     'anúncios grátis',
     'comprar e vender',
     'imóveis',
     'carros usados',
+    'eletrônicos baratos',
+    'desapegar',
     'Dezzapego',
 ];
 
 function fallbackCategory(cat: string): CategorySeoBlock {
     return {
-        listingTitle: `Anúncios de ${cat}`,
-        metaDescription: `Classificados de ${cat} no ${SITE_NAME}. Filtros por localização e preço; publique seu anúncio grátis.`,
-        keywords: [cat, 'classificados', 'anúncios', SITE_NAME.toLowerCase()],
+        listingTitle: `${cat} — Ofertas e Anúncios`,
+        metaDescription: `Confira os melhores anúncios de ${cat} no ${SITE_NAME}. Filtre por estado, cidade e preço ou anuncie grátis para milhares de compradores.`,
+        keywords: [cat, 'classificados', 'anúncios grátis', 'comprar e vender', SITE_NAME.toLowerCase()],
     };
 }
 
@@ -507,3 +509,105 @@ export function getAllCategoryListingPaths(): string[] {
     }
     return paths;
 }
+
+/** FAQPage Structured Data (Schema.org) para páginas informativas e guias */
+export function buildFaqStructuredData(params: {
+    title: string;
+    description: string;
+    path: string;
+    faqs: { question: string; answer: string }[];
+}): Record<string, unknown> {
+    const origin = getSiteOrigin();
+    const url = toAbsoluteUrl(params.path);
+    return {
+        '@context': 'https://schema.org',
+        '@graph': [
+            buildOrganizationGraphNode(),
+            buildWebSiteGraphNode(),
+            {
+                '@type': 'FAQPage',
+                '@id': `${url}#faq`,
+                name: params.title,
+                description: params.description,
+                url,
+                inLanguage: 'pt-BR',
+                isPartOf: { '@id': `${origin}/#website` },
+                mainEntity: params.faqs.map((faq) => ({
+                    '@type': 'Question',
+                    name: faq.question,
+                    acceptedAnswer: {
+                        '@type': 'Answer',
+                        text: faq.answer,
+                    },
+                })),
+            },
+            {
+                '@type': 'BreadcrumbList',
+                itemListElement: [
+                    { '@type': 'ListItem', position: 1, name: 'Início', item: `${origin}/` },
+                    { '@type': 'ListItem', position: 2, name: params.title, item: url },
+                ],
+            },
+        ],
+    };
+}
+
+/** LocalBusiness / RealEstateAgent / AutoDealer Structured Data (Schema.org) para páginas de empresas, lojas e corretores */
+export function buildLocalBusinessStructuredData(params: {
+    name: string;
+    description: string;
+    path: string;
+    image?: string;
+    logo?: string;
+    telephone?: string;
+    address?: {
+        streetAddress?: string;
+        addressLocality?: string;
+        addressRegion?: string;
+        postalCode?: string;
+    };
+    businessType?: 'RealEstateAgent' | 'AutoDealer' | 'LocalBusiness' | 'Store' | 'ProfessionalService';
+}): Record<string, unknown> {
+    const origin = getSiteOrigin();
+    const url = toAbsoluteUrl(params.path);
+    const schemaType = params.businessType || 'LocalBusiness';
+
+    const businessNode: Record<string, unknown> = {
+        '@type': schemaType,
+        '@id': `${url}#business`,
+        name: params.name,
+        description: params.description,
+        url,
+        inLanguage: 'pt-BR',
+        isPartOf: { '@id': `${origin}/#website` },
+    };
+
+    if (params.image) businessNode.image = toAbsoluteUrl(params.image);
+    if (params.logo) businessNode.logo = toAbsoluteUrl(params.logo);
+    if (params.telephone) businessNode.telephone = params.telephone;
+    if (params.address && (params.address.addressLocality || params.address.addressRegion)) {
+        businessNode.address = {
+            '@type': 'PostalAddress',
+            ...(params.address.streetAddress ? { streetAddress: params.address.streetAddress } : {}),
+            ...(params.address.addressLocality ? { addressLocality: params.address.addressLocality } : {}),
+            ...(params.address.addressRegion ? { addressRegion: params.address.addressRegion } : {}),
+            ...(params.address.postalCode ? { postalCode: params.address.postalCode } : {}),
+            addressCountry: 'BR',
+        };
+    }
+
+    const breadcrumbs: Record<string, unknown> = {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Início', item: `${origin}/` },
+            { '@type': 'ListItem', position: 2, name: 'Empresas & Lojas', item: `${origin}/mapa-do-site` },
+            { '@type': 'ListItem', position: 3, name: params.name, item: url },
+        ],
+    };
+
+    return {
+        '@context': 'https://schema.org',
+        '@graph': [buildOrganizationGraphNode(), buildWebSiteGraphNode(), businessNode, breadcrumbs],
+    };
+}
+

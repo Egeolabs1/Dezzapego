@@ -4,12 +4,12 @@ import App from '@/app/App';
 import {
   buildWebPageStructuredData,
 } from '@/lib/categorySeo';
-import { SITE_NAME } from '@/lib/seo';
 
 
 export const metadata: Metadata = {
-  title: `Classificados e anúncios grátis no Brasil | ${SITE_NAME}`,
-  description: 'Anúncios de imóveis, veículos, eletrônicos, agro e mais. Filtre por cidade, categoria e preço. Publique grátis no Dezzapego.',
+  title: 'Dezzapego | Compre e Venda Grátis no Brasil — Imóveis, Carros e Mais',
+  description:
+    'Compre e venda de tudo no Dezzapego: imóveis, carros, eletrônicos, móveis, agro e serviços. Encontre ofertas perto de você ou publique seu anúncio 100% grátis.',
 };
 
 export default function Page() {
@@ -22,9 +22,9 @@ export default function Page() {
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(
             buildWebPageStructuredData({
-              title: 'Classificados e anúncios grátis no Brasil',
+              title: 'Dezzapego | Compre e Venda Grátis no Brasil — Imóveis, Carros e Mais',
               description:
-                'Anúncios de imóveis, veículos, eletrônicos, agro e mais. Filtre por cidade, categoria e preço. Publique grátis no Dezzapego.',
+                'Compre e venda de tudo no Dezzapego: imóveis, carros, eletrônicos, móveis, agro e serviços. Encontre ofertas perto de você ou publique seu anúncio 100% grátis.',
               path,
             })
           ),

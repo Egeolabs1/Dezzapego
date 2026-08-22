@@ -5,9 +5,9 @@ import '../src/styles/index.css';
 
 
 const origin = getSiteOrigin();
-const defaultTitle = 'Classificados e anúncios grátis no Brasil';
+const defaultTitle = 'Dezzapego | Compre e Venda Grátis no Brasil — Imóveis, Carros e Mais';
 const defaultDescription =
-  'Anúncios de imóveis, veículos, eletrônicos, agro e mais. Filtre por cidade, categoria e preço. Publique grátis no Dezzapego.';
+  'Compre e venda de tudo no Dezzapego: imóveis, carros, eletrônicos, móveis, agro e serviços. Milhares de ofertas perto de você. Publique seu anúncio 100% grátis.';
 const defaultImage = toAbsoluteUrl(getDefaultShareImagePath());
 
 export const viewport: Viewport = {
@@ -20,10 +20,21 @@ export const metadata: Metadata = {
   metadataBase: new URL(origin),
   applicationName: SITE_NAME,
   title: {
-    default: `${defaultTitle} | ${SITE_NAME}`,
+    default: defaultTitle,
     template: `%s | ${SITE_NAME}`,
   },
   description: defaultDescription,
+  keywords: [
+    'classificados',
+    'anúncios grátis',
+    'comprar e vender',
+    'imóveis',
+    'carros usados',
+    'celulares usados',
+    'móveis usados',
+    'desapegar',
+    'Dezzapego',
+  ],
   manifest: '/manifest.webmanifest',
   icons: {
     icon: '/icon.svg',
@@ -41,8 +52,8 @@ export const metadata: Metadata = {
     locale: 'pt_BR',
     siteName: SITE_NAME,
     type: 'website',
-    title: SITE_NAME,
-    description: 'Imóveis, carros, eletrônicos e mais. Publique anúncios grátis no Dezzapego.',
+    title: defaultTitle,
+    description: defaultDescription,
     url: '/',
     images: [
       {
@@ -55,8 +66,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: SITE_NAME,
-    description: 'Imóveis, carros, eletrônicos e mais. Publique anúncios grátis no Dezzapego.',
+    title: defaultTitle,
+    description: defaultDescription,
     images: [defaultImage],
   },
   robots: {

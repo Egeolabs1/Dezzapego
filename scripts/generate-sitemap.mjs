@@ -138,18 +138,65 @@ const GUIDE_PATHS = [
 ];
 
 const SEO_LOCATIONS = [
+    // Sudeste
     { stateSlug: 'sp', citySlug: 'sao-paulo' },
+    { stateSlug: 'sp', citySlug: 'campinas' },
+    { stateSlug: 'sp', citySlug: 'guarulhos' },
+    { stateSlug: 'sp', citySlug: 'sao-bernardo-do-campo' },
+    { stateSlug: 'sp', citySlug: 'santo-andre' },
+    { stateSlug: 'sp', citySlug: 'osasco' },
+    { stateSlug: 'sp', citySlug: 'sorocaba' },
+    { stateSlug: 'sp', citySlug: 'ribeirao-preto' },
+    { stateSlug: 'sp', citySlug: 'sao-jose-dos-campos' },
+    { stateSlug: 'sp', citySlug: 'santos' },
     { stateSlug: 'rj', citySlug: 'rio-de-janeiro' },
+    { stateSlug: 'rj', citySlug: 'niteroi' },
+    { stateSlug: 'rj', citySlug: 'sao-goncalo' },
+    { stateSlug: 'rj', citySlug: 'duque-de-caxias' },
     { stateSlug: 'mg', citySlug: 'belo-horizonte' },
+    { stateSlug: 'mg', citySlug: 'uberlandia' },
+    { stateSlug: 'mg', citySlug: 'contagem' },
+    { stateSlug: 'mg', citySlug: 'juiz-de-fora' },
+    { stateSlug: 'es', citySlug: 'vitoria' },
+    { stateSlug: 'es', citySlug: 'vila-velha' },
+
+    // Sul
     { stateSlug: 'pr', citySlug: 'curitiba' },
+    { stateSlug: 'pr', citySlug: 'londrina' },
+    { stateSlug: 'pr', citySlug: 'maringa' },
+    { stateSlug: 'sc', citySlug: 'florianopolis' },
+    { stateSlug: 'sc', citySlug: 'joinville' },
+    { stateSlug: 'sc', citySlug: 'blumenau' },
     { stateSlug: 'rs', citySlug: 'porto-alegre' },
-    { stateSlug: 'ba', citySlug: 'salvador' },
-    { stateSlug: 'pe', citySlug: 'recife' },
-    { stateSlug: 'ce', citySlug: 'fortaleza' },
+    { stateSlug: 'rs', citySlug: 'caxias-do-sul' },
+
+    // Centro-Oeste
     { stateSlug: 'df', citySlug: 'brasilia' },
     { stateSlug: 'go', citySlug: 'goiania' },
-    { stateSlug: 'sp', citySlug: 'campinas' },
-    { stateSlug: 'sc', citySlug: 'florianopolis' },
+    { stateSlug: 'go', citySlug: 'anapolis' },
+    { stateSlug: 'mt', citySlug: 'cuiaba' },
+    { stateSlug: 'ms', citySlug: 'campo-grande' },
+
+    // Nordeste
+    { stateSlug: 'ba', citySlug: 'salvador' },
+    { stateSlug: 'ba', citySlug: 'feira-de-santana' },
+    { stateSlug: 'pe', citySlug: 'recife' },
+    { stateSlug: 'ce', citySlug: 'fortaleza' },
+    { stateSlug: 'rn', citySlug: 'natal' },
+    { stateSlug: 'pb', citySlug: 'joao-pessoa' },
+    { stateSlug: 'al', citySlug: 'maceio' },
+    { stateSlug: 'se', citySlug: 'aracaju' },
+    { stateSlug: 'pi', citySlug: 'teresina' },
+    { stateSlug: 'ma', citySlug: 'sao-luis' },
+
+    // Norte
+    { stateSlug: 'pa', citySlug: 'belem' },
+    { stateSlug: 'am', citySlug: 'manaus' },
+    { stateSlug: 'ro', citySlug: 'porto-velho' },
+    { stateSlug: 'ac', citySlug: 'rio-branco' },
+    { stateSlug: 'ap', citySlug: 'macapa' },
+    { stateSlug: 'rr', citySlug: 'boa-vista' },
+    { stateSlug: 'to', citySlug: 'palmas' },
 ];
 
 function escapeXml(s) {
@@ -270,6 +317,30 @@ ${body}
 `;
 }
 
+async function fetchAllBusinessesForSitemap() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || supabaseUrl === 'YOUR_SUPABASE_URL' || !supabaseKey) {
+        return [];
+    }
+
+    try {
+        const client = createClient(supabaseUrl, supabaseKey);
+        const { data, error } = await client
+            .from('businesses')
+            .select('slug, updated_at, created_at')
+            .eq('is_active', true)
+            .limit(1000);
+        if (error || !data) return [];
+        return data.map((b) => ({
+            slug: b.slug,
+            lastmod: toIsoDate(b.updated_at || b.created_at),
+        }));
+    } catch {
+        return [];
+    }
+}
+
 async function main() {
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.VITE_SITE_URL || 'https://dezzapego.com').replace(/\/$/, '');
     const entries = [];
@@ -322,6 +393,18 @@ async function main() {
         });
     }
 
+    const businesses = await fetchAllBusinessesForSitemap();
+    for (const b of businesses) {
+        if (b.slug) {
+            entries.push({
+                loc: `${siteUrl}/empresa/${b.slug}`,
+                lastmod: b.lastmod,
+                changefreq: 'weekly',
+                priority: '0.75',
+            });
+        }
+    }
+
     const ads = await fetchAllAdsForSitemap();
     for (const ad of ads) {
         entries.push({
@@ -353,6 +436,19 @@ function writeRobotsTxt(siteUrl) {
         '# Gerado por npm run generate:sitemap — domínio em NEXT_PUBLIC_SITE_URL',
         'User-agent: *',
         'Allow: /',
+        'Disallow: /admin',
+        'Disallow: /admin/',
+        'Disallow: /dashboard',
+        'Disallow: /dashboard/',
+        'Disallow: /meus-anuncios',
+        'Disallow: /meus-anuncios/',
+        'Disallow: /favoritos',
+        'Disallow: /favoritos/',
+        'Disallow: /checkout/',
+        'Disallow: /redefinir-senha',
+        'Disallow: /conta-suspensa',
+        'Disallow: /api/',
+        'Disallow: /*?*details=*',
         '',
         `Sitemap: ${siteUrl}/sitemap.xml`,
         '',

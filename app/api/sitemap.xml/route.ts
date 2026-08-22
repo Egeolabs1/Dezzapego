@@ -145,6 +145,37 @@ export async function GET() {
     // Silently ignore — location pages are optional
   }
 
+  // Active business and store pages
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+    if (supabaseUrl && supabaseKey) {
+      const supabase = createClient(supabaseUrl, supabaseKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data: businesses } = await supabase
+        .from('businesses')
+        .select('slug, updated_at, created_at')
+        .eq('is_active', true)
+        .limit(1000);
+      if (businesses) {
+        for (const b of businesses) {
+          if (b.slug) {
+            const loc = `${siteUrl}/empresa/${b.slug}`;
+            entries.set(loc, {
+              loc,
+              lastmod: b.updated_at || b.created_at || nowIso,
+              changefreq: 'weekly',
+              priority: '0.75',
+            });
+          }
+        }
+      }
+    }
+  } catch {
+    // Silently ignore
+  }
+
   const ads = await fetchAdsForSitemap();
   for (const ad of ads) {
     const loc = `${siteUrl}/anuncio/${ad.id}`;

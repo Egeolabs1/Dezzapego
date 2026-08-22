@@ -6,12 +6,16 @@ import { CATEGORIES } from '@/app/data/categories';
 import { getCategoryPath, resolveCategoryFromSlug, resolveSubcategoryFromSlug, slugifyCategoryPart } from '@/lib/categoryRoutes';
 import {
   buildArticleStructuredData,
+  buildFaqStructuredData,
+  buildListingStructuredData,
+  buildLocalBusinessStructuredData,
   buildLocationStructuredData,
   buildWebPageStructuredData,
   getDefaultHomeSeoConstants,
   getListingSeoForHome,
 } from '@/lib/categorySeo';
-import { SEO_LOCATIONS, SEO_GUIDES } from '@/lib/seoContent';
+import { SEO_LOCATIONS, SEO_GUIDES, SAFETY_FAQS, PLANS_FAQS, ABOUT_FAQS } from '@/lib/seoContent';
+import { fetchBusinessForSeo, fetchProfileForSeo } from '@/lib/serverBusinessSeo';
 import { SITE_NAME, toAbsoluteUrl } from '@/lib/seo';
 
 type PageProps = {
@@ -26,8 +30,15 @@ function titleWithSite(title: string) {
   return `${title} | ${SITE_NAME}`;
 }
 
-function baseMetadata(path: string, title: string, description: string, noIndex = false): Metadata {
+function baseMetadata(
+  path: string,
+  title: string,
+  description: string,
+  noIndex = false,
+  customImage?: string,
+): Metadata {
   const canonical = toAbsoluteUrl(path);
+  const image = customImage ? toAbsoluteUrl(customImage) : toAbsoluteUrl('/og-default.png');
   return {
     title,
     description,
@@ -63,7 +74,7 @@ function baseMetadata(path: string, title: string, description: string, noIndex 
       url: canonical,
       images: [
         {
-          url: toAbsoluteUrl('/og-default.png'),
+          url: image,
           width: 1200,
           height: 630,
           alt: title,
@@ -74,7 +85,7 @@ function baseMetadata(path: string, title: string, description: string, noIndex 
       card: 'summary_large_image',
       title: titleWithSite(title),
       description,
-      images: [toAbsoluteUrl('/og-default.png')],
+      images: [image],
     },
   };
 }
@@ -99,9 +110,94 @@ async function metadataForPath(path: string): Promise<Metadata> {
   if (path === '/sobre') {
     return baseMetadata(
       path,
-      'Sobre o Dezzapego',
-      'Conheça o Dezzapego, uma plataforma brasileira de classificados para comprar, vender e desapegar com segurança.',
+      'Sobre o Dezzapego — Quem Somos e Nossa Missão',
+      'Conheça o Dezzapego: a plataforma brasileira de classificados criada para facilitar a compra, venda e desapego de produtos e serviços com total segurança.',
     );
+  }
+
+  if (path === '/planos') {
+    return baseMetadata(
+      path,
+      'Planos e Destaques para Anunciantes',
+      'Turbine suas vendas no Dezzapego. Conheça nossos planos profissionais para imobiliárias, concessionárias e lojistas com maior visibilidade.',
+    );
+  }
+
+  if (path === '/dicas-seguranca') {
+    return baseMetadata(
+      path,
+      'Dicas de Segurança para Comprar e Vender Online',
+      'Aprenda as melhores práticas para negociar com segurança na internet, evitar fraudes e fechar negócios confiáveis no Dezzapego.',
+    );
+  }
+
+  if (path === '/contato') {
+    return baseMetadata(
+      path,
+      'Fale Conosco — Atendimento e Suporte',
+      'Entre em contato com a equipe do Dezzapego. Tire dúvidas sobre seus anúncios, planos ou envie sugestões para nossa plataforma.',
+    );
+  }
+
+  if (path === '/termos') {
+    return baseMetadata(
+      path,
+      'Termos de Uso',
+      'Confira os Termos e Condições de Uso da plataforma Dezzapego para compradores e anunciantes em todo o Brasil.',
+    );
+  }
+
+  if (path === '/privacidade') {
+    return baseMetadata(
+      path,
+      'Política de Privacidade e Proteção de Dados',
+      'Saiba como o Dezzapego protege seus dados pessoais e cumpre integralmente as diretrizes da LGPD com total transparência.',
+    );
+  }
+
+  if (path === '/mapa-do-site') {
+    return baseMetadata(
+      path,
+      'Mapa do Site — Categorias, Cidades e Guias',
+      'Navegue pelo mapa completo do Dezzapego: acesse anúncios em todas as cidades brasileiras, categorias e guias de compra e venda.',
+    );
+  }
+
+  // Business profile routes: /empresa/:slug, /loja/:slug, /imobiliaria/:slug, /corretor/:slug
+  const businessMatch = path.match(/^\/(?:empresa|loja|imobiliaria|corretor)\/([^/]+)$/);
+  if (businessMatch) {
+    const slug = businessMatch[1];
+    const business = await fetchBusinessForSeo(slug);
+    if (business) {
+      const typeLabel =
+        business.type === 'real_estate'
+          ? 'Imobiliária'
+          : business.type === 'vehicle_dealer'
+          ? 'Concessionária'
+          : 'Loja';
+      const locLabel = business.city && business.state ? ` em ${business.city}, ${business.state}` : '';
+      const title = `${business.name} — ${typeLabel}${locLabel}`;
+      const description =
+        business.description?.slice(0, 160) ||
+        `Confira os anúncios e ofertas de ${business.name}${locLabel} no Dezzapego. Compre com segurança e fale direto pelo WhatsApp.`;
+      const image = business.logo_url || business.cover_url || undefined;
+      return baseMetadata(path, title, description, false, image);
+    }
+    return baseMetadata(path, 'Empresa não encontrada', 'Esta empresa não existe ou foi desativada.', true);
+  }
+
+  // Seller profile route: /anunciante/:id
+  const sellerMatch = path.match(/^\/anunciante\/([^/]+)$/);
+  if (sellerMatch) {
+    const profile = await fetchProfileForSeo(sellerMatch[1]);
+    if (profile) {
+      const name = profile.full_name || 'Vendedor';
+      const loc = profile.city && profile.state ? ` em ${profile.city}, ${profile.state}` : '';
+      const title = `Anúncios de ${name}${loc}`;
+      const description = `Veja todos os anúncios ativos publicados por ${name}${loc} no Dezzapego.`;
+      return baseMetadata(path, title, description, false, profile.avatar_url || undefined);
+    }
+    return baseMetadata(path, 'Anunciante', 'Perfil de anunciante no Dezzapego.', true);
   }
 
   const categoryMatch = path.match(/^\/categoria\/([^/]+)(?:\/([^/]+))?$/);
@@ -127,11 +223,11 @@ async function metadataForPath(path: string): Promise<Metadata> {
     const category = resolveCategoryFromSlug(locationMatch[3]);
     if (location) {
       const title = category
-        ? `${category} em ${location.city}, ${location.state}`
-        : `Anúncios em ${location.city}, ${location.state}`;
+        ? `${category} em ${location.city}, ${location.state} — Comprar e Vender`
+        : `Classificados em ${location.city}, ${location.state} — Anúncios Grátis`;
       const description = category
-        ? `Encontre anúncios de ${category} em ${location.city}, ${location.state}. Veja ofertas locais e publique grátis no Dezzapego.`
-        : `Compre e venda em ${location.city}, ${location.state}. Veja anúncios locais no Dezzapego por categoria, preço e localização.`;
+        ? `Encontre anúncios de ${category} em ${location.city}, ${location.state}. Veja ofertas com fotos e preços e publique grátis no Dezzapego.`
+        : `Compre e venda em ${location.city}, ${location.state}. Veja anúncios locais no Dezzapego de imóveis, carros, celulares, móveis e serviços.`;
       return baseMetadata(path, title, description);
     }
   }
@@ -144,15 +240,16 @@ async function metadataForPath(path: string): Promise<Metadata> {
     '/meus-anuncios',
     '/dashboard',
     '/favoritos',
+    '/conta-suspensa',
   ];
-  const noIndex = noIndexPaths.some((item) => path === item || path.startsWith('/admin'));
+  const noIndex = noIndexPaths.some((item) => path === item || path.startsWith('/admin') || path.startsWith('/checkout'));
   const noIndexMetadata: Record<string, { title: string; description: string }> = {
     '/login': {
-      title: 'Entrar',
+      title: 'Entrar na Conta',
       description: 'Acesse sua conta no Dezzapego para anunciar, responder interessados e gerenciar seus anúncios.',
     },
     '/register': {
-      title: 'Criar Conta',
+      title: 'Criar Conta Grátis',
       description: 'Crie sua conta no Dezzapego para comprar, vender e publicar anúncios com segurança.',
     },
     '/redefinir-senha': {
@@ -161,7 +258,23 @@ async function metadataForPath(path: string): Promise<Metadata> {
     },
     '/anunciar': {
       title: 'Anunciar Grátis',
-      description: 'Publique seu anúncio grátis no Dezzapego.',
+      description: 'Publique seu anúncio grátis no Dezzapego em poucos minutos.',
+    },
+    '/meus-anuncios': {
+      title: 'Meus Anúncios',
+      description: 'Gerencie seus anúncios publicados no Dezzapego.',
+    },
+    '/dashboard': {
+      title: 'Painel do Usuário',
+      description: 'Painel de controle do usuário no Dezzapego.',
+    },
+    '/favoritos': {
+      title: 'Meus Favoritos',
+      description: 'Veja os anúncios salvos nos seus favoritos no Dezzapego.',
+    },
+    '/conta-suspensa': {
+      title: 'Conta Suspensa',
+      description: 'Informações sobre suspensão de conta no Dezzapego.',
     },
   };
   if (noIndexMetadata[path]) {
@@ -186,7 +299,6 @@ async function metadataForPath(path: string): Promise<Metadata> {
 
       return baseMetadata(path, pageData.title, pageData.description);
     } catch {
-      // If DB query fails, still return valid metadata (don't break the page)
       return baseMetadata(path, 'Dezzapego', 'Classificados e anúncios no Dezzapego.');
     }
   }
@@ -229,7 +341,7 @@ function isKnownSeoPath(path: string) {
     return true;
   }
 
-  if (/^\/checkout\/plano$/.test(path)) {
+  if (/^\/checkout(?:\/.*)?$/.test(path)) {
     return true;
   }
 
@@ -287,7 +399,7 @@ function isKnownSeoPath(path: string) {
   return false;
 }
 
-function JsonLdForPath({ path }: { path: string }) {
+async function JsonLdForPath({ path }: { path: string }) {
   const data: Record<string, unknown>[] = [];
   const guide = SEO_GUIDES.find((item) => `/guias/${item.slug}` === path);
   if (guide) {
@@ -300,22 +412,77 @@ function JsonLdForPath({ path }: { path: string }) {
     );
   }
 
+  if (path === '/dicas-seguranca') {
+    data.push(
+      buildFaqStructuredData({
+        title: 'Dicas de Segurança para Comprar e Vender Online',
+        description: 'Perguntas frequentes e boas práticas para negociar com segurança no Dezzapego.',
+        path,
+        faqs: SAFETY_FAQS,
+      }),
+    );
+  }
+
+  if (path === '/planos') {
+    data.push(
+      buildFaqStructuredData({
+        title: 'Planos e Destaques do Dezzapego',
+        description: 'Tire suas dúvidas sobre os planos profissionais e benefícios para lojistas no Dezzapego.',
+        path,
+        faqs: PLANS_FAQS,
+      }),
+    );
+  }
+
+  if (path === '/sobre') {
+    data.push(
+      buildFaqStructuredData({
+        title: 'Sobre o Dezzapego',
+        description: 'Conheça o Dezzapego e tire dúvidas sobre a plataforma de classificados.',
+        path,
+        faqs: ABOUT_FAQS,
+      }),
+    );
+  }
+
+  // Business profile structured data
+  const businessMatch = path.match(/^\/(?:empresa|loja|imobiliaria|corretor)\/([^/]+)$/);
+  if (businessMatch) {
+    const business = await fetchBusinessForSeo(businessMatch[1]);
+    if (business) {
+      const schemaType =
+        business.type === 'real_estate'
+          ? 'RealEstateAgent'
+          : business.type === 'vehicle_dealer'
+          ? 'AutoDealer'
+          : 'LocalBusiness';
+      data.push(
+        buildLocalBusinessStructuredData({
+          name: business.name,
+          description: business.description || `Empresa ${business.name} no Dezzapego`,
+          path,
+          image: business.cover_url || undefined,
+          logo: business.logo_url || undefined,
+          telephone: business.phone || business.whatsapp || undefined,
+          address: {
+            addressLocality: business.city || undefined,
+            addressRegion: business.state || undefined,
+          },
+          businessType: schemaType,
+        }),
+      );
+    }
+  }
+
   const categoryMatch = path.match(/^\/categoria\/([^/]+)(?:\/([^/]+))?$/);
   if (categoryMatch) {
     const category = resolveCategoryFromSlug(categoryMatch[1]);
     const subcategory = resolveSubcategoryFromSlug(category, categoryMatch[2]);
     if (category) {
-      const seo = getListingSeoForHome({
-        category,
-        subcategory,
-        transactionType: '',
-        searchQuery: '',
-      });
       data.push(
-        buildWebPageStructuredData({
-          title: seo.title,
-          description: seo.description,
-          path,
+        buildListingStructuredData({
+          category,
+          subcategory: subcategory || undefined,
         }),
       );
     }
@@ -329,11 +496,11 @@ function JsonLdForPath({ path }: { path: string }) {
     const category = resolveCategoryFromSlug(locationMatch[3]);
     if (location) {
       const title = category
-        ? `${category} em ${location.city}, ${location.state}`
-        : `Anúncios em ${location.city}, ${location.state}`;
+        ? `${category} em ${location.city}, ${location.state} — Comprar e Vender`
+        : `Classificados em ${location.city}, ${location.state} — Anúncios Grátis`;
       const description = category
-        ? `Encontre anúncios de ${category} em ${location.city}, ${location.state}. Veja ofertas locais e publique grátis no Dezzapego.`
-        : `Compre e venda em ${location.city}, ${location.state}. Veja anúncios locais no Dezzapego por categoria, preço e localização.`;
+        ? `Encontre anúncios de ${category} em ${location.city}, ${location.state}. Veja ofertas com fotos e preços e publique grátis no Dezzapego.`
+        : `Compre e venda em ${location.city}, ${location.state}. Veja anúncios locais no Dezzapego de imóveis, carros, celulares, móveis e serviços.`;
       data.push(
         buildLocationStructuredData({
           title,
@@ -347,12 +514,14 @@ function JsonLdForPath({ path }: { path: string }) {
   }
 
   if (path === '/' || data.length === 0) {
-    data.push(buildWebPageStructuredData({
-      title: 'Classificados e anúncios grátis no Brasil',
-      description:
-        'Anúncios de imóveis, veículos, eletrônicos, agro e mais. Filtre por cidade, categoria e preço. Publique grátis no Dezzapego.',
-      path,
-    }));
+    data.push(
+      buildWebPageStructuredData({
+        title: 'Dezzapego | Compre e Venda Grátis no Brasil — Imóveis, Carros e Mais',
+        description:
+          'Compre e venda de tudo no Dezzapego: imóveis, carros, eletrônicos, móveis, agro e serviços. Encontre ofertas perto de você ou publique seu anúncio 100% grátis.',
+        path,
+      }),
+    );
   }
 
   return (
@@ -411,7 +580,9 @@ export default async function Page({ params }: PageProps) {
 
   return (
     <>
-      <JsonLdForPath path={path} />
+      <Suspense fallback={null}>
+        <JsonLdForPath path={path} />
+      </Suspense>
       <Suspense>
         <App initialPath={path} enableHelmet={false} />
       </Suspense>

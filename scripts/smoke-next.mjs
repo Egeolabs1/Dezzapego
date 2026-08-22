@@ -76,9 +76,9 @@ child.stderr.on('data', (chunk) => {
 
 try {
   await waitForServer();
-  await expectPage('/', 'Classificados e anúncios grátis no Brasil');
+  await expectPage('/', 'Dezzapego');
   await expectPage('/register', 'Crie sua conta');
-  await expectPage('/login', 'Entrar no Dezzapego');
+  await expectPage('/login', 'Entrar na Conta');
   await expectPage('/categoria/imoveis', 'Dezzapego');
   await expectXml('/api/sitemap.xml', '<urlset');
   await expectXml('/api/sitemap.xml', '/guias/como-vender-com-seguranca');

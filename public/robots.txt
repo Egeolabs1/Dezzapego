@@ -1,5 +1,18 @@
 # Gerado por npm run generate:sitemap — domínio em NEXT_PUBLIC_SITE_URL
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /meus-anuncios
+Disallow: /meus-anuncios/
+Disallow: /favoritos
+Disallow: /favoritos/
+Disallow: /checkout/
+Disallow: /redefinir-senha
+Disallow: /conta-suspensa
+Disallow: /api/
+Disallow: /*?*details=*
 
 Sitemap: https://dezzapego.com/sitemap.xml
