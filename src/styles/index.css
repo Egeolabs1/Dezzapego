@@ -16,6 +16,11 @@ html, body {
     animation: global-announcement-scroll linear infinite;
 }
 
+.global-announcement__group {
+    display: inline-flex;
+    flex: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .global-announcement__ticker {
         animation: none;

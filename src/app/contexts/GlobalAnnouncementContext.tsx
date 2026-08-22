@@ -6,6 +6,8 @@ export type GlobalAnnouncementSettings = {
     message: string;
     scroll: boolean;
     speed: number;
+    repeatCount: number;
+    gap: number;
     backgroundColor: string;
     textColor: string;
 };
@@ -15,6 +17,8 @@ export const DEFAULT_GLOBAL_ANNOUNCEMENT: GlobalAnnouncementSettings = {
     message: '',
     scroll: false,
     speed: 24,
+    repeatCount: 1,
+    gap: 24,
     backgroundColor: '#1d4ed8',
     textColor: '#ffffff',
 };
@@ -36,6 +40,12 @@ export function parseGlobalAnnouncement(value: unknown): GlobalAnnouncementSetti
     const speed = typeof raw.speed === 'number' && Number.isFinite(raw.speed)
         ? Math.min(60, Math.max(8, raw.speed))
         : DEFAULT_GLOBAL_ANNOUNCEMENT.speed;
+    const repeatCount = typeof raw.repeatCount === 'number' && Number.isFinite(raw.repeatCount)
+        ? Math.min(6, Math.max(1, Math.round(raw.repeatCount)))
+        : DEFAULT_GLOBAL_ANNOUNCEMENT.repeatCount;
+    const gap = typeof raw.gap === 'number' && Number.isFinite(raw.gap)
+        ? Math.min(200, Math.max(0, Math.round(raw.gap)))
+        : DEFAULT_GLOBAL_ANNOUNCEMENT.gap;
     const backgroundColor = typeof raw.backgroundColor === 'string' && /^#[0-9a-f]{6}$/i.test(raw.backgroundColor)
         ? raw.backgroundColor
         : DEFAULT_GLOBAL_ANNOUNCEMENT.backgroundColor;
@@ -48,6 +58,8 @@ export function parseGlobalAnnouncement(value: unknown): GlobalAnnouncementSetti
         message: typeof raw.message === 'string' ? raw.message.slice(0, 300) : '',
         scroll: raw.scroll === true,
         speed,
+        repeatCount,
+        gap,
         backgroundColor,
         textColor,
     };

@@ -4,7 +4,7 @@ values ('require_ad_approval', 'true'::jsonb)
 on conflict (key) do nothing;
 
 insert into public.system_settings (key, value)
-values ('global_announcement', '{"enabled": false, "message": "", "scroll": false, "speed": 24, "backgroundColor": "#1d4ed8", "textColor": "#ffffff"}'::jsonb)
+values ('global_announcement', '{"enabled": false, "message": "", "scroll": false, "speed": 24, "repeatCount": 1, "gap": 24, "backgroundColor": "#1d4ed8", "textColor": "#ffffff"}'::jsonb)
 on conflict (key) do nothing;
 
 create or replace function public.apply_ad_moderation_status()
