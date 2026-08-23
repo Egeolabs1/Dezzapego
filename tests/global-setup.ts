@@ -30,6 +30,16 @@ loadEnv();
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
+const fetchWithTimeout: typeof fetch = async (input, init = {}) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20_000);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
 // Fixed UUIDs — MUST match tests/fixtures/auth.ts TEST_USERS
 const USERS = {
   userA:    { id: 'a1111111-1111-4111-8111-111111111111', email: 'test.userA@dezzapego.test',    password: 'TestUserA1!',  name: 'Test User A' },
@@ -48,6 +58,7 @@ const SUB_A_ID = '33333333-3333-4333-9333-333333333301';
 export default async function globalSetup() {
   const admin = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
+    global: { fetch: fetchWithTimeout },
   });
 
   // 0. Apply RPC fix via direct DB connection — ensures search_ads_by_location
