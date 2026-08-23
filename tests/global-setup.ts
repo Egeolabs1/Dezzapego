@@ -57,7 +57,14 @@ export default async function globalSetup() {
     const { Pool } = await import('pg');
     const dbUrl = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
     if (dbUrl) {
-      const pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+      const pool = new Pool({
+        connectionString: dbUrl,
+        ssl: { rejectUnauthorized: false },
+        connectionTimeoutMillis: 10_000,
+        idleTimeoutMillis: 5_000,
+        statement_timeout: 20_000,
+        query_timeout: 20_000,
+      });
       const rpcFixSql = readFileSync(
         resolve(__dirname, '..', 'supabase', 'migrations', '20250818_01_fix_geolocation_rpcs.sql'),
         'utf-8',
