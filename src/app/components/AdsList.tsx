@@ -1,4 +1,4 @@
-import { BookmarkPlus, Heart, ImageIcon, LayoutGrid, List as ListIcon, Trash2 } from 'lucide-react';
+import { BookmarkPlus, Heart, ImageIcon, LayoutGrid, List as ListIcon, MapPin, Trash2 } from 'lucide-react';
 import { AdCardSkeleton } from './ui/skeleton';
 
 import type { Ad } from '../../types';
@@ -376,11 +376,6 @@ export function AdsList({
                     <Heart className={`w-4 h-4 ${favorites.has(ad.id) ? 'fill-red-500 text-red-500' : ''}`} />
                   </button>
                 </div>
-                <div className="absolute bottom-2 left-2 right-2">
-                  <span className="px-1.5 py-0.5 md:px-2 md:py-1 bg-black/50 backdrop-blur-sm text-white text-[10px] md:text-xs font-medium rounded-md truncate block w-fit max-w-full">
-                    {ad.location?.city || 'Brasil'}, {ad.location?.state || 'BR'}
-                  </span>
-                </div>
               </div>
 
               {/* Content */}
@@ -402,23 +397,12 @@ export function AdsList({
                   </p>
                 </div>
 
-                {/* Seller - Live Data Display */}
-                <div className="flex items-center gap-2 pt-2 border-t border-gray-50 mt-auto">
-                  <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200 shrink-0">
-                    {ad.seller?.avatar_url ? (
-                      <img src={ad.seller.avatar_url} alt={ad.seller.name} className="w-full h-full object-cover" loading="lazy" />
-                    ) : (
-                      <span className="text-[10px] font-bold text-gray-400">{(ad.seller?.name || '?').charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
-                  <span className="text-xs text-gray-500 truncate">
-                    {ad.seller?.name?.split(' ')[0]}
+                {/* Location */}
+                <div className="flex items-center gap-1.5 pt-2 border-t border-gray-50 mt-auto text-xs text-gray-500">
+                  <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <span className="truncate">
+                    {ad.location?.city || 'Brasil'}{ad.location?.state ? `, ${ad.location.state}` : ''}
                   </span>
-                  {ad.seller?.verified && (
-                    <span className="bg-blue-100 text-blue-600 text-[10px] px-1.5 py-0.5 rounded-full font-bold ml-auto" title="Verificado">
-                      ✔
-                    </span>
-                  )}
                 </div>
               </div>
             </Link>

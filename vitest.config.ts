@@ -6,6 +6,7 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['tests/unit/**/*.spec.ts', 'tests/unit/**/*.test.ts'],
     globals: true,
+    pool: 'threads',
   },
   resolve: {
     alias: {
