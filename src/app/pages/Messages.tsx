@@ -50,7 +50,13 @@ export default function Messages() {
     const { data, error } = await supabase.from('marketplace_messages').select('id, sender_id, body, created_at, read_at').eq('conversation_id', conversation.id).order('created_at');
     if (error) toast.error('Não foi possível carregar as mensagens.');
     setMessages((data || []) as Message[]);
-    await supabase.from('marketplace_messages').update({ read_at: new Date().toISOString() }).eq('conversation_id', conversation.id).neq('sender_id', user?.id || '').is('read_at', null);
+    const { error: readError } = await supabase
+      .from('marketplace_messages')
+      .update({ read_at: new Date().toISOString() })
+      .eq('conversation_id', conversation.id)
+      .neq('sender_id', user?.id || '')
+      .is('read_at', null);
+    if (readError) toast.error('Não foi possível confirmar a leitura das mensagens.');
   }
 
   async function sendMessage() {

@@ -6,6 +6,7 @@ import {
   jsonResponse,
   markAccountPlanPaymentStatus,
   markPaymentStatus,
+  shouldRenewStripeInvoice,
 } from '@/lib/payments';
 
 export async function POST(req: Request) {
@@ -43,7 +44,11 @@ export async function POST(req: Request) {
             })
             .eq('id', paymentId);
 
-          await activateAccountPlan(supabase, paymentId);
+          await activateAccountPlan(
+            supabase,
+            paymentId,
+            typeof session.subscription === 'string' ? session.subscription : session.subscription?.id || null,
+          );
         } else {
           await supabase
             .from('featured_payments')
@@ -71,52 +76,29 @@ export async function POST(req: Request) {
     }
 
     if (event.type === 'invoice.paid' || event.type === 'invoice.payment_succeeded') {
-      const invoice = event.data.object as Stripe.Invoice & { subscription?: string | { id?: string } | null };
+      const invoice = event.data.object as Stripe.Invoice & { subscription?: string | { id?: string } | null; billing_reason?: string | null };
       const subscriptionId = typeof invoice.subscription === 'string'
         ? invoice.subscription
         : invoice.subscription?.id;
 
-      if (subscriptionId) {
-        const { data: payment } = await supabase
-          .from('account_plan_payments')
-          .select('id')
-          .eq('external_id', subscriptionId)
-          .eq('provider', 'stripe')
-          .order('created_at', { ascending: true })
-          .limit(1)
-          .maybeSingle();
-
-        if (payment?.id) {
-          await supabase
-            .from('account_plan_payments')
-            .update({ webhook_payload: event })
-            .eq('id', payment.id);
-          await activateAccountPlan(supabase, payment.id);
-        }
+      if (subscriptionId && shouldRenewStripeInvoice(invoice.billing_reason)) {
+        const { error } = await supabase.rpc('renew_stripe_account_plan', {
+          p_subscription_id: subscriptionId,
+          p_event_id: event.id,
+        });
+        if (error) throw error;
       }
     }
 
     if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object as Stripe.Subscription;
-      const { data: payment } = await supabase
-        .from('account_plan_payments')
-        .select('user_id')
-        .eq('external_id', subscription.id)
-        .eq('provider', 'stripe')
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      if (payment?.user_id) {
-        await supabase
-          .from('user_account_subscriptions')
-          .update({
-            status: 'canceled',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', payment.user_id)
-          .eq('external_id', subscription.id);
-      }
+      await supabase
+        .from('user_account_subscriptions')
+        .update({
+          status: 'canceled',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('external_subscription_id', subscription.id);
     }
 
     return jsonResponse({ received: true });

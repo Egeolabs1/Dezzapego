@@ -27,8 +27,8 @@ function loadEnv() {
 }
 loadEnv();
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.E2E_SUPABASE_URL!;
+const serviceKey = process.env.E2E_SUPABASE_SERVICE_ROLE_KEY!;
 
 const fetchWithTimeout: typeof fetch = async (input, init = {}) => {
   const controller = new AbortController();
@@ -66,7 +66,7 @@ export default async function globalSetup() {
   //    Uses CREATE OR REPLACE so it's idempotent.
   try {
     const { Pool } = await import('pg');
-    const dbUrl = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
+    const dbUrl = process.env.E2E_SUPABASE_DB_URL;
     if (dbUrl) {
       const pool = new Pool({
         connectionString: dbUrl,
@@ -84,7 +84,7 @@ export default async function globalSetup() {
       await pool.end();
       console.log('  ✓ RPC fix applied (search_ads_by_location)');
     } else {
-      console.warn('  [global-setup] No SUPABASE_DB_URL — RPC fix must be applied manually in SQL Editor');
+      console.warn('  [global-setup] No E2E_SUPABASE_DB_URL — RPC fix must be applied manually in the test database');
     }
   } catch (e: any) {
     console.warn(`  [global-setup] RPC fix skipped: ${e.message}`);
