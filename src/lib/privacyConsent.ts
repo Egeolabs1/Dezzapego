@@ -50,7 +50,11 @@ export function setConsent(consent: boolean | { analytics: boolean; adsPersonali
         at: new Date().toISOString(),
         policyVersion: CONSENT_POLICY_VERSION,
     };
-    window.localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify(state));
+    try {
+        window.localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify(state));
+    } catch {
+        // Private browsing or storage restrictions should not prevent closing the banner.
+    }
     window.dispatchEvent(new CustomEvent(CONSENT_CHANGED_EVENT));
 }
 

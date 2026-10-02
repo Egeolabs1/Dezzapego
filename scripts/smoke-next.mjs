@@ -82,6 +82,8 @@ try {
   await expectPage('/categoria/imoveis', 'Dezzapego');
   await expectXml('/api/sitemap.xml', '<urlset');
   await expectXml('/api/sitemap.xml', '/guias/como-vender-com-seguranca');
+  await expectRejectedWebhook('/api/search-alerts', { method: 'GET' }, 401);
+  await expectPage('/api/search-alerts/unsubscribe?token=invalid', 'Link inválido');
   await expectRejectedWebhook('/api/stripe-webhook', { method: 'POST', body: '{}' }, 400);
   await expectRejectedWebhook(
     '/api/pixgo-webhook',

@@ -114,6 +114,7 @@ export function Header({
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 ref={mobileSearchRef}
+                aria-label="Buscar produtos, marcas ou categorias"
                 type="text"
                 enterKeyHint="search"
                 value={searchQuery}
@@ -146,6 +147,7 @@ export function Header({
                 <Search className="w-3.5 h-3.5 text-gray-400" />
               </div>
               <input
+                aria-label="Buscar produtos, marcas ou categorias"
                 type="text"
                 enterKeyHint="search"
                 value={searchQuery}

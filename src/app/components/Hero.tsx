@@ -103,12 +103,12 @@ export function Hero() {
         </>
       )}
 
-      <div className="container mx-auto px-4 py-8 md:py-16 relative z-10">
+      <div className="container mx-auto px-4 py-6 md:py-10 relative z-10">
         <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-3xl md:text-5xl mb-4 font-bold drop-shadow-lg select-none">
+          <h1 className="text-3xl md:text-4xl mb-3 font-bold drop-shadow-lg select-none">
             {title}
           </h1>
-          <p className="text-base md:text-xl text-blue-50 mb-6 md:mb-8 drop-shadow-md select-none">
+          <p className="text-base md:text-lg text-blue-50 mb-4 md:mb-5 drop-shadow-md select-none">
             {subtitle}
           </p>
 
@@ -125,7 +125,7 @@ export function Hero() {
             </button>
           )}
 
-          <div className="hidden md:grid grid-cols-3 gap-6 mt-12">
+          <div className="hidden">
             <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 border border-white/20 shadow-lg transition-transform hover:-translate-y-1">
               <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <TrendingUp className="w-6 h-6" />

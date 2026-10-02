@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Header } from '../components/Header';
 import SEO from '../../components/SEO';
 import { buildArticleStructuredData } from '../../lib/categorySeo';
@@ -8,7 +8,8 @@ import { getSeoGuide, SEO_GUIDES } from '../../lib/seoContent';
 import { toAbsoluteUrl } from '../../lib/seo';
 
 export default function GuidePage() {
-    const { guideSlug } = useParams() as { guideSlug: string };
+    const pathname = usePathname();
+    const guideSlug = pathname.split('/')[2];
     const router = useRouter();
     const guide = getSeoGuide(guideSlug);
 

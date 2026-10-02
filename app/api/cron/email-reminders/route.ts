@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { emailLayout, isEmailConfigured, sendTransactionalEmail } from '@/lib/resend';
-import { getSupabaseAdmin } from '@/lib/payments';
+import { getSiteUrl, getSupabaseAdmin } from '@/lib/payments';
+import { matchesSearchAlert, normalizeSearchAlertFilters } from '@/lib/searchAlertMatching';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -49,5 +50,72 @@ export async function GET(req: Request) {
       await supabase.from('email_reminders').update({ status: attempts >= 3 ? 'failed' : 'pending', attempts, scheduled_for: new Date(Date.now() + Math.min(60, 5 * attempts) * 60 * 1000).toISOString(), last_error: sendError instanceof Error ? sendError.message : 'Falha ao enviar' }).eq('id', reminder.id);
     }
   }
-  return NextResponse.json({ processed: reminders?.length || 0, sent });
+
+  const scanCutoff = new Date().toISOString();
+  const { data: alerts, error: alertError } = await supabase
+    .from('saved_search_alerts')
+    .select('id, user_id, email, label, search_url, filters, unsubscribe_token, last_checked_at, attempts')
+    .eq('is_active', true)
+    .lt('attempts', 5)
+    .lte('last_checked_at', scanCutoff)
+    .order('last_checked_at')
+    .limit(50);
+  if (alertError) return NextResponse.json({ error: alertError.message }, { status: 500 });
+
+  let alertsSent = 0;
+  for (const alert of alerts || []) {
+    const { data: profile } = await supabase.from('profiles').select('email_reminders_enabled, account_type').eq('id', alert.user_id).maybeSingle();
+    if (profile?.email_reminders_enabled === false) {
+      await supabase.from('saved_search_alerts').update({ last_checked_at: scanCutoff }).eq('id', alert.id);
+      continue;
+    }
+
+    const { data: ads, error: adsError } = await supabase
+      .from('ads')
+      .select('*')
+      .eq('status', 'active')
+      .gt('created_at', alert.last_checked_at)
+      .lte('created_at', scanCutoff)
+      .order('created_at', { ascending: false })
+      .limit(1000);
+    if (adsError) {
+      await supabase.from('saved_search_alerts').update({ attempts: Number(alert.attempts || 0) + 1, last_error: adsError.message }).eq('id', alert.id);
+      continue;
+    }
+
+    const candidates = ads || [];
+    const ownerIds = [...new Set(candidates.map((ad: any) => ad.user_id).filter(Boolean))];
+    const { data: profiles } = ownerIds.length
+      ? await supabase.from('profiles').select('id, account_type').in('id', ownerIds)
+      : { data: [] };
+    const accountTypes = new Map((profiles || []).map((item: any) => [item.id, item.account_type]));
+    const filters = normalizeSearchAlertFilters(alert.filters);
+    const matches = candidates.filter((ad: any) => matchesSearchAlert({
+      ...ad,
+      seller: { type: accountTypes.get(ad.user_id) || '' },
+    }, filters)).slice(0, 5);
+
+    if (!matches.length) {
+      await supabase.from('saved_search_alerts').update({ last_checked_at: scanCutoff, attempts: 0, last_error: null }).eq('id', alert.id);
+      continue;
+    }
+
+    const siteUrl = getSiteUrl();
+    const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
+    const adLinks = matches.map((ad: any) => `<li style="margin:0 0 14px"><a href="${siteUrl}/anuncio/${encodeURIComponent(ad.id)}" style="color:#1d4ed8;font-weight:700">${escapeHtml(ad.title)}</a>${Number(ad.price) > 0 ? ` · R$ ${Number(ad.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''}</li>`).join('');
+    const unsubscribeUrl = `${siteUrl}/api/search-alerts/unsubscribe?token=${encodeURIComponent(alert.unsubscribe_token)}`;
+    try {
+      await sendTransactionalEmail({
+        to: alert.email,
+        subject: `Novos anúncios para: ${alert.label}`,
+        html: emailLayout(`Novos anúncios para sua busca`, `<p>Encontramos ${matches.length === 1 ? 'um anúncio' : `${matches.length} anúncios`} em <strong>${escapeHtml(alert.label)}</strong>:</p><ul>${adLinks}</ul><p><a href="${siteUrl}${alert.search_url}">Ver todos os resultados</a></p><p style="font-size:12px;color:#6b7280">Você ativou este alerta no Dezzapego. <a href="${unsubscribeUrl}">Cancelar este alerta</a>.</p>`),
+      });
+      await supabase.from('saved_search_alerts').update({ last_checked_at: scanCutoff, last_notified_at: scanCutoff, attempts: 0, last_error: null }).eq('id', alert.id);
+      alertsSent += 1;
+    } catch (sendError) {
+      const attempts = Number(alert.attempts || 0) + 1;
+      await supabase.from('saved_search_alerts').update({ attempts, last_error: sendError instanceof Error ? sendError.message.slice(0, 500) : 'Falha ao enviar' }).eq('id', alert.id);
+    }
+  }
+  return NextResponse.json({ processed: reminders?.length || 0, sent, searchAlertsProcessed: alerts?.length || 0, searchAlertsSent: alertsSent });
 }

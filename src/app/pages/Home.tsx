@@ -43,8 +43,11 @@ export default function Home() {
     const pathname = usePathname();
     const { categorySlug, subcategorySlug } = useParams() as { categorySlug?: string; subcategorySlug?: string };
     const { searchQuery, setSearchQuery } = useFilter();
-    const categoryFromRoute = resolveCategoryFromSlug(categorySlug);
-    const subcategoryFromRoute = resolveSubcategoryFromSlug(categoryFromRoute, subcategorySlug);
+    const routeSegments = pathname.match(/^\/categoria\/([^/]+)(?:\/([^/]+))?/i);
+    const resolvedCategorySlug = categorySlug || routeSegments?.[1];
+    const resolvedSubcategorySlug = subcategorySlug || routeSegments?.[2];
+    const categoryFromRoute = resolveCategoryFromSlug(resolvedCategorySlug);
+    const subcategoryFromRoute = resolveSubcategoryFromSlug(categoryFromRoute, resolvedSubcategorySlug);
 
     // Derived state from URL
     const selectedCategory = categoryFromRoute || searchParams.get('category') || '';
@@ -248,21 +251,30 @@ export default function Home() {
                 selectedCity={selectedCity}
                 onLocationChange={handleHeaderLocationChange}
             />
-            <Hero />
+            {!selectedCategory && <Hero />}
             {!selectedCategory && (
                 <BannerSlot placement="home_top" className="pt-4" />
             )}
             {selectedCategory && (
                 <BannerSlot placement="category_top" className="pt-4" />
             )}
-            <Categories
+            {!selectedCategory && <Categories
                 selectedCategory={selectedCategory}
                 onCategorySelect={handleCategorySelect}
                 selectedSubcategory={selectedSubcategory}
                 onSubcategorySelect={handleSubcategorySelect}
                 selectedTransactionType={selectedTransactionType}
                 onTransactionTypeSelect={handleTransactionTypeSelect}
-            />
+            />}
+            {selectedCategory && (
+                <section className="border-b border-gray-200 bg-white px-4 py-6">
+                    <div className="mx-auto max-w-[1600px]">
+                        <p className="text-sm font-medium text-blue-600">Categoria selecionada</p>
+                        <h1 className="mt-1 text-2xl font-bold text-gray-900">{selectedSubcategory || selectedCategory}</h1>
+                        <p className="mt-1 text-sm text-gray-600">Encontre anúncios nesta categoria e refine os resultados pelos filtros.</p>
+                    </div>
+                </section>
+            )}
 
             <div className="max-w-[1600px] mx-auto px-2 md:px-4 pt-4">
                 <AdSenseSlot

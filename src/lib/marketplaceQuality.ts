@@ -88,9 +88,24 @@ export function normalizeText(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
+export function isMalformedAdText(value: string) {
+  const text = normalizeText(value).replace(/[^a-z0-9]+/g, '');
+  if (text.length < 12) return false;
+  // Reject obvious keyboard/test spam such as "wewewe..." while allowing
+  // legitimate repeated words and model names.
+  return /(.{2,6})\1{2,}/i.test(text) || /(.)\1{4,}/i.test(text);
+}
+
+export function isLowQualityPublicAd(input: { title?: string | null; description?: string | null }) {
+  return isMalformedAdText(input.title || '') || isMalformedAdText(input.description || '');
+}
+
 export function findSuspiciousSignals(input: { title: string; description: string; price?: string | number }) {
   const text = normalizeText(`${input.title} ${input.description}`);
   const signals: string[] = [];
+  if (isMalformedAdText(input.title)) {
+    signals.push('Revise o título: ele parece conter texto repetido ou de teste.');
+  }
   if (/(pix antecipado|sinal antecipado|entrada antecipada|pague antes|reserva por pix)/.test(text)) {
     signals.push('Evite pedir pagamento antecipado no texto do anúncio.');
   }
@@ -118,7 +133,7 @@ export function getAdQualityTips(input: { title: string; description: string; im
 
 export function getSellerTrustBadges(profile: Partial<Profile> | null, seller?: Ad['seller']) {
   const badges: string[] = [];
-  if (profile?.verified || seller?.verified) badges.push('Conta verificada');
+  if (profile?.verified) badges.push('Conta verificada');
   if (profile?.created_at) badges.push(`Desde ${new Date(profile.created_at).getFullYear()}`);
   if ((seller as { type?: string } | undefined)?.type === 'professional') badges.push('Profissional');
   return badges;

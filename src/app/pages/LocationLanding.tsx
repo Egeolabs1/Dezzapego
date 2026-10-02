@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Header } from '../components/Header';
 import SEO from '../../components/SEO';
 import { categoriesData } from '../data/categories';
@@ -10,7 +10,8 @@ import { getCategoryPath, resolveCategoryFromSlug } from '../../lib/categoryRout
 import { toAbsoluteUrl } from '../../lib/seo';
 
 export default function LocationLanding() {
-    const { stateSlug, citySlug, categorySlug } = useParams() as { stateSlug: string; citySlug: string; categorySlug?: string };
+    const pathname = usePathname();
+    const [, , stateSlug, citySlug, categorySlug] = pathname.split('/');
     const router = useRouter();
     const location = getSeoLocation(stateSlug, citySlug);
     const category = resolveCategoryFromSlug(categorySlug);
@@ -78,7 +79,7 @@ export default function LocationLanding() {
                         {category ? `Outras buscas em ${location.city}` : `Categorias em ${location.city}`}
                     </h2>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {categoriesData.map((item) => (
+                        {categoriesData.filter((item) => getCategoryPath(item.id).split('/').pop() !== categorySlug).map((item) => (
                             <Link
                                 key={item.id}
                                 href={`/cidade/${location.stateSlug}/${location.citySlug}/${getCategoryPath(item.id).replace('/categoria/', '')}`}

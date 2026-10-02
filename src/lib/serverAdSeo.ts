@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Metadata } from 'next';
 import { buildAdDetailStructuredGraph, getKeywordsForAd } from './categorySeo';
+import { isLowQualityPublicAd } from './marketplaceQuality';
 import { getDefaultShareImagePath, SITE_NAME, toAbsoluteUrl } from './seo';
 import type { Ad } from '../types';
 
@@ -104,6 +105,7 @@ export async function fetchAdForSeo(id: string): Promise<Ad | null> {
 
   if (data) {
     if (data.status && data.status !== 'active') return null;
+    if (isLowQualityPublicAd(data)) return null;
     return normalizeAd(data);
   }
 
@@ -116,6 +118,7 @@ export async function fetchAdForSeo(id: string): Promise<Ad | null> {
 
     if (fallbackError || !fallbackData) return null;
     if (fallbackData.status && fallbackData.status !== 'active') return null;
+    if (isLowQualityPublicAd(fallbackData)) return null;
     return normalizeAd(fallbackData);
   }
 

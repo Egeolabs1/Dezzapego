@@ -60,18 +60,19 @@ export function CookieConsentBanner() {
 
     return (
         <div
-            className="fixed inset-x-0 bottom-[64px] z-[100] border-t border-gray-200 bg-white/95 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm md:bottom-0 md:pb-[env(safe-area-inset-bottom)]"
+            className="fixed inset-x-0 bottom-0 z-[120] max-h-[min(34svh,16rem)] overflow-y-auto border-t border-gray-200 bg-white/95 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm pb-[env(safe-area-inset-bottom)]"
             role="dialog"
             aria-label="Preferências de privacidade e cookies"
         >
-            <div className="container mx-auto max-w-4xl px-4 py-4 md:py-5">
+            <div className="container mx-auto max-w-4xl px-4 py-3 md:py-4">
                 <p className="text-sm font-semibold text-gray-900">
                     {settingsMode ? 'Gerenciar cookies e medição de uso' : 'Privacidade e cookies'}
                 </p>
-                <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-                    Usamos cookies e armazenamento local estritamente necessários para o funcionamento do site (sessão,
-                    preferências). Com seu consentimento, também registramos páginas visitadas de forma agregada e
-                    podemos exibir publicidade personalizada do Google. Consulte a{' '}
+                <p className="mt-1 text-sm text-gray-600 leading-relaxed">
+                    {settingsMode
+                        ? 'Usamos armazenamento necessário para a sessão e preferências. Com seu consentimento, registramos páginas visitadas de forma agregada e permitimos publicidade personalizada.'
+                        : 'Cookies essenciais mantêm o site funcionando. Com seu consentimento, usamos medição de visitas e publicidade personalizada.'}{' '}
+                    Consulte a{' '}
                     <Link href="/privacidade" className="text-blue-600 underline hover:text-blue-800">
                         Política de Privacidade
                     </Link>{' '}
@@ -107,20 +108,20 @@ export function CookieConsentBanner() {
                     </div>
                 )}
 
-                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
                     {!settingsMode ? (
                         <>
                             <button
                                 type="button"
                                 onClick={acceptEssentials}
-                                className="order-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 sm:order-1"
+                                className="order-2 rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 sm:order-1"
                             >
                                 Apenas essenciais
                             </button>
                             <button
                                 type="button"
                                 onClick={acceptAll}
-                                className="order-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 sm:order-2"
+                                className="order-1 rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 sm:order-2"
                             >
                                 Aceitar todos
                             </button>
@@ -132,7 +133,7 @@ export function CookieConsentBanner() {
                                     setAnalyticsToggle(current?.analytics ?? false);
                                     setAdsToggle(current?.adsPersonalization ?? false);
                                 }}
-                                className="order-3 text-sm text-blue-600 underline hover:text-blue-800 sm:order-3"
+                                className="order-3 col-span-2 py-1 text-sm text-blue-600 underline hover:text-blue-800 sm:col-span-1 sm:order-3"
                             >
                                 Personalizar
                             </button>
@@ -145,14 +146,14 @@ export function CookieConsentBanner() {
                                     setSettingsMode(false);
                                     if (hasConsentRecorded()) setOpen(false);
                                 }}
-                                className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                className="rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                             >
                                 Cancelar
                             </button>
                             <button
                                 type="button"
                                 onClick={savePreferences}
-                                className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+                                className="rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
                             >
                                 Salvar preferências
                             </button>

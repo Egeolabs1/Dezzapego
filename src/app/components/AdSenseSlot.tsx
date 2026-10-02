@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PUBLIC_ENV, isPublicDevMode } from '../../lib/publicEnv';
+import { hasAdsPersonalizationConsent } from '../../lib/privacyConsent';
 
 declare global {
     interface Window {
@@ -35,9 +36,17 @@ export function AdSenseSlot({
 }: AdSenseSlotProps) {
     const pushed = useRef(false);
     const client = getAdSenseClient();
+    const [adsEnabled, setAdsEnabled] = useState(false);
 
     useEffect(() => {
-        if (!client || !slot || pushed.current) return;
+        const syncConsent = () => setAdsEnabled(hasAdsPersonalizationConsent());
+        syncConsent();
+        window.addEventListener('dezzapego-consent-changed', syncConsent);
+        return () => window.removeEventListener('dezzapego-consent-changed', syncConsent);
+    }, []);
+
+    useEffect(() => {
+        if (!client || !slot || !adsEnabled || pushed.current) return;
         try {
             window.adsbygoogle = window.adsbygoogle || [];
             window.adsbygoogle.push({});
@@ -45,9 +54,9 @@ export function AdSenseSlot({
         } catch (error) {
             console.warn('[AdSenseSlot] Falha ao inicializar slot.', error);
         }
-    }, [client, slot]);
+    }, [adsEnabled, client, slot]);
 
-    if (!client || !slot) return null;
+    if (!client || !slot || !adsEnabled) return null;
 
     return (
         <div

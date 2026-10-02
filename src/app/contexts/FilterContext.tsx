@@ -35,7 +35,8 @@ export function FilterProvider({ children }: { children: ReactNode }) {
     const [hasLoadedStoredFilters, setHasLoadedStoredFilters] = useState(false);
 
     useEffect(() => {
-        setSearchQuery(readLocalStorage('dezzapego_search'));
+        const queryFromUrl = new URLSearchParams(window.location.search).get('q');
+        setSearchQuery(queryFromUrl ?? readLocalStorage('dezzapego_search'));
         setSelectedState(readLocalStorage('dezzapego_state'));
         setSelectedCity(readLocalStorage('dezzapego_city'));
         setHasLoadedStoredFilters(true);

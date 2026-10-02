@@ -157,6 +157,7 @@ export function Filters({
                 <label key={field.name} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                   <input
                     type="checkbox"
+                    aria-label={field.label}
                     checked={Boolean(detailsFilters[field.name])}
                     onChange={() => handleBooleanFilterToggle(field.name)}
                     className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
@@ -226,6 +227,7 @@ export function Filters({
                   <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
                     <input
                       type="number"
+                      aria-label={`${field.label} mínimo`}
                       placeholder="Min."
                       value={detailsFilters[`${field.name}Min`] || ''}
                       onChange={(e) => handleDynamicFilterChange(`${field.name}Min`, e.target.value)}
@@ -233,6 +235,7 @@ export function Filters({
                     />
                     <input
                       type="number"
+                      aria-label={`${field.label} máximo`}
                       placeholder="Máx."
                       value={detailsFilters[`${field.name}Max`] || ''}
                       onChange={(e) => handleDynamicFilterChange(`${field.name}Max`, e.target.value)}
@@ -255,6 +258,7 @@ export function Filters({
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">{field.label}</label>
                 <input
                   type="text"
+                  aria-label={field.label}
                   placeholder={field.placeholder || field.label}
                   value={detailsFilters[field.name] || ''}
                   onChange={(e) => handleDynamicFilterChange(field.name, e.target.value)}
@@ -323,6 +327,8 @@ export function Filters({
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Estado</label>
               <div className="relative">
                 <select
+                  id="filter-state"
+                  aria-label="Estado"
                   title="Estado"
                   value={selectedState}
                   onChange={(e) => {
@@ -347,6 +353,8 @@ export function Filters({
             <div className="min-w-0">
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Cidade (opcional)</label>
               <input
+                id="filter-city"
+                aria-label="Cidade"
                 type="text"
                 value={selectedCity}
                 onChange={(e) => onCityChange(e.target.value)}
@@ -438,6 +446,7 @@ export function Filters({
                   <label key={item.key} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                     <input
                       type="checkbox"
+                      aria-label={item.label}
                       checked={Boolean(detailsFilters[item.key])}
                       onChange={() => handleBooleanFilterToggle(item.key)}
                       className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
@@ -455,6 +464,7 @@ export function Filters({
                   <label key={item.key} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                     <input
                       type="checkbox"
+                    aria-label={item.label}
                       checked={Boolean(detailsFilters[item.key])}
                       onChange={() => handleBooleanFilterToggle(item.key)}
                       className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
@@ -539,6 +549,8 @@ export function Filters({
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">R$</span>
                   <input
+                    id="filter-price-min"
+                    aria-label="Preço mínimo"
                     type="number"
                     value={minPrice}
                     onChange={(e) => setMinPrice(Number(e.target.value))}
@@ -552,6 +564,8 @@ export function Filters({
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">R$</span>
                   <input
+                    id="filter-price-max"
+                    aria-label="Preço máximo"
                     type="number"
                     value={maxPrice}
                     onChange={(e) => setMaxPrice(Number(e.target.value))}

@@ -1,14 +1,21 @@
-import { BookmarkPlus, Heart, ImageIcon, LayoutGrid, List as ListIcon, MapPin, Trash2 } from 'lucide-react';
+import { Bell, BellOff, BookmarkPlus, Heart, ImageIcon, LayoutGrid, List as ListIcon, MapPin, Share2, Trash2 } from 'lucide-react';
 import { AdCardSkeleton } from './ui/skeleton';
 
 import type { Ad } from '../../types';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { formatPrice, formatDate } from '../../lib/formatters';
 import { useAds } from '../hooks/useAds';
 import Link from 'next/link';
 import { getCategoryFields } from '../data/categorySpecs';
 import { toast } from 'sonner';
-import { readSavedSearches, removeSavedSearch, saveSearch, withDetailsFiltersInUrl, type SavedSearch } from '../../lib/marketplaceQuality';
+import { useRouter } from 'next/navigation';
+import { useFilter } from '../contexts/FilterContext';
+import { buildSearchLabel, isLowQualityPublicAd, readSavedSearches, removeSavedSearch, saveSearch, withDetailsFiltersInUrl, type SavedSearch } from '../../lib/marketplaceQuality';
+import { getCategoryPath } from '../../lib/categoryRoutes';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { hasSearchAlertCriteria } from '../../lib/searchAlertMatching';
+import type { MouseEvent } from 'react';
 
 type AdsListProps = {
   selectedCategory: string;
@@ -45,9 +52,38 @@ export function AdsList({
   radius,
   userLocation
 }: AdsListProps) {
+  const router = useRouter();
+  const { setSearchQuery } = useFilter();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(() => readSavedSearches());
   const [showSavedSearches, setShowSavedSearches] = useState(false);
+  const [emailAlertId, setEmailAlertId] = useState<string | null>(null);
+  const [emailAlertBusy, setEmailAlertBusy] = useState(false);
+  const { user } = useAuth();
+
+  const currentFilters = {
+    selectedCategory, selectedSubcategory, selectedTransactionType, selectedState, selectedCity,
+    advertiserType, priceRange, searchQuery,
+  };
+  const currentSearchUrl = typeof window === 'undefined' ? '' : withDetailsFiltersInUrl(window.location.pathname, window.location.search, detailsFilters);
+  const alertFilters = { ...currentFilters, detailsFilters };
+  const canAlert = hasSearchAlertCriteria(alertFilters);
+
+  useEffect(() => {
+    let cancelled = false;
+    setEmailAlertId(null);
+    if (!user) return;
+    void (async () => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return;
+      const response = await fetch('/api/search-alerts', { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) return;
+      const result = await response.json();
+      if (!cancelled) setEmailAlertId(result.alerts?.find((alert: { search_url: string }) => alert.search_url === currentSearchUrl)?.id || null);
+    })().catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [user, currentSearchUrl]);
 
   const { ads, loading, loadingMore, hasMore, loadMore } = useAds({
     lat: userLocation?.lat,
@@ -70,6 +106,7 @@ export function AdsList({
     const fieldTypeMap = new Map(getCategoryFields(selectedCategory, selectedSubcategory).map((f) => [f.name, f.type]));
 
     return ads.filter((ad) => {
+      if (isLowQualityPublicAd(ad)) return false;
       // Category filter
       if (selectedCategory && ad.category !== selectedCategory) return false;
 
@@ -243,6 +280,58 @@ export function AdsList({
     toast.success('Busca removida.');
   };
 
+  const toggleEmailAlert = async () => {
+    if (!canAlert) return;
+    if (!user) {
+      router.push(`/login?next=${encodeURIComponent(currentSearchUrl)}`);
+      return;
+    }
+    setEmailAlertBusy(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Entre novamente para gerenciar seus alertas.');
+      const response = await fetch('/api/search-alerts', {
+        method: emailAlertId ? 'DELETE' : 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(emailAlertId ? { id: emailAlertId } : {
+          url: currentSearchUrl,
+          label: buildSearchLabel({ filters: { ...currentFilters, sortBy, detailsFilters, radius } }),
+          filters: alertFilters,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Não foi possível atualizar o alerta.');
+      setEmailAlertId(emailAlertId ? null : result.alert.id);
+      toast.success(emailAlertId ? 'Alerta por e-mail desativado.' : 'Alerta por e-mail ativado.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar o alerta.');
+    } finally {
+      setEmailAlertBusy(false);
+    }
+  };
+
+  const shareAd = async (event: MouseEvent, ad: Ad) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const url = `${window.location.origin}/anuncio/${ad.id}`;
+    try {
+      if (navigator.share) await navigator.share({ title: ad.title, url });
+      else {
+        await navigator.clipboard.writeText(url);
+        toast.success('Link do anúncio copiado.');
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return;
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success('Link do anúncio copiado.');
+      } catch {
+        toast.error('Não foi possível compartilhar este anúncio.');
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className={viewMode === 'grid' ? "grid grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4" : "flex flex-col gap-4"}>
@@ -279,6 +368,16 @@ export function AdsList({
               <ListIcon className="w-5 h-5" />
             </button>
           </div>
+          <button
+            type="button"
+            onClick={toggleEmailAlert}
+            disabled={!canAlert || emailAlertBusy}
+            className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${emailAlertId ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
+            title={canAlert ? (emailAlertId ? 'Desativar alerta por e-mail' : 'Avisar por e-mail quando surgirem anúncios') : 'Aplique pelo menos um filtro específico para criar um alerta'}
+          >
+            {emailAlertId ? <BellOff className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
+            <span className="hidden sm:inline">{emailAlertId ? 'Alerta ativo' : 'Avisar por e-mail'}</span>
+          </button>
           <div className="relative group">
             <button
               type="button"
@@ -338,33 +437,59 @@ export function AdsList({
       </div>
 
       {sortedAds.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
-          <p className="text-gray-500 mb-2">Nenhum anúncio encontrado</p>
-          <p className="text-sm text-gray-400">Tente ajustar seus filtros de busca</p>
+        <div className="border-y border-gray-200 bg-white px-5 py-10 text-center sm:px-8">
+          <h2 className="text-lg font-semibold text-gray-900">Nenhum anúncio encontrado</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            {searchQuery.trim() ? <>Não encontramos resultados para <strong>“{searchQuery.trim()}”</strong>. Tente outro termo ou veja categorias populares.</> : 'Tente remover alguns filtros ou explore estas categorias.'}
+          </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            {['Imóveis', 'Autos e Peças', 'Eletrônicos e Celulares', 'Para a sua Casa'].map((category) => (
+              <Link key={category} href={getCategoryPath(category)} className="rounded-full border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:border-blue-500 hover:text-blue-700">
+                {category}
+              </Link>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => { setSearchQuery(''); router.push('/'); }}
+            className="mt-5 min-h-11 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            Limpar busca e filtros
+          </button>
         </div>
       ) : (
         <div className={viewMode === 'grid' ? "grid grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4" : "flex flex-col gap-4"}>
           {sortedAds.map((ad) => (
-            <Link
-              href={`/anuncio/${ad.id}`}
+            <article
               key={ad.id}
               className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 overflow-hidden group flex ${viewMode === 'grid' ? 'flex-col' : 'flex-row'}`}
             >
               {/* Image Container */}
               <div className={`relative bg-gray-100 overflow-hidden ${viewMode === 'grid' ? 'aspect-[4/3] w-full' : 'w-32 sm:w-48 md:w-64 shrink-0'}`}>
-                {ad.images[0] ? (
-                  <img
-                    src={ad.images[0]}
-                    alt={ad.title}
-                    className="w-full h-full object-contain bg-white p-1"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-50">
-                    <ImageIcon className="w-10 h-10 text-gray-300" />
-                  </div>
-                )}
-                <div className={`absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${viewMode === 'grid' ? 'translate-x-4 group-hover:translate-x-0' : ''}`}>
+                <Link href={`/anuncio/${ad.id}`} className="absolute inset-0 z-0" aria-label={`Ver anúncio: ${ad.title}`}>
+                  {ad.images[0] ? (
+                    <img
+                      src={ad.images[0]}
+                      alt={ad.title}
+                      className="w-full h-full object-contain bg-white p-1"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center bg-gray-50">
+                      <ImageIcon className="w-10 h-10 text-gray-300" />
+                    </span>
+                  )}
+                </Link>
+                <div className={`absolute top-2 right-2 z-10 flex flex-col gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 ${viewMode === 'grid' ? 'translate-x-0 md:translate-x-4 md:group-hover:translate-x-0' : ''}`}>
+                  <button
+                    type="button"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-gray-600 shadow-lg transition-colors hover:bg-blue-50 hover:text-blue-600"
+                    aria-label="Compartilhar anúncio"
+                    title="Compartilhar anúncio"
+                    onClick={(event) => shareAd(event, ad)}
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </button>
                   <button
                     className="p-1.5 md:p-2 bg-white rounded-full shadow-lg hover:bg-blue-50 text-gray-600 hover:text-blue-600 transition-colors"
                     aria-label={favorites.has(ad.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}
@@ -379,7 +504,7 @@ export function AdsList({
               </div>
 
               {/* Content */}
-              <div className="p-3 md:p-4 flex flex-col flex-1 justify-between">
+              <Link href={`/anuncio/${ad.id}`} className="p-3 md:p-4 flex flex-col flex-1 justify-between">
                 <div>
                   <div className="flex justify-between items-start mb-1">
                     <span className="text-[10px] md:text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full truncate max-w-[70%]">
@@ -404,8 +529,8 @@ export function AdsList({
                     {ad.location?.city || 'Brasil'}{ad.location?.state ? `, ${ad.location.state}` : ''}
                   </span>
                 </div>
-              </div>
-            </Link>
+              </Link>
+            </article>
           ))}
         </div>
       )}

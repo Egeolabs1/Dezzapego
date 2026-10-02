@@ -40,26 +40,34 @@ function applyConsentMode() {
 export function AdSenseLoader() {
     useEffect(() => {
         const client = getAdSenseClient();
-        if (!client || document.getElementById(ADSENSE_SCRIPT_ID)) return;
+        if (!client) return;
 
-        ensureGtagConsentBridge();
-        window.gtag?.('consent', 'default', {
-            ad_storage: 'denied',
-            ad_user_data: 'denied',
-            ad_personalization: 'denied',
-            analytics_storage: 'denied',
-        });
-        applyConsentMode();
+        const loadAds = () => {
+            if (!hasAdsPersonalizationConsent() || document.getElementById(ADSENSE_SCRIPT_ID)) return;
 
-        const script = document.createElement('script');
-        script.id = ADSENSE_SCRIPT_ID;
-        script.async = true;
-        script.crossOrigin = 'anonymous';
-        script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(client)}`;
-        document.head.appendChild(script);
+            ensureGtagConsentBridge();
+            window.gtag?.('consent', 'default', {
+                ad_storage: 'denied',
+                ad_user_data: 'denied',
+                ad_personalization: 'denied',
+                analytics_storage: 'denied',
+            });
+            applyConsentMode();
 
-        const onConsentChanged = () => applyConsentMode();
+            const script = document.createElement('script');
+            script.id = ADSENSE_SCRIPT_ID;
+            script.async = true;
+            script.crossOrigin = 'anonymous';
+            script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(client)}`;
+            document.head.appendChild(script);
+        };
+
+        const onConsentChanged = () => {
+            applyConsentMode();
+            loadAds();
+        };
         window.addEventListener('dezzapego-consent-changed', onConsentChanged);
+        loadAds();
 
         return () => {
             window.removeEventListener('dezzapego-consent-changed', onConsentChanged);

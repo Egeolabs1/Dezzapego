@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 
 import SEO from '../../components/SEO';
 import { consumeAuthNext, getSafeNextPath, rememberAuthNext } from '../../lib/authIntent';
+import { PUBLIC_ENV } from '../../lib/publicEnv';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -15,12 +16,22 @@ export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
     const [resetLoading, setResetLoading] = useState(false);
     const [resetSent, setResetSent] = useState(false);
+    const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
     const router = useRouter();
     const searchParams = useSearchParams();
     const nextPath = getSafeNextPath(searchParams.get('next'), '/');
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        const nextErrors: typeof fieldErrors = {};
+        if (!email.trim()) nextErrors.email = 'Informe seu e-mail.';
+        else if (!/^\S+@\S+\.\S+$/.test(email.trim())) nextErrors.email = 'Informe um e-mail válido.';
+        if (!password) nextErrors.password = 'Informe sua senha.';
+        if (Object.keys(nextErrors).length > 0) {
+            setFieldErrors(nextErrors);
+            return;
+        }
+        setFieldErrors({});
         setLoading(true);
 
         try {
@@ -92,6 +103,12 @@ export default function Login() {
             <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-md">
                 <h1 className="text-2xl font-bold mb-6 text-center text-gray-800">Entrar no Dezzapego</h1>
 
+                {nextPath !== '/' && (
+                    <p className="-mt-3 mb-5 rounded-md bg-blue-50 px-3 py-2 text-center text-sm text-blue-900">
+                        Entre ou crie sua conta para continuar. Depois do login, você voltará para {nextPath === '/anunciar' ? 'criar seu anúncio' : 'a página que estava acessando'}.
+                    </p>
+                )}
+
                 <Link
                     href={nextPath === '/' ? '/register' : `/register?next=${encodeURIComponent(nextPath)}`}
                     className="flex items-center justify-center gap-2 w-full mb-6 py-3 rounded-lg border-2 border-dashed border-blue-300 text-blue-600 font-semibold hover:bg-blue-50 hover:border-blue-400 transition-all text-sm"
@@ -108,18 +125,21 @@ export default function Login() {
                     </div>
                 </div>
 
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-4" noValidate>
                     <div className="space-y-2">
                         <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
                         <input
                             id="email"
+                            name="email"
                             type="email"
                             placeholder="seu@email.com"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
+                            onChange={(e) => { setEmail(e.target.value); setFieldErrors((prev) => ({ ...prev, email: undefined })); }}
+                            aria-invalid={Boolean(fieldErrors.email)}
+                            aria-describedby={fieldErrors.email ? 'email-error' : undefined}
                             className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                         />
+                        {fieldErrors.email && <p id="email-error" className="text-sm text-red-600" role="alert">{fieldErrors.email}</p>}
                     </div>
 
                     <div className="space-y-2">
@@ -127,11 +147,13 @@ export default function Login() {
                         <div className="relative">
                             <input
                                 id="password"
+                                name="password"
                                 type={showPassword ? 'text' : 'password'}
                                 placeholder="********"
                                 value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
+                                onChange={(e) => { setPassword(e.target.value); setFieldErrors((prev) => ({ ...prev, password: undefined })); }}
+                                aria-invalid={Boolean(fieldErrors.password)}
+                                aria-describedby={fieldErrors.password ? 'password-error' : undefined}
                                 className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 pr-10 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                             />
                             <button
@@ -143,6 +165,7 @@ export default function Login() {
                                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                         </div>
+                        {fieldErrors.password && <p id="password-error" className="text-sm text-red-600" role="alert">{fieldErrors.password}</p>}
                         {resetSent ? (
                             <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
                                 Link enviado! Verifique seu e-mail (e pasta spam).
@@ -168,7 +191,7 @@ export default function Login() {
                         Entrar
                     </button>
 
-                    <button
+                    {PUBLIC_ENV.GOOGLE_AUTH_ENABLED && <button
                         type="button"
                         onClick={handleGoogleLogin}
                         disabled={loading}
@@ -181,7 +204,7 @@ export default function Login() {
                             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                         </svg>
                         Entrar com Google
-                    </button>
+                    </button>}
                 </form>
             </div>
         </div>

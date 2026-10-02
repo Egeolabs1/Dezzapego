@@ -21,6 +21,8 @@ export const PUBLIC_ENV = {
         process.env.NEXT_PUBLIC_ADSENSE_TEST_MODE || '',
     TURNSTILE_SITE_KEY:
         process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '',
+    GOOGLE_AUTH_ENABLED:
+        process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === 'true',
 };
 
 export function isPublicDevMode() {

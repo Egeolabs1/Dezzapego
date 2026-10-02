@@ -32,6 +32,7 @@ import {
     formatCpfCnpj,
     formatPhone,
     getAdQualityTips,
+    isMalformedAdText,
     isValidCpfOrCnpj,
 } from '../../lib/marketplaceQuality';
 
@@ -227,6 +228,12 @@ export default function NewAd() {
             return;
         }
 
+        if (isMalformedAdText(formData.title) || isMalformedAdText(formData.description)) {
+            toast.error('Revise o título e a descrição. Texto repetido ou de teste não pode ser publicado.');
+            setStep(1);
+            return;
+        }
+
         if (suspiciousSignals.length > 0 && !confirmedSuspiciousContent) {
             setShowSuspiciousConfirm(true);
             setStep(1);
@@ -320,10 +327,33 @@ export default function NewAd() {
 
         setLoading(true);
         try {
+            const phone = digitsOnly(requiredPhone);
+            const cpfCnpj = digitsOnly(requiredDocument);
+            const currentPhone = digitsOnly(profile?.phone || '');
+            const currentCpfCnpj = digitsOnly(profile?.cpf_cnpj || '');
+            const [phoneCheck, cpfCheck] = await Promise.all([
+                phone !== currentPhone
+                    ? supabase.rpc('profile_identity_exists', { p_phone: phone, p_cpf_cnpj: null })
+                    : Promise.resolve({ data: false, error: null }),
+                cpfCnpj !== currentCpfCnpj
+                    ? supabase.rpc('profile_identity_exists', { p_phone: null, p_cpf_cnpj: cpfCnpj })
+                    : Promise.resolve({ data: false, error: null }),
+            ]);
+            if (phoneCheck.error) throw phoneCheck.error;
+            if (cpfCheck.error) throw cpfCheck.error;
+            if (phoneCheck.data || cpfCheck.data) {
+                const duplicatedFields = [
+                    phoneCheck.data ? 'telefone/WhatsApp' : '',
+                    cpfCheck.data ? 'CPF/CNPJ' : '',
+                ].filter(Boolean).join(' e ');
+                toast.error(`Este ${duplicatedFields} já está vinculado a outra conta. Use seus próprios dados ou entre na conta existente.`);
+                return;
+            }
+
             const { error } = await supabase.from('profiles').upsert({
                 id: user.id,
-                phone: digitsOnly(requiredPhone),
-                cpf_cnpj: digitsOnly(requiredDocument),
+                phone,
+                cpf_cnpj: cpfCnpj,
                 updated_at: new Date().toISOString(),
             });
             if (error) throw error;
@@ -332,8 +362,12 @@ export default function NewAd() {
             toast.success('Dados obrigatórios salvos. Publicando anúncio...');
             await publishAd();
         } catch (error: unknown) {
-            const msg = error instanceof Error ? error.message : 'Não foi possível salvar os dados.';
-            toast.error(msg);
+            const message = error instanceof Error ? error.message : '';
+            if (/duplicate|unique|23505/i.test(message)) {
+                toast.error('Telefone/WhatsApp ou CPF/CNPJ já está vinculado a outra conta. Confira os dados informados.');
+            } else {
+                toast.error('Não foi possível salvar os dados. Tente novamente.');
+            }
             setLoading(false);
         }
     };

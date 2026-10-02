@@ -23,7 +23,7 @@ import { loadTurnstile } from '../../lib/turnstile';
 import { useFavorites } from '../hooks/useFavorites';
 import { getCategoryPath } from '../../lib/categoryRoutes';
 import { AdSenseSlot } from '../components/AdSenseSlot';
-import { getRelatedAds, getSellerTrustBadges } from '../../lib/marketplaceQuality';
+import { getRelatedAds, getSellerTrustBadges, isLowQualityPublicAd } from '../../lib/marketplaceQuality';
 import { PUBLIC_ENV } from '../../lib/publicEnv';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { buildAuthPath } from '../../lib/authIntent';
@@ -101,6 +101,10 @@ export default function AdDetails() {
                     .single();
 
                 if (adError) throw adError;
+                if (isLowQualityPublicAd(adData)) {
+                    router.replace('/');
+                    return;
+                }
                 const { phone: _phone, ...sellerSnapshot } = adData.seller || {};
                 const publicAdData = { ...adData, seller: sellerSnapshot };
                 setAd(publicAdData);
@@ -594,7 +598,7 @@ export default function AdDetails() {
                                                     PRO
                                                 </span>
                                             )}
-                                            {(profile?.verified || ad.seller?.verified) && (
+                                            {profile?.verified && (
                                                 <span className="text-blue-600" title="Vendedor Verificado">
                                                     <ShieldCheck className="w-5 h-5 fill-blue-100" />
                                                 </span>

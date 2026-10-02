@@ -11,6 +11,7 @@ import { recordSignupIpAndFirstAccess } from '../../lib/profileIpLog';
 import { digitsOnly, formatCpfCnpj, formatPhone, isValidCpfOrCnpj } from '../../lib/marketplaceQuality';
 import { buildAuthPath, getSafeNextPath, rememberAuthNext } from '../../lib/authIntent';
 import { trackFunnelEvent } from '../../lib/siteVisits';
+import { PUBLIC_ENV } from '../../lib/publicEnv';
 
 type AccountType = 'personal' | 'professional';
 
@@ -160,7 +161,7 @@ export default function Register() {
             if (error) throw error;
 
             if (data.user && !data.session) {
-                toast.success('Conta criada! Verifique seu e-mail para confirmar o cadastro antes de entrar.');
+                toast.success('Conta criada. Verifique seu e-mail para ativar o acesso e continuar.');
                 router.replace(buildAuthPath('/login', nextPath));
                 return;
             }
@@ -214,11 +215,9 @@ export default function Register() {
             <div className="w-full max-w-lg bg-white p-8 rounded-xl shadow-md border border-gray-100">
                 <h1 className="text-2xl font-bold mb-1 text-center text-gray-800">Crie sua conta</h1>
                 <p className="text-center text-sm text-gray-500 mb-6">Preencha com atenção para proteger sua conta e facilitar contatos.</p>
-                {process.env.NEXT_PUBLIC_EMAIL_CONFIRM !== 'false' && (
-                    <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-                        Após criar sua conta, enviaremos um <strong>e-mail de confirmação</strong>. Você precisa confirmar o e-mail para concluir o cadastro e entrar.
-                    </div>
-                )}
+                <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                    Se a confirmação por e-mail estiver habilitada, enviaremos um link para ativar sua conta.
+                </div>
 
                 <form onSubmit={handleRegister} className="space-y-4" noValidate>
                     <div className="flex gap-2 p-1 bg-gray-100 rounded-lg mb-2">
@@ -282,6 +281,10 @@ export default function Register() {
                         </div>
                     )}
 
+                    <details className="rounded-md border border-gray-200 px-3 py-2">
+                        <summary className="cursor-pointer py-1 text-sm font-medium text-gray-700">Adicionar telefone e documento (opcional)</summary>
+
+                    <div className="mt-3 space-y-4">
                     <div className="space-y-1">
                         <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
                             Telefone / WhatsApp <span className="font-normal text-gray-500">(opcional)</span>
@@ -331,6 +334,8 @@ export default function Register() {
                         <p className="text-xs text-gray-500">Você poderá completar esses dados antes de publicar ou receber pagamentos.</p>
                         <p className="text-xs text-gray-500">Usamos para segurança da conta e prevenção de duplicidade.</p>
                     </div>
+                    </div>
+                    </details>
 
                     <div className="space-y-1">
                         <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -454,16 +459,16 @@ export default function Register() {
                         {accountType === 'professional' ? 'Criar conta profissional' : 'Criar conta'}
                     </button>
 
-                    <div className="relative py-1">
+                    {PUBLIC_ENV.GOOGLE_AUTH_ENABLED && <div className="relative py-1">
                         <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-gray-200" />
                         </div>
                         <div className="relative flex justify-center text-xs">
                             <span className="bg-white px-2 text-gray-500">ou</span>
                         </div>
-                    </div>
+                    </div>}
 
-                    <button
+                    {PUBLIC_ENV.GOOGLE_AUTH_ENABLED && <button
                         type="button"
                         onClick={handleGoogleSignup}
                         disabled={loading}
@@ -476,7 +481,7 @@ export default function Register() {
                             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                         </svg>
                         Continuar com Google
-                    </button>
+                    </button>}
                 </form>
 
                 <div className="mt-6 text-center text-sm text-gray-600">
