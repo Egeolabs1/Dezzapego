@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -85,6 +85,7 @@ export default function NewAd() {
     const [loading, setLoading] = useState(false);
     const [step, setStep] = useState(0);
     const [showPublishRequirements, setShowPublishRequirements] = useState(false);
+    const savingRequirementsRef = useRef(false);
     const [showSuspiciousConfirm, setShowSuspiciousConfirm] = useState(false);
     const [requiredPhone, setRequiredPhone] = useState('');
     const [requiredDocument, setRequiredDocument] = useState('');
@@ -315,7 +316,7 @@ export default function NewAd() {
     };
 
     const handleSaveRequirementsAndPublish = async () => {
-        if (!user) return;
+        if (!user || savingRequirementsRef.current) return;
         if (!hasPhoneForPublish(requiredPhone)) {
             toast.error('Informe um telefone/WhatsApp válido com DDD.');
             return;
@@ -325,6 +326,7 @@ export default function NewAd() {
             return;
         }
 
+        savingRequirementsRef.current = true;
         setLoading(true);
         try {
             const phone = digitsOnly(requiredPhone);
@@ -347,28 +349,52 @@ export default function NewAd() {
                     cpfCheck.data ? 'CPF/CNPJ' : '',
                 ].filter(Boolean).join(' e ');
                 toast.error(`Este ${duplicatedFields} já está vinculado a outra conta. Use seus próprios dados ou entre na conta existente.`);
+                savingRequirementsRef.current = false;
+                setLoading(false);
                 return;
             }
 
-            const { error } = await supabase.from('profiles').upsert({
-                id: user.id,
+            const profileFields = {
                 phone,
                 cpf_cnpj: cpfCnpj,
                 updated_at: new Date().toISOString(),
-            });
-            if (error) throw error;
+            };
+            const { data: updatedProfile, error: updateError } = await supabase
+                .from('profiles')
+                .update(profileFields)
+                .eq('id', user.id)
+                .select('id')
+                .maybeSingle();
+            if (updateError) throw updateError;
+
+            // A profile can be absent when the Auth trigger was delayed or failed.
+            // Update first so this flow never relies on ambiguous upsert conflict resolution.
+            if (!updatedProfile) {
+                const { error: insertError } = await supabase.from('profiles').insert({
+                    id: user.id,
+                    email: user.email || null,
+                    full_name: user.user_metadata?.full_name || null,
+                    ...profileFields,
+                });
+                if (insertError) throw insertError;
+            }
             await refreshProfile();
             setShowPublishRequirements(false);
             toast.success('Dados obrigatórios salvos. Publicando anúncio...');
             await publishAd();
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : '';
-            if (/duplicate|unique|23505/i.test(message)) {
+            const databaseError = error as { code?: string; message?: string; details?: string };
+            const message = databaseError.message || (error instanceof Error ? error.message : '');
+            const details = databaseError.details || '';
+            console.error('Erro ao salvar dados obrigatórios do perfil:', error);
+            if (/duplicate|unique|23505/i.test(`${databaseError.code || ''} ${message} ${details}`)) {
                 toast.error('Telefone/WhatsApp ou CPF/CNPJ já está vinculado a outra conta. Confira os dados informados.');
             } else {
                 toast.error('Não foi possível salvar os dados. Tente novamente.');
             }
             setLoading(false);
+        } finally {
+            savingRequirementsRef.current = false;
         }
     };
 
